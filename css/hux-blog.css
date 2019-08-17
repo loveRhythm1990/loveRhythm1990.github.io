@@ -995,7 +995,7 @@ samp {
 .intro-header.style-text .site-heading,
 .intro-header.style-text .post-heading,
 .intro-header.style-text .page-heading {
-  padding: 85px 0 20px;
+  padding: 35px 0 20px;
   color: #404040;
 }
 .intro-header.style-text .site-heading .subheading,
@@ -1023,22 +1023,22 @@ samp {
 .intro-header .site-heading,
 .intro-header .post-heading,
 .intro-header .page-heading {
-  padding: 85px 0 55px;
+  padding: 35px 0 55px;
   color: white;
 }
 @media only screen and (min-width: 768px) {
   .intro-header .site-heading,
   .intro-header .post-heading,
   .intro-header .page-heading {
-    padding: 150px 0;
+    padding: 50px 0;
   }
 }
 .intro-header .site-heading {
-  padding: 95px 0 70px;
+  padding: 45px 0 70px;
 }
 @media only screen and (min-width: 768px) {
   .intro-header .site-heading {
-    padding: 150px 0;
+    padding: 50px 0;
   }
 }
 .intro-header .site-heading,
@@ -1072,7 +1072,7 @@ samp {
 }
 .intro-header .post-heading h1 {
   font-size: 30px;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 .intro-header .post-heading .subheading,
 .intro-header .post-heading .meta {
