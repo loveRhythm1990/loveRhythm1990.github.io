@@ -1,6 +1,6 @@
 # Site settings
-title: 老狗 
-SEOTitle: 老狗的博客 | Hux Blog
+title: An Old Dog 
+SEOTitle: Old Dog | WM
 header-img: img/home-bg.jpg
 email: qiuweimin@126.com
 description: "一只老狗 | 很老 | 但是想做点事"
@@ -75,14 +75,14 @@ ga_domain: weimin.me
 
 
 # Sidebar settings
-sidebar: true                           # whether or not using Sidebar.
+sidebar: false                           # whether or not using Sidebar.
 sidebar-about-description: "For the next quantum leap<br>离开世界之前，一切都是过程"
 sidebar-avatar: /img/avatar-hux-ny.jpg      # use absolute URL, seeing it's used in both `/` and `/about/`
 
 
 
 # Featured Tags
-featured-tags: true                     # whether or not using Feature-Tags
+featured-tags: false                     # whether or not using Feature-Tags
 featured-condition-size: 1              # A tag will be featured if the size of it is more than this condition value
 
 
