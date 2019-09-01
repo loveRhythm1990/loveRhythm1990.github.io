@@ -113,3 +113,27 @@ func NewExpandController(
 
 首先实例化一个expandController结构体，并调用expandController的volumePluginMgr的InitPlugins来初始化所有插件。初始化插件就是调用每个插件的Init方法（VolumePlugin中的一个接口，必须实现），并将这个插件放置到volumePluginMgr的一个名叫plugins的map中，map的key是插件的名字，value就是实例。
 
+加下来的步骤是：
+* 初始化一个OperationExecutor
+* 初始化一个VolumeResizeMap，这应该是一个缓存request的map
+* 添加pvc的事件处理器，update以及delete事件
+* 初始化一个SyncVolumeResize，这个是同步Resize的地方
+* 最后是初始化一个PVCPopulator
+
+## 分析PVCPopulator
+pvcPopulator这部分应该相对独立，先分析这个。这个数据结构只做了一件事：就是每隔2分钟从apiserver把所有的pvc都拿过来，然后把每个pvc对应的pv也拿过来，然后调用调用resizeMap的AddPVCUpdate方法，参数就是一个pvc以及这个pvc对应的pv。
+需要注意的是PVCPopulator没有做任何检查，上面操作获取的都是所有的PVC，检查在AddPVCUpdate方法中做。另外获取pv的时候，拿的是一个深拷贝。
+
+## SyncVolumeResize
+这个应该是VolumeExpandController的主要处理逻辑。从run函数开始看，这个执行周期是30s，这个数据的sync方法也不麻烦。主要逻辑如下：
+```go
+
+	for _, pvcWithResizeRequest := range rc.resizeMap.GetPVCsWithResizeRequest() {
+
+		1. 将pvc的状态设置为 Resizing，这个是通过 更新 pvc的status来实现的，一个细节就是调用UpdateStatus之前，做了一个pvc的deepcopy，这里涉及到一些deepcopy，以后要考虑一下为什么。
+
+	    2. 调用operationExecutor的ExpandVolume方法，
+	}
+
+```
+SyncVolumeResize看上去是resizeMap的消费者，PVCPopulator是resizeMap的生产者。另外，我们之前 
