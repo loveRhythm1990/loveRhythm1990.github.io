@@ -33,15 +33,15 @@ tags:
 
    调度失败的处理逻辑如下，其中`sched.config.Error(pod, err)`会重新将pod加入到队列，下面的update方法也会触发一个unschedule pod的update事件。
    ```go
-   	pod = pod.DeepCopy()
-		sched.config.Error(pod, err)
-		sched.config.Recorder.Eventf(pod, v1.EventTypeWarning, "FailedScheduling", "%v", err)
-		sched.config.PodConditionUpdater.Update(pod, &v1.PodCondition{
-			Type:    v1.PodScheduled,
-			Status:  v1.ConditionFalse,
-			Reason:  v1.PodReasonUnschedulable,
-			Message: err.Error(),
-		})
+   pod = pod.DeepCopy()
+   sched.config.Error(pod, err)
+   sched.config.Recorder.Eventf(pod, v1.EventTypeWarning, "FailedScheduling", "%v", err)
+   sched.config.PodConditionUpdater.Update(pod, &v1.PodCondition{
+       Type:    v1.PodScheduled,
+       Status:  v1.ConditionFalse,
+       Reason:  v1.PodReasonUnschedulable,
+       Message: err.Error(),
+   })
    ```
    另外如果调度失败，还会尝试抢占，抢占成功，则继续下面的assume操作。这个有个疑问，上面的Error方法将pod加入到了队列中，如果抢占成功（得到了suggestedHost），那队列中还有一个pod，这不是重新调度吗？（等研究下k8s 1.16再看这个问题）
 
@@ -94,45 +94,45 @@ type SchedulingQueue interface {
 队列的生产者是scheduler的pod informer事件处理器，scheduler注册了两个pod事件处理器，一个用于处理unscheduled pod，一个用于处理scheduled pod，两个事件处理器是通过添加Filter函数实现的，其中作为队列生产者的处理器是unscheduled pod事件处理器。schedulerd pod处理器主要用于更新scheduler缓存。
 下面是代码，`unassignedNonTerminatedPod`用来过滤没有分配的且未结束的pod，`AddFunc`直接添加到队列里（添加到队列之前会检查队列中是否已经存在），`UpdateFunc`最终也调用的add方法，不过update可以有选择的忽略某些事件。此外，前面提到过，一个pod调度失败，也会被重新添加到scheduler的未调度队列。
 ```golang
-	// unscheduled pod queue
-	podInformer.Informer().AddEventHandler(
-		cache.FilteringResourceEventHandler{
-			FilterFunc: func(obj interface{}) bool {
-				switch t := obj.(type) {
-				case *v1.Pod:
-					return unassignedNonTerminatedPod(t)
-				default:
-					runtime.HandleError(fmt.Errorf("unable to handle object in %T: %T", c, obj))
-					return false
+// unscheduled pod queue
+podInformer.Informer().AddEventHandler(
+	cache.FilteringResourceEventHandler{
+		FilterFunc: func(obj interface{}) bool {
+			switch t := obj.(type) {
+			case *v1.Pod:
+				return unassignedNonTerminatedPod(t)
+			default:
+				runtime.HandleError(fmt.Errorf("unable to handle object in %T: %T", c, obj))
+				return false
+			}
+		},
+		Handler: cache.ResourceEventHandlerFuncs{
+			AddFunc: func(obj interface{}) {
+				if err := c.podQueue.Add(obj.(*v1.Pod)); err != nil {
+					runtime.HandleError(fmt.Errorf("unable to queue %T: %v", obj, err))
 				}
 			},
-			Handler: cache.ResourceEventHandlerFuncs{
-				AddFunc: func(obj interface{}) {
-					if err := c.podQueue.Add(obj.(*v1.Pod)); err != nil {
-						runtime.HandleError(fmt.Errorf("unable to queue %T: %v", obj, err))
-					}
-				},
-				UpdateFunc: func(oldObj, newObj interface{}) {
-					pod := newObj.(*v1.Pod)
-					if c.skipPodUpdate(pod) {
-						return
-					}
-					if err := c.podQueue.Update(oldObj.(*v1.Pod), pod); err != nil {
-						runtime.HandleError(fmt.Errorf("unable to update %T: %v", newObj, err))
-					}
-				},
-				DeleteFunc: func(obj interface{}) {
-					pod := obj.(*v1.Pod)
-					if err := c.podQueue.Delete(pod); err != nil {
-						runtime.HandleError(fmt.Errorf("unable to dequeue %T: %v", obj, err))
-					}
-					if c.volumeBinder != nil {
-						// Volume binder only wants to keep unassigned pods
-						c.volumeBinder.DeletePodBindings(pod)
-					}
-				},
+			UpdateFunc: func(oldObj, newObj interface{}) {
+				pod := newObj.(*v1.Pod)
+				if c.skipPodUpdate(pod) {
+					return
+				}
+				if err := c.podQueue.Update(oldObj.(*v1.Pod), pod); err != nil {
+					runtime.HandleError(fmt.Errorf("unable to update %T: %v", newObj, err))
+				}
+			},
+			DeleteFunc: func(obj interface{}) {
+				pod := obj.(*v1.Pod)
+				if err := c.podQueue.Delete(pod); err != nil {
+					runtime.HandleError(fmt.Errorf("unable to dequeue %T: %v", obj, err))
+				}
+				if c.volumeBinder != nil {
+					// Volume binder only wants to keep unassigned pods
+					c.volumeBinder.DeletePodBindings(pod)
+				}
 			},
 		},
-	)
+	},
+)
 ```
 队列的生产者就是scheduler的调度逻辑。即`pod := sched.config.NextPod()`，每次从队列取出一个pod进行调度。
