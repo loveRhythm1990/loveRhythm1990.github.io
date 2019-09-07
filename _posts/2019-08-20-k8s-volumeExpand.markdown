@@ -121,7 +121,7 @@ func NewExpandController(
 * 最后是初始化一个PVCPopulator
 
 ## 分析PVCPopulator
-pvcPopulator这部分应该相对独立，先分析这个。这个数据结构只做了一件事：就是每隔2分钟从apiserver把所有的pvc都拿过来，然后把每个pvc对应的pv也拿过来，然后调用调用resizeMap的AddPVCUpdate方法，参数就是一个pvc以及这个pvc对应的pv。
+pvcPopulator这部分相对独立，先分析这个。这个数据结构只做了一件事：就是每隔2分钟从apiserver把所有的pvc都拿过来，然后把每个pvc对应的pv也拿过来，然后调用调用resizeMap的AddPVCUpdate方法，参数就是一个pvc以及这个pvc对应的pv。
 需要注意的是PVCPopulator没有做任何检查，上面操作获取的都是所有的PVC，检查在AddPVCUpdate方法中做。另外获取pv的时候，拿的是一个深拷贝。
 
 ## SyncVolumeResize
@@ -130,10 +130,19 @@ pvcPopulator这部分应该相对独立，先分析这个。这个数据结构�
 
 	for _, pvcWithResizeRequest := range rc.resizeMap.GetPVCsWithResizeRequest() {
 
-		1. 将pvc的状态设置为 Resizing，这个是通过 更新 pvc的status来实现的，一个细节就是调用UpdateStatus之前，做了一个pvc的deepcopy，这里涉及到一些deepcopy，以后要考虑一下为什么。
+		// 1. 将pvc的状态设置为 Resizing，这个是通过 更新 pvc的status来实现的，一个细节就是调用UpdateStatus之前，做了一个pvc的deepcopy，这里涉及到一些deepcopy，以后要考虑一下为什么。
 
-	    2. 调用operationExecutor的ExpandVolume方法，
+	    // 2. 调用operationExecutor的ExpandVolume方法，对volume进行调整。
 	}
 
 ```
-SyncVolumeResize看上去是resizeMap的消费者，PVCPopulator是resizeMap的生产者。另外，我们之前 
+SyncVolumeResize看上去是resizeMap的消费者，PVCPopulator是resizeMap的生产者。另外，我们之前pvc update事件处理器`UpdateFunc: expc.pvcUpdate`也是resizeMap的生产者。
+
+## ResizeMap缓存
+resizeMap是ExpandController创建并持有的，`	expc.resizeMap = cache.NewVolumeResizeMap(expc.kubeClient)
+`，并将这个resizeMap当做参数传递给SyncVolumeResize以及PVCPopoluator，因此，存在三个可以更新缓存的地方：expandController、PVCPopluator、SyncVolumeResize，前两个是生产者，最后一个是消费者。因为有三个goroutine会访问resizemap所以需要加锁。
+
+另外，resizemap的AddPVCUpdate是需要做资源检查的，只有在Spec.Size比Status.Size大的时候才需要进行扩展。
+
+## 总结
+ExpandOperator的主要流程是这样的，下一步打算介绍OperationExecutor的设计。
