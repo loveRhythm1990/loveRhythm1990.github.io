@@ -1,0 +1,87 @@
+---
+layout:     post
+title:      "k8s中的wait.Until"
+subtitle:   " \"k8s中一些设计模式\""
+date:       2019-09-10 19:48:00
+author:     "weak old dog"
+header-img-credit: false
+tags:
+    - k8s
+    - k8s 设计模式
+---
+
+> 因为理论还没成型，很多知识点看着很零散；理解深度也不够，所以一些硬骨头啃不动。需要一个循序渐进的过程。
+
+k8s代码中有很多这样的调用，一看大概意思就是每隔一段时间就执行一个方法，直到stopChan关闭（或者收到数据）。但是不仔细看一下总觉得有点虚，决定看一下。下面代码取自`pkg/kubelet/kubelet.go`, 启动一个用于kill不需要的pod的goroutine。
+```golang
+// Start a goroutine responsible for killing pods (that are not properly
+// handled by pod workers).
+go wait.Until(kl.podKiller, 1*time.Second, wait.NeverStop)
+```
+首先看这个函数的签名，Until接收三个参数，第一个为一个函数，该函数没有参数，没有返回值；第二个参数为时间，表示周期，第三个是一个用来通知停止执行的通道，类型是struct{}。
+```go
+// Until loops until stop channel is closed, running f every period.
+//
+// Until is syntactic sugar on top of JitterUntil with zero jitter factor and
+// with sliding = true (which means the timer for period starts after the f
+// completes).
+func Until(f func(), period time.Duration, stopCh <-chan struct{}) {
+	JitterUntil(f, period, 0.0, true, stopCh)
+}
+
+```
+看JitterUntil怎么实现的(Jitter是电子信号等的“抖动”，类似于滴答)，JitterUntil多了两个参数：jitterFactor、sliding，分别是浮点类型以及bool类型。这两个参数的默认值是0，以及true，（其中sliding为true表示在执行完函数之后再重新计时，计时时间不包括函数执行时间）。为方便分析，我先将JitterUntill在这两个默认值情况下的执行代码贴出来（即删除了不会执行的if语句），事实上，在k8s代码中大部分都是直接调用上面的wait.Until函数。经过删减的代码逻辑如下：
+
+```go
+func JitterUntil(f func(), period time.Duration, jitterFactor float64, sliding bool, stopCh <-chan struct{}) {
+	var t *time.Timer
+	var sawTimeout bool
+
+        //一个无限循环
+	for {
+                // 每次循环前检查通道是不是可读, 关闭channel或者写入数据都会读成功
+		select {
+		case <-stopCh:
+			return
+		default:
+		}
+
+		jitteredPeriod := period
+
+                // 执行目标函数
+		func() {
+			defer runtime.HandleCrash()
+			f()
+		}()
+
+                // silding为true, 在执行函数之后，重置计时器
+		if sliding {
+			t = resetOrReuseTimer(t, jitteredPeriod, sawTimeout)
+		}
+
+		// NOTE: b/c there is no priority selection in golang
+		// it is possible for this to race, meaning we could
+		// trigger t.C and stopCh, and t.C select falls through.
+		// In order to mitigate we re-check stopCh at the beginning
+		// of every loop to prevent extra executions of f().
+		select {
+		case <-stopCh:
+			return
+		case <-t.C:
+			sawTimeout = true
+		}
+	}
+}
+```
+
+在文章刚开始提到了kubelet.go中的一行代码。在函数的最后一个参数为wait.NeverStop，这个参数的定义在wait.go中。这个参数之所以表示NeverStop是因为他不会被其他goroutine关闭。
+```go
+go wait.Until(kl.podKiller, 1*time.Second, wait.NeverStop)
+```
+NeverStop的声明如下，是一个只读的channel（`NeverStop <- struct{}{}`会报错'send to readonly type <- struct{}'），下面我们来看一下这个channel的生命周期，从上面函数可以看出channel的作用域在wait.Until函数中，而wait.Until又调用了JitterUntil，后者只对这个channel进行了读取操作，这个channel是不会close，又不能写，所以读操作永远会阻塞。所以是NeverStop的。
+```go
+// NeverStop may be passed to Until to make it never stop.
+var NeverStop <-chan struct{} = make(chan struct{})
+```
+
+> tip: b/c在英文中是because的意思，代码最后关于data race的描述没有看懂，目前先了解wait.Until吧，以后慢慢再分析。
