@@ -1,10 +1,10 @@
 # Site settings
-title: An Old Dog 
-SEOTitle: Old Dog | WM
+title: Record and Learning 
+SEOTitle: Blog | WM
 header-img: img/home-bg.jpg
 email: qiuweimin@126.com
-description: "一只老狗 | 很老 | 但是想做点事"
-keyword: "老狗"
+description: "Record | Learning | Live"
+keyword: "OD"
 url: "https://xxx.me"              # your host, for absolute URL
 baseurl: ""                             # for example, '/blog' if your blog hosted on 'host/blog'
 
