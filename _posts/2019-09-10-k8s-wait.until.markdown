@@ -85,3 +85,6 @@ var NeverStop <-chan struct{} = make(chan struct{})
 ```
 
 > tip: b/c在英文中是because的意思，代码最后关于data race的描述没有看懂，目前先了解wait.Until吧，以后慢慢再分析。
+
+## 总结
+所以`go wait.Until(kl.podKiller, 1*time.Second, wait.NeverStop)`的含义就是，先执行一下kl.podKiller，执行完了之后，等一秒钟，再执行一下kl.podKiller，再等一秒钟，...，直到channel close。
