@@ -14,7 +14,11 @@ tags:
 ## 前言
 在我看来，k8s的statefulset控制器，算是controller-manager中比较重要的一个了（是不是最重要的一个呢？），鉴于也是一块硬骨头，只能一点一点啃，能一次写完整是极好的，但是鉴于精力与能力不足，一点点写也是不错的，而且对我自身来说，也是非常有效的。
 
-本文只会介绍Statefulset控制器中核心算法`UpdateStatefulSet`的实现，基于的k8s代码为1.16。
+本文只会介绍Statefulset控制器中核心算法`UpdateStatefulSet`的实现，基于的k8s代码为1.16。所在的代码路径为`pkg\controller\statefulset\stateful_set_control.go`
+
+这个方法的注释的翻译为:
+> UpdateStatefulSet执行sts的核心逻辑，执行可预期的、单调的默认更新策略：扩展的时候是以序号递增的，如果有任何pod处于不健康的状态，新pod是不会创建的；pod终止的时候是降序的。在burst strategy模式下，这些约束有所放松：pod的创建以及删除都非常eagerly，并且无序，使用burst strategy模式的client应该知道有不可预期的可用的pod所带来的影响。
+
 
 ## 算法实现
 ```golang
