@@ -33,10 +33,7 @@ nodeSelector是推荐使用的较为简单的影响pod调度到node的一种方�
 `kubectl label nodes <node-name> <label-key>=<label-value>`
 
 可以给node打上特定类型的标签，比如你想给node01打上`disktype=ssd`的标签，需要执行的命令为：
-
-`kubectl label nodes node01 disktype=ssd`
-
-打上标签之后，可以通过命令`kubectl get nodes --show-labels`以及命令`kubectl describe node node01`来确认node的标签。
+`kubectl label nodes node01 disktype=ssd` 打上标签之后，可以通过命令`kubectl get nodes --show-labels`以及命令`kubectl describe node node01`来确认node的标签。
 
 ### step 2: 在pod的spec中设置nodeSelector
 我们很少单独定义一个pod的yaml文件，一般是通过控制器来定义pod的template，总之方式都是一样的，假如我有一个pod的yaml，设置nodeSelector的方式如下：
@@ -87,8 +84,7 @@ nodeSelector提供了一种简单的将pod调度到node上的方式，`affinity/
 ##### Node affinity
 Node affinity在概念上跟nodeSelector上一致，它同样根据node的标签，来约束哪些pod可以调度到该node上。目前有两类node affinity，分别为：
 
-`requiredDuringSchedulingIgnoredDuringExecution`
-
+`requiredDuringSchedulingIgnoredDuringExecution`  
 `preferredDuringSchedulingIgnoredDuringExecution`
 
 你可以将他们分别看做`硬性`以及`非硬性`约束，第一个约束指定pod调度到node的硬性条件（类似nodeSelector，但是语法上更宽泛一些），第二个约束提供一个`preference`，并不是强制规定。`IgnoredDuringExecution`部分跟nodeSelector类似，当一个pod已经在node上运行了，但是node标签变了，已经不满足nodeSelector约束条件了，pod仍然继续运行。
@@ -137,10 +133,64 @@ spec:
 
 > Pod `anti-affinity`需要所有的node都打上标签`topologyKey`，没有这个标签会产生不可预期的行为。
 
+`topologyKey`的概念一直没讲清楚，文档说这个用来表示一种拓扑结构，比如：节点、机架、云供应商的zone或者region。
 跟node affinity一致，pod affinity以及anti-affinity也分为`hard`, `soft`两类，（各分两类）：
-
-`requiredDuringSchedulingIgnoredDuringExecution`
-
+`requiredDuringSchedulingIgnoredDuringExecution`  
 `preferredDuringSchedulingIgnoredDuringExecution`
 
-Inter-pod affinity跟node affinity差不多，具体啃文档吧。
+下面是一个使用pod affinity的例子，注意缩进表示的golang数据结构组合关系，`-` 符号表示数组的一项。
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: with-pod-affinity
+spec:
+  affinity:
+    podAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+         matchExpressions:
+         - key: security
+           operator: In
+           values:
+           - S1
+        topologyKey: failuredomain.beta.kubernetes.io/zone
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+            - key: security
+              operator: In
+              values:
+              - S2
+          topologyKey: failuredomain.beta.kubernetes.io/zone
+containers:
+- name: with-pod-affinity
+image: k8s.gcr.io/pause:2.0
+```
+这个例子定义了一个pod affinity规则，以及一个pod anti-affinity规则，第一个规则定义为：pod对node的要求是，node上面至少有个正在运行的其他pod，并且这个pod含有标签`security=S1`，并且node含有标签`failure-domain.beta.kubernetes.io/zone`（关于这点，我理解的也不清楚，只能等以后结合具体实例看一下了）
+
+## 实际用例
+Interpod Affinity 以及 AntiAffinity在ReplicaSets、StatefulSets、以及Deployment中用处更大一些。比如，假如我们起了三个redis作为内存缓存，分布在三个节点；同时我们希望起三个web-server，每个web-server都跟一个redis在同一个节点。这里有两个需求：1）三个pod分布在三个节点；2）另外三个pod实例web-server希望依附于之前三个redis实例。
+
+关于第一个需求：使用pod anti-affinity实现，首先template中先给pod打一个`app=store`的标签，其次利用podAntiAffinity的requiredDuringSchedulingIgnoredDuringExecution配置拥有app=store标签的pod互斥，这个是强制规定，配置如下：
+```yaml
+template:
+  metadata:
+    labels:
+      app: store
+spec:
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+        matchExpressions:
+        - key: app
+          operator: In
+          values:
+          - store
+        topologyKey: "kubernetes.io/hostname"
+```
+关于第二个需求：首先配置podAntiAffinity的requiredDuringSchedulingIgnoredDuringExecution来保证三个web-server互斥，跟上面的redis配置一致；其次配置podAffinity的requiredDuringSchedulingIgnoredDuringExecution要求节点运行了redis（要求节点含有有标签`app=store`的pod），配置就不贴了。
