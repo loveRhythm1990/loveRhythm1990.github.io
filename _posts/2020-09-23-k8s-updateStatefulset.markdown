@@ -7,7 +7,7 @@ author:     "weak old dog"
 header-img-credit: false
 tags:
     - k8s
-    - Statefulset
+    - statefulset
 ---
 
 
