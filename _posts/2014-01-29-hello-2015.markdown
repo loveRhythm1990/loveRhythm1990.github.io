@@ -76,3 +76,9 @@ Theme 的 CSS 是基于 Bootstrap 定制的，看得不爽的地方直接在 Les
 如果你恰好逛到了这里，希望你也能喜欢这个博客主题。
 
 —— Hux 后记于 2015.10
+
+ 下面是reference的模板，保留黄大侠的一个，以后参考。
+
+- [Service Worker 101][1] · GDG DevFest 北京 2016
+
+[1]: //huangxuan.me/2016/11/20/sw-101-gdgdf/

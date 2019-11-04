@@ -15,14 +15,9 @@ multilingual: true
 
 <!-- Chinese Version -->
 <div class="zh post-container">
-    {% capture about_zh %}{% include about/zh.md %}{% endcapture %}
+    {% capture about_zh %}{% include about/zh_new.md %}{% endcapture %}
     {{ about_zh | markdownify }}
 </div>
-
-
-<!-- Valine 评论框 start -->
-<div class="comment"></div>
-<!-- Valine 评论框 end -->
 
 <!--载入js，在</body>之前插入即可-->
 <script src="https://cdnjs.cat.net/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
