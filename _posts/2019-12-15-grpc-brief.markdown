@@ -93,7 +93,7 @@ func RegisterGreeterServer(s *grpc.Server, srv GreeterServer) {
 ```
 
 ### 附录：
-开局一张图，内容全靠抄，gRPC技术栈
+开局一张图，内容全靠抄，[gRPC技术栈](https://chai2010.cn/advanced-go-programming-book/ch4-rpc/ch4-04-grpc.html)
 ![java-javascript](/img/in-post/grpc/grpc-go-stack.png){:height="60%" width="60%"}
 
 最底层为TCP或Unix Socket协议，在此之上是HTTP/2协议的实现，然后在HTTP/2协议之上又构建了针对Go语言的gRPC核心库。应用程序通过gRPC插件生产的Stub代码和gRPC核心库通信，也可以直接和gRPC核心库通信。
