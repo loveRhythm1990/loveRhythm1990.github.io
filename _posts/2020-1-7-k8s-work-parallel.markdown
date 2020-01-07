@@ -77,4 +77,4 @@ func Parallelize(workers, pieces int, doWorkPiece DoWorkPieceFunc) {
 	wg.Wait()
 }
 ```
-在上面代码中，goroutine是不会阻塞的，任务处理完了就退出。
+在上面代码中，goroutine是不会阻塞的，任务处理完了就退出。然而如果不调用`close(toProcess)`，情况就不一样了，在不调用close的情况下，所有的goroutine在拿不到任务时都会阻塞，整个Parallelize函数也永远不会退出。
