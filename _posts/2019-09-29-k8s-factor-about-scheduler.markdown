@@ -172,6 +172,12 @@ image: k8s.gcr.io/pause:2.0
 ```
 这个例子定义了一个pod affinity规则，以及一个pod anti-affinity规则，第一个规则定义为：pod对node的要求是，node上面至少有个正在运行的其他pod，并且这个pod含有标签`security=S1`，并且node含有标签`failure-domain.beta.kubernetes.io/zone`（关于这点，我理解的也不清楚，只能等以后结合具体实例看一下了）
 
+### 关于topology key
+关于Affinity以及AntiAffinity中的`PodAffinityTerm`代码中有这样一段注释，
+>  Defines a set of pods (namely those matching the labelSelector relative to the given namespace(s)) that this pod should be co-located (affinity) or not co-located (anti-affinity) with, where co-located is defined as running on a node whose value of the label with key topologyKey matches that of any node on which a pod of the set of pods is running
+
+这段注释中解释了topologyKey的含义，首先，在`PodAffinityTerm`中定义的topologyKey指的是node的一个label，这个label以及label的value，指定了这个node的拓扑结构，如果可以指定在同一个机架上，所有node的含有这个topologyKey label，并且这个label的value是相同的。AntiAffinity以及Affinity的`co-located`，即共存或者不共存，指的是在这个**topology**中共存不共存，默认情况下，这个key是`kubernetes.io/hostname`，volue是hostname，在这种情况下比较简单，就是指pod能不能共存在一个node上。
+
 ## 实际用例
 Interpod Affinity 以及 AntiAffinity在ReplicaSets、StatefulSets、以及Deployment中用处更大一些。比如，假如我们起了三个redis作为内存缓存，分布在三个节点；同时我们希望起三个web-server，每个web-server都跟一个redis在同一个节点。这里有两个需求：1）三个pod分布在三个节点；2）另外三个pod实例web-server希望依附于之前三个redis实例。
 
