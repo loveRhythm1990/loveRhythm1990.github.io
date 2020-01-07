@@ -7,7 +7,7 @@ author:     "weak old dog"
 header-img-credit: false
 tags:
     - k8s
-    - k8s 设计模式
+    - k8s设计模式
 ---
 
 > 因为理论还没成型，很多知识点看着很零散；理解深度也不够，所以一些硬骨头啃不动。需要一个循序渐进的过程。
