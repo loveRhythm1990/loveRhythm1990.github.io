@@ -6,7 +6,7 @@ date:       2020-2-21 17:06:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - 算法
+    - leetcode
 ---
 
 leetcode题目：
