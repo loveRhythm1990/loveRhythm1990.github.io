@@ -1,7 +1,6 @@
 ---
 layout:     post
 title:      "go delete 阅读笔记"
-subtitle:   " \"综述\""
 date:       2020-2-20 23:33:00
 author:     "weak old dog"
 header-img-credit: false

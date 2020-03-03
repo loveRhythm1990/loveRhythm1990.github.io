@@ -1,7 +1,6 @@
 ---
 layout:     post
 title:      "golang寄存器相关[入门]"
-subtitle:   " \"helloworld\""
 date:       2019-12-29 21:40:00
 author:     "weak old dog"
 header-img-credit: false

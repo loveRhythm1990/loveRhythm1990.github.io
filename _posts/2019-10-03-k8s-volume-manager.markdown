@@ -1,7 +1,6 @@
 ---
 layout:     post
 title:      "Kubelet volume manager"
-subtitle:   " \"概述\""
 date:       2019-10-04 19:16:00
 author:     "weak old dog"
 header-img-credit: false

@@ -1,7 +1,6 @@
 ---
 layout:     post
 title:      "golang memory"
-subtitle:   " \"综述\""
 date:       2020-2-9 18:51:00
 author:     "weak old dog"
 header-img-credit: false

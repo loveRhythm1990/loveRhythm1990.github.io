@@ -1,7 +1,6 @@
 ---
 layout:     post
 title:      "k8s scheduler framework概述"
-subtitle:   " \"\""
 date:       2020-02-22 16:36:00
 author:     "weak old dog"
 header-img-credit: false

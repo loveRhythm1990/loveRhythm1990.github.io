@@ -1,7 +1,6 @@
 ---
 layout:     post
 title:      "golang中的生产者消费者"
-subtitle:   " \"channel生产者消费者模型\""
 date:       2020-1-10 21:29:00
 author:     "weak old dog"
 header-img-credit: false

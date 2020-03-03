@@ -1,7 +1,6 @@
 ---
 layout:     post
 title:      "结构体与结构体指针的方法集"
-subtitle:   " \"简介\""
 date:       2019-09-18 22:32:00
 author:     "weak old dog"
 header-img-credit: false

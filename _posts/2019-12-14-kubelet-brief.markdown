@@ -1,7 +1,6 @@
 ---
 layout:     post
 title:      "kubelet概述"
-subtitle:   " \"kubelet要做的事情\""
 date:       2019-12-14 7:54:00
 author:     "weak old dog"
 header-img-credit: false

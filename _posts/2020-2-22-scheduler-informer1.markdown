@@ -1,7 +1,6 @@
 ---
 layout:     post
 title:      "k8s informer工作流程 1"
-subtitle:   " \"概述\""
 date:       2020-02-25 11:50:00
 author:     "weak old dog"
 header-img-credit: false

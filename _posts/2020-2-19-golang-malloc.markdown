@@ -1,7 +1,6 @@
 ---
 layout:     post
 title:      "golang 源码概述"
-subtitle:   " \"综述\""
 date:       2020-2-19 18:07:00
 author:     "weak old dog"
 header-img-credit: false

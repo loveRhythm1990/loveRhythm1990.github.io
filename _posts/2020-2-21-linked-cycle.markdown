@@ -1,7 +1,6 @@
 ---
 layout:     post
 title:      "环形链表"
-subtitle:   " \"综述\""
 date:       2020-2-21 17:06:00
 author:     "weak old dog"
 header-img-credit: false

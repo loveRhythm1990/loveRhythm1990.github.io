@@ -1,7 +1,6 @@
 ---
 layout:     post
 title:      "最长回文子串"
-subtitle:   " \"综述\""
 date:       2020-2-20 15:55:00
 author:     "weak old dog"
 header-img-credit: false

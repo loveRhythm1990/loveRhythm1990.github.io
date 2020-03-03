@@ -1,7 +1,6 @@
 ---
 layout:     post
 title:      "golang内存逃逸分析"
-subtitle:   " \"现象\""
 date:       2020-1-10 17:03:00
 author:     "weak old dog"
 header-img-credit: false

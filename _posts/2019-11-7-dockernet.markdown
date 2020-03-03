@@ -1,7 +1,6 @@
 ---
 layout:     post
 title:      "单机容器网络配置"
-subtitle:   " \"单机容器网络配置\""
 date:       2019-11-7 8:24:00
 author:     "weak old dog"
 header-img-credit: false

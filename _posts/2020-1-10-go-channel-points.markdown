@@ -1,7 +1,6 @@
 ---
 layout:     post
 title:      "golang中channel知识点"
-subtitle:   " \"channel\""
 date:       2020-1-10 21:29:00
 author:     "weak old dog"
 header-img-credit: false
