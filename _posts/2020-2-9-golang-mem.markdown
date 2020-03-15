@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "golang memory"
+title:      "golang memory[翻译]"
 date:       2020-2-9 18:51:00
 author:     "weak old dog"
 header-img-credit: false
@@ -14,14 +14,14 @@ tags:
 
 ### 理解VSZ与RSS
 以下面为例，VSZ以及RSS的单位都是`KB`：
-```bash
+```sh
 root@z-Latitude:~# ps -u --pid 4435
 USER       PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
 root      4435  0.0  0.0 308680  5200 pts/0    Sl   18:27   0:00 /tmp/___go_build_mem_go
 ```
 首先是`VSZ`，全称是`Virtual Memory Size`，包括进程能访问的所有内存，也包括被swap到硬盘上的内存，包括已经被分配但是没有被使用的内存，也包括加载了动态链接库（shared libraries）的内存。
 
-其次是`RSS`，全称是`Resident Set Size`，包括在内存中的，进程已经分配的内存，不包括swap到硬盘上的内存，也包括加载的动态链接库的内存，包括进程分配的堆内存以及栈内存。因为RSS包括了动态链接库的内存，所以所有进程的RSS值加起来会超过系统的内存总值。同时，已经分配但是没有使用的内存，可能并不在RSS中，等到这部分内存被使用时才统计。因此如果你申请了一大块内存，并且逐步使用的时候，会发现RSS值在一直上升，但是VSZ值不变。
+其次是`RSS`，全称是`Resident Set Size`，包括在内存中的，进程已经使用的内存，不包括swap到硬盘上的内存，也包括加载的动态链接库的内存，包括进程分配的堆内存以及栈内存。因为RSS包括了动态链接库的内存，所以所有进程的RSS值加起来会超过系统的内存总值。*同时，已经分配但是没有使用的内存，可能并不在RSS中，等到这部分内存被使用时才统计*。因此如果你申请了一大块内存，并且逐步使用的时候，会发现RSS值在一直上升，但是VSZ值不变。
 
 动态链接库是不包含在进程的可执行文件（ELF文件）中的，ELF文件中仅包括这个动态链接库的名字，在运行期间会寻找动态库并加载它。默认情况下，系统在/lib和/usr/lib文件夹下寻找动态库，找不到就报错，也可以设置环境变量`LD_LIBRARY_PATH`指定目录。
 

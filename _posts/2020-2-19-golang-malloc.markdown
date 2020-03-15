@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "golang 源码概述"
+title:      "golang内存相关源码"
 date:       2020-2-19 18:07:00
 author:     "weak old dog"
 header-img-credit: false
@@ -51,63 +51,14 @@ mspan中的空闲对象slot只有在`mspan.needzero`的值为false时才被`zero
 3. We don't zero pages that never get reused.
 
 ### 关键数据结构
+**mspan**:内存管理基本单位
 **mcache**: per-P cache，可以认为是 local cache。
 **mcentral**: 全局 cache，mcache 不够用的时候向 mcentral 申请。
 **mheap**: 当 mcentral 也不够用的时候，通过 mheap 向操作系统申请。
 
 可以将其看成多级内存分配器。
 
-#### mcache
-每个 Gorontine 的运行都是绑定到一个 P 上面，mcache 是每个 P 的 cache。这么做的好处是分配内存时不需要加锁。mcache 结构如下。mcache源代码在`go/src/runtime/mcache.go`
-```golang
-// 线程(in Go, per-P)私有的内存空间， for small objects（大对象直接从heap中分配）.
-// 因为是线程私有的，所以不需要加锁
-//
-// mcaches are allocated from non-GC'd memory, so any heap pointers
-// must be specially handled.
-//
-//go:notinheap
-type mcache struct {
-	// 下面field在每次内存申请时都会被访问到,
-	// so they are grouped here for better caching.
-	next_sample int32   // trigger heap sample after allocating this many bytes
-	local_scan  uintptr // bytes of scannable heap allocated
-
-	// Allocator cache for tiny objects w/o pointers.
-	// 参考malloc.go文件中的"Tiny allocator" 注释.
-
-	// tiny points to the beginning of the current tiny block, or
-	// nil if there is no current tiny block.
-	//
-	// tiny is a heap pointer. Since mcache is in non-GC'd memory,
-	// we handle it by clearing it in releaseAll during mark
-	// termination.
-	// tiny是指向当前tiny block的指针
-	// 这里说mcache是non-GC memory
-	tiny             uintptr
-	tinyoffset       uintptr
-	local_tinyallocs uintptr // number of tiny allocs not counted in other stats
-
-	// The rest is not accessed on every malloc.
-
-	// 这些是用来分配的span空间
-	alloc [numSpanClasses]*mspan // spans to allocate from, indexed by spanClass
-
-	stackcache [_NumStackOrders]stackfreelist
-
-	// Local allocator stats, flushed during GC.
-	local_nlookup    uintptr                  // number of pointer lookups
-	local_largefree  uintptr                  // bytes freed for large objects (>maxsmallsize)
-	local_nlargefree uintptr                  // number of frees for large objects (>maxsmallsize)
-	local_nsmallfree [_NumSizeClasses]uintptr // number of frees for small objects (<=maxsmallsize)
-}
-```
-上面代码中提到了`Tiny allocator`，也稍作翻译一下吧
-> Tiny allocator. Tiny allocator将多个tiny存储请求合并为一个单独的memory block，这个memory block会在其中所有的tiny object（称为subobject）都不能访问到时（unreachable）被释放，这些subobject必须是`noscan`（不包含指针的），这样保证了可能浪费的内存是有限的。 用来合并的subobject的大小是可调的，参数是`maxTinySize`，目前是16bytes，16bytes会导致2x的最坏的内存浪费（当一个memory block中只有一个subobject能被访问到时），8bytes不会导致内存浪费，但是减少了内存合并的可能性，32byte提供了合并的更大的可能性，但是会导致最大4x的内存浪费，（**这个地方不是很懂**）。 Objects obtained from tiny allocator must not be freed explicitly. So when an object will be freed explicitly, we ensure that its size >= maxTinySize. tiny allocator的主要目标是小字符串，以及一些单独的逃逸变量，在json bench基准脚本中，这个allocator减少了～12%的内存申请，以及~20%的heap大小。
-
-下面看`alloc [numSpanClasses]*mspan`，这里`numSpanClasses`等于`67<<1`，这是一个指针数组，每个数组的元素是指向mspan类型的指针。不同的大小都使用了`mspan`这个结构体，那么其应该记录了当前span对应的object大小。下面看mspan
-
-### mspan
+#### mspan
 mspan的源代码在`src/runtime/mheap.go`中。
 ```go
 type mspan struct {
@@ -200,3 +151,55 @@ type mspan struct {
 	specials    *special   // linked list of special records sorted by offset.
 }
 ```
+
+
+#### mcache
+每个 Gorontine 的运行都是绑定到一个 P 上面，mcache 是每个 P 的 cache。这么做的好处是分配内存时不需要加锁。mcache 结构如下。mcache源代码在`go/src/runtime/mcache.go`
+```golang
+// 线程(in Go, per-P)私有的内存空间， for small objects（大对象直接从heap中分配）.
+// 因为是线程私有的，所以不需要加锁
+//
+// mcaches are allocated from non-GC'd memory, so any heap pointers
+// must be specially handled.
+//
+//go:notinheap
+type mcache struct {
+	// 下面field在每次内存申请时都会被访问到,
+	// so they are grouped here for better caching.
+	next_sample int32   // trigger heap sample after allocating this many bytes
+	local_scan  uintptr // bytes of scannable heap allocated
+
+	// Allocator cache for tiny objects w/o pointers.
+	// 参考malloc.go文件中的"Tiny allocator" 注释.
+
+	// tiny points to the beginning of the current tiny block, or
+	// nil if there is no current tiny block.
+	//
+	// tiny is a heap pointer. Since mcache is in non-GC'd memory,
+	// we handle it by clearing it in releaseAll during mark
+	// termination.
+	// tiny是指向当前tiny block的指针
+	// 这里说mcache是non-GC memory
+	tiny             uintptr
+	tinyoffset       uintptr
+	local_tinyallocs uintptr // number of tiny allocs not counted in other stats
+
+	// The rest is not accessed on every malloc.
+
+	// 这些是用来分配的span空间
+	alloc [numSpanClasses]*mspan // spans to allocate from, indexed by spanClass
+
+	stackcache [_NumStackOrders]stackfreelist
+
+	// Local allocator stats, flushed during GC.
+	local_nlookup    uintptr                  // number of pointer lookups
+	local_largefree  uintptr                  // bytes freed for large objects (>maxsmallsize)
+	local_nlargefree uintptr                  // number of frees for large objects (>maxsmallsize)
+	local_nsmallfree [_NumSizeClasses]uintptr // number of frees for small objects (<=maxsmallsize)
+}
+```
+上面代码中提到了`Tiny allocator`，也稍作翻译一下吧
+> Tiny allocator. Tiny allocator将多个tiny存储请求合并为一个单独的memory block，这个memory block会在其中所有的tiny object（称为subobject）都不能访问到时（unreachable）被释放，这些subobject必须是`noscan`（不包含指针的），这样保证了可能浪费的内存是有限的。 用来合并的subobject的大小是可调的，参数是`maxTinySize`，目前是16bytes，16bytes会导致2x的最坏的内存浪费（当一个memory block中只有一个subobject能被访问到时），8bytes不会导致内存浪费，但是减少了内存合并的可能性，32byte提供了合并的更大的可能性，但是会导致最大4x的内存浪费，（**这个地方不是很懂**）。 Objects obtained from tiny allocator must not be freed explicitly. So when an object will be freed explicitly, we ensure that its size >= maxTinySize. tiny allocator的主要目标是小字符串，以及一些单独的逃逸变量，在json bench基准脚本中，这个allocator减少了～12%的内存申请，以及~20%的heap大小。
+
+下面看`alloc [numSpanClasses]*mspan`，这里`numSpanClasses`等于`67<<1`，这是一个指针数组，每个数组的元素是指向mspan类型的指针。不同的大小都使用了`mspan`这个结构体，那么其应该记录了当前span对应的object大小。下面看mspan
+
