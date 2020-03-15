@@ -197,3 +197,5 @@ SCHED 2002ms: gomaxprocs=4 idleprocs=0 threads=23 spinningthreads=0 idlethreads=
 [鸟窝 Go 调度器: M, P 和 G](https://colobu.com/2017/05/04/go-scheduler/)
 
 [鸟窝 Golang调度器源码分析](https://colobu.com/2017/05/04/golang-runtime-scheduler/)
+
+[深入golang runtime的调度](https://zboya.github.io/post/go_scheduler/)
