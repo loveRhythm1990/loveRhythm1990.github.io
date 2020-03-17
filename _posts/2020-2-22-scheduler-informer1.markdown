@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "k8s informer工作流程 1"
+title:      "k8s informer工作流程"
 date:       2020-02-25 11:50:00
 author:     "weak old dog"
 header-img-credit: false
@@ -315,3 +315,25 @@ func (s *sharedIndexInformer) HandleDeltas(obj interface{}) error {
 关于SharedInformerFactory，一个SharedInformer的工厂模式，生成特定资源的informer，以k8s scheduler的configFactory为例
 
 ![java-javascript](/img/in-post/informer/Picture4.png)
+
+
+#### watch是怎么实现的
+HTTP/1.1则规定所有连接都必须是持久的，除非显式地在头部加上Connection: close，另外HTTP/1.1支持分块编码机制，在头部加入Transfer-Encoding: chunked 之后，就代表这个报文采用了分块编码，在分块编码传输中，每次发送数据之前会先发送数据的长度，然后再发送数据，如果发送的数据长度为0，就表示这次传输结束了。
+
+那watch机制也是靠这个实现的。具体来说，就是watch api与apiserver维持一个长连接，apiserver在一次发送数据之前先发送数据长度。apiserver中的代码大致是如此的，但是没有具体研究。
+
+k8s中WatchServer的目录文件`kubernetes/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/watch.go`，里面有如下代码：
+```go
+	// begin the stream
+	w.Header().Set("Content-Type", s.MediaType)
+	w.Header().Set("Transfer-Encoding", "chunked")
+	w.WriteHeader(http.StatusOK)
+```
+
+参考：
+
+[HTTP 协议中的 Transfer-Encoding](https://imququ.com/post/transfer-encoding-header-in-http.html)
+
+[理解 K8S 的设计精髓之 list-watch](http://wsfdl.com/kubernetes/2019/01/10/list_watch_in_k8s.html)
+
+[http chunked和Trailer](https://blog.evanshao.com/posts/42134/)

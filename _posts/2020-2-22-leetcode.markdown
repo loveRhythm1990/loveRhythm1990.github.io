@@ -86,3 +86,138 @@ func search2(nums []int, target int) int {
 	return -1
 }
 ```
+
+
+### [211. 添加与搜索单词 - 数据结构设计](https://leetcode-cn.com/problems/add-and-search-word-data-structure-design/)
+设计一个支持以下两种操作的数据结构：
+```s
+void addWord(word)
+bool search(word)
+```
+search(word) 可以搜索文字或正则表达式字符串，字符串只包含字母 . 或 a-z 。 . 可以表示任何一个字母。
+
+示例:
+```s
+addWord("bad")
+addWord("dad")
+addWord("mad")
+search("pad") -> false
+search("bad") -> true
+search(".ad") -> true
+search("b..") -> true
+```
+说明:
+
+你可以假设所有单词都是由小写字母 a-z 组成的。
+
+这个题考虑到的解法是用trie树，即字典树，在trie树中，每个节点表示一个word中的一个字符，在word结尾的那个节点存放该word，表示有这么一个word存在，在trie树中，有多少个不同的字符一个节点就有多少个孩子，查找时，从根节点向孩子节点依次查找每个字符。添加word时也是依次添加的，如果遇到孩子节点为nil，是需要create一个的。
+
+另外在go语言中，结构体是不能嵌套结构体自身的，否则在初始化的时候会无限递归，嵌套指针是可以的。
+
+代码如下，可能不是最优的，只记录思路，日后可以优化一下，
+```go
+// implements trie tree by golang
+type WordDictionary struct {
+	root *trieNode
+}
+
+type trieNode struct {
+	children [27]*trieNode
+	// contains a string ?
+	str string
+}
+
+/** Initialize your data structure here. */
+func Constructor() WordDictionary {
+	return WordDictionary{&trieNode{}}
+}
+
+/** Adds a word into the data structure. */
+func (this *WordDictionary) AddWord(word string) {
+	this.addToChild(word, this.root)
+}
+
+// add character into root's children
+func (this *WordDictionary) addToChild(word string, root *trieNode) {
+	bs := []byte(word)
+
+	parent := root
+	for _, c := range bs {
+		// get index
+		index := 0
+		if c == '.' {
+			index = 26
+		} else {
+			index = int(c - 'a')
+		}
+
+		if parent.children[index] == nil {
+			// create this child
+			child := &trieNode{}
+			parent.children[index] = child
+
+			// dfs
+			parent = child
+		} else {
+			parent = parent.children[index]
+		}
+	}
+
+	parent.str = word
+}
+
+/** Returns if the word is in the data structure. A word could contain the dot character '.' to represent any one letter. */
+func (this *WordDictionary) Search(word string) bool {
+	if this.searchFromChildren(word, this.root) {
+		return true
+	}
+	return false
+}
+
+func (this *WordDictionary) searchFromChildren(word string, node *trieNode) bool {
+	bs := []byte(word)
+
+	parent := node
+	for i := 0; i < len(bs); i++ {
+
+		// bs[i] is the character should to search in child (children) node
+		if bs[i] == '.' {
+			// find rest word in all children
+			for _, n := range parent.children {
+				if n == nil {
+					continue
+				}
+				// check the last character
+				if i == len(bs) - 1 {
+					if len(n.str) != 0 {
+						return true
+					}
+				}
+
+				if this.searchFromChildren(word[i+1:], n) {
+					return true
+				}
+			}
+			return false
+		} else {
+			// child index should search
+			index := bs[i] - 'a'
+			if parent.children[index] == nil {
+				// child is nil, search failure
+				return false
+			}
+
+			// check whether last node contains word
+			if i == len(bs) - 1 {
+				if len(parent.children[index].str) == 0 {
+					return false
+				}
+				return true
+			}
+
+			return this.searchFromChildren(word[i+1:], parent.children[index])
+		}
+	}
+	return false
+}
+```
