@@ -221,3 +221,64 @@ func (this *WordDictionary) searchFromChildren(word string, node *trieNode) bool
 	return false
 }
 ```
+
+### 寻找数组中最大的k个数
+很多题目使用优先级队列实现，这里写一个使用golang实现优先级队列的范例。golang中有堆的实现，可以用来实现优先级队列。对于**最大**的k个数，要使用**最小堆**来实现，在最小堆中，数组的第一个元素是最小的值，每次拿当前值跟这个最小的值比较，如果比最小值大，就把最小的值pop出来，把当前值放进去。
+
+关于最小堆MinHeap有如下特点：
+
+* 堆顶元素是最小值，即在minHeap[0]位置。
+* 堆内部的[]int本身不是有序的，只有使用pop操作让元素依次出队列时才是有序的。
+
+另外使用heap还需要注意以下两点：
+* 访问最大或最小元素时，以及进行长度判断时，要使用heap结构，即强制转换后的结构，因为heap操作包含对slice数据结构的修改
+* heap package包含了对结构的调整，它知道最大或者最小元素在哪，所以我们只需要在pop时，删除最后一个元素（heap在调用我们的pop时，已经将第一个元素同最后一个元素交换），以及在push时，将元素添加到末尾。
+
+代码如下：
+```go
+// int[0] is min value
+type MinHeap []int
+
+func (minHeap MinHeap) Len() int {
+	return len(minHeap)
+}
+
+func (minHeap MinHeap) Less(i, j int) bool {
+	return minHeap[i] < minHeap[j]
+}
+
+func (minHeap MinHeap) Swap(i, j int) {
+	minHeap[i], minHeap[j] = minHeap[j], minHeap[i]
+}
+
+func (minHeap *MinHeap) Pop() interface{} {
+	x := (*minHeap)[len(*minHeap)-1]
+	*minHeap = (*minHeap)[0 : len(*minHeap)-1]
+	return x
+}
+
+func (minHeap *MinHeap) Push(e interface{}) {
+	*minHeap = append(*minHeap, e.(int))
+}
+
+func main() {
+	fmt.Println(findMaxKElement([]int{121, 14, 46, 9, 5, 10}, 3))
+}
+
+func findMaxKElement(a []int, k int) []int {
+	mh := make([]int,0)
+	mHeap := MinHeap(mh)
+	for i := 0; i < k; i++ {
+		heap.Push(&mHeap, a[i])
+	}
+
+	for i := k; i < len(a); i++ {
+		if a[i] > mHeap[0] {
+			heap.Pop(&mHeap)
+			heap.Push(&mHeap, a[i])
+		}
+	}
+	return mHeap
+}
+
+```
