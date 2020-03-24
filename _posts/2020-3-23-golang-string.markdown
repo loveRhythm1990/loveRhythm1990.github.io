@@ -127,6 +127,7 @@ b.WriteString("abc")
 b.WriteString("efd")
 str := b.String()
 ```
+
 大概翻了一下strings.Builder的实现，就是持有一个[\]byte的缓存，每次写操作就是对这个[\]byte执行append操作。如果空间不够了就执行grow，这个grow好像跟[]byte内部的grow区别也不大，就是增大为2倍(还有额外的n个空间)，主要代码如下：
 ```go
 // A Builder is used to efficiently build a string using Write methods.
