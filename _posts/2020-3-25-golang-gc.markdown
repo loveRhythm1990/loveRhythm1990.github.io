@@ -20,7 +20,7 @@ tags:
 为了打开写屏障，每个应用的goroutine都必须停下来，这个过程会很快，大概10-30微秒（microsecond）。让所有goroutine都能安全的停下来的方法是等待其发起函数调用，（这个应该是发起函数调用的时候，上下文比较容易保存），如果goroutine不发起函数调用呢？比如在执行一个无限for循环，这种情况下比较糟糕，执行for循环的这个goroutine不停下来，其他goroutine都停下来了，并且在等着它。这个跟golang调度器的抢占类似，只有在goroutine执行函数调用的时候才可以抢占。**在golang 1.14中实现了基于信号量的抢占**，这个参考文献中给出了一个链接，有空研究一下。
 
 #### Marking - Concurrent
-当打开写屏障之后，收集器开始执行Marking。此时收集器的第一件任务是占用20%的cpu资源，收集器与应用goroutine使用同样的P/M资源，现在它要占用原来的25%的P/M。Marking阶段就是要标记heap中所有正在使用的object。大概是这样工作的：查找所有存在的goroutine的stack、全局变量，找root object（find root pointers to heap memory）；接下来收集器根据这些root object遍历heap中的object（能找到的就算是还在用）。
+当打开写屏障之后，收集器开始执行Marking。此时收集器的第一件任务是占用20%的cpu资源，收集器与应用goroutine使用同样的P/M资源，现在它要占用原来的25%的P/M。Marking阶段就是要标记heap中所有正在使用的object。大概是这样工作的：查找所有存在的goroutine的stack，找root object（find root pointers to heap memory）；接下来收集器根据这些root object遍历heap中的object（能找到的就算是还在用）。
 
 刚刚提到了收集器会占用25%的P/M来进行标记Marking，那么在标记阶段，其他的应用goroutine仍然是在运行的，这些应用goroutine占用了剩下的P/M，这里说的就是并发标记，因为收集器占用了25%的PM，所以性能还是有影响的，但是影响有限。
 
@@ -29,7 +29,7 @@ tags:
 当收集器决定它需要去停止内存分配的时候，它会征用（recruit）部分应用goroutine来协助标记工作，这个叫做`Marking Assist`，应用goroutine被征用来执行Marking Assist的时间跟它向heap中写入的数据量有关。Marking Assist有利的一方面是它加快了标记的速度。没有被征用的goroutine继续执行应用业务。收集器的一个优化目标就是减少Marking Assist goroutine的数量，如果上次垃圾收集过程中，征用了大量goroutine，那么下次垃圾收集会提早开始。
 
 #### Mark Termination - STW
-标记工作完成之后，下一个阶段就是Mark Termination。这个过程是Write Barrier被关闭，各种（various）清理工作开始执行，并且计算下次垃圾收集的目标。这个阶段是需要STW的，大概需要60-90微秒，Ardan labs说不STW也行的，但是STW的代码比较简单，得不偿失。这里说了一些various clean work，这个还不是很清楚（应该是指GC相关资源的清理回收，而不是sweep操作，比如戴维斯说的清理处理器上的线程缓存）。这个Mark Termination接收之后，应用goroutine又可以拿到P/M愉快的执行了。
+标记工作完成之后，下一个阶段就是Mark Termination。这个过程是Write Barrier被关闭，各种（various）清理工作开始执行，并且计算下次垃圾收集的目标。这个阶段是需要STW的，大概需要60-90微秒，Ardan labs说不STW也行的，但是STW的代码比较简单，得不偿失。这里说了一些various clean work，这个还不是很清楚（应该是指GC相关资源的清理回收，而不是sweep操作）。这个Mark Termination接收之后，应用goroutine又可以拿到P/M愉快的执行了。
 
 #### Sweeping - Concurrent
 收集完就开始清扫（Sweeping），就是把heap中没有被标记为正在使用的Object清理掉。这个过程发生在**应用goroutine试图在heap中分配内存的时候**，Sweeping带来的时延是被统计到内存分配中的，并没有跟GC的时延绑定在一起。
@@ -114,11 +114,16 @@ gc 1404     : The 1404 GC run since the program started，应该是第1404次垃
 11%         : 有11%的cpu消耗在了GC上
 
 // Wall-Clock (挂钟走过的时间，这里表示的是实际的时间)
+gc 1404     : The 1404 GC run since the program started
+@6.068s     : 程序启动6秒了
+11%         : 有11%的cpu消耗在了GC上
+
+// Wall-Clock
 0.058ms     : STW        : Mark Start       - Write Barrier on（打开写屏障）
 1.2ms       : Concurrent : Marking
 0.083ms     : STW        : Mark Termination - Write Barrier off and clean up（关闭写屏障、清理工作）
 
-// CPU Time  （CPU time在多线程下是多个cpu时间的和，因此大于Wall-Clock）
+// CPU Time  （这个CPU time跟上面的 wall-clock有什么区别？）
 0.70ms      : STW        : Mark Start
 2.5ms       : Concurrent : Mark - Assist Time (GC performed in line with allocation)
 1.5ms       : Concurrent : Mark - Background GC time
@@ -246,3 +251,4 @@ Trace viewer is listening on http://127.0.0.1:45761
 [Go GC 20 问](https://mp.weixin.qq.com/s/o2oMMh0PF5ZSoYD0XOBY2Q)
 
 [Golang 垃圾回收剖析](http://legendtkl.com/2017/04/28/golang-gc/)
+[关于Go1.14，你一定想知道的性能提升与新特性](https://juejin.im/post/5e3f9990e51d4526cc3b1672)
