@@ -118,3 +118,22 @@ var v int
 i := &v
 ```
 答案是几乎没有区别的，都是最终调用了`runtime.newobject`来分配空间的。 
+
+
+##### 协称、线程、进程的区别
+
+
+##### golang编译相关问题，静态编译/动态编译
+
+##### 如何理解"不要通过共享内存来通信，而应该通过通信来共享内存"
+
+##### for-range实现相关
+
+
+参考：
+
+[Golang 线程和协程的区别](https://segmentfault.com/q/1010000004878639)
+
+[你遇到过哪些高质量的 Go 语言面试题？](https://www.zhihu.com/question/60952598)
+
+[Golang语言面试题-go夜读](https://reading.developerlearning.cn/interview/interview-golang-language/)

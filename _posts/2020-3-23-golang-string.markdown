@@ -92,7 +92,7 @@ type stringHeader struct {
 * 字符串类型可以强制转换为[\]byte类型，[]byte类型也可以被转换为string类型。
 * 字符串类型可以强制转换为[\]rune类型，[]rune类型也可以强制转换为string类型。
 
-当字符串与[\]byte类型相互转换的时候，其实底层是发生了deepcopy，这个很好理解，string转换为[\]byte的时候，[]byte是可以写的，但是原来的string是不可写的，那就需要发生deepcopy了。
+当字符串与[\]byte类型相互转换的时候，其实底层是发生了deepcopy（重新分配一块堆内存），这个很好理解，string转换为[\]byte的时候，[]byte是可以写的，但是原来的string是不可写的，那就需要发生deepcopy了。
 
 string与[]byte转换时的编译优化：
 string与[]byte相互转换时不一定总是发生deepcopy，比如下面几种情况，总的来说，就是发生了强制转换，但是对转换后的结果进行了读操作，不需要写操作，这个时候可以不用发生深拷贝。
