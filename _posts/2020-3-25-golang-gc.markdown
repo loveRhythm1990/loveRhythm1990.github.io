@@ -212,7 +212,7 @@ Trace viewer is listening on http://127.0.0.1:45761
 ```s
 | Algorithm  | Program | GC Time  | % Of GC | # of GC’s | Avg GC   | Max Heap |
 |------------|---------|----------|---------|-----------|----------|----------|
-| freq       | 2626 ms |  64.5 ms |     ~2% |       232 |   278 μs |    4 meg |
+| freq           | 2626 ms |  64.5 ms |     ~2% |       232 |   278 μs |    4 meg |
 | concurrent |  951 ms | 284.4 ms |    ~34% |        23 |  12.3 ms |  200 meg |
 | numCPU     |  754 ms | 177.7 ms |    ~25% |       467 | 380.5 μs |    4 meg |
 ```
@@ -242,3 +242,7 @@ Trace viewer is listening on http://127.0.0.1:45761
 [关于Go1.14，你一定想知道的性能提升与新特性](https://juejin.im/post/5e3f9990e51d4526cc3b1672)
 
 [draveness.me 垃圾收集器](https://draveness.me/golang/docs/part3-runtime/ch07-memory/golang-garbage-collector/)
+
+[Go GC 20 问](https://mp.weixin.qq.com/s/o2oMMh0PF5ZSoYD0XOBY2Q)
+
+[Golang 垃圾回收剖析](http://legendtkl.com/2017/04/28/golang-gc/)
