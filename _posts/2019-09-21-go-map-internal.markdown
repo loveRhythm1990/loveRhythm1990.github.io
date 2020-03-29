@@ -130,4 +130,9 @@ type hmap struct {
 
 ## 参考
 * [浅谈go语言实现原理-map](https://draveness.me/golang/datastructure/golang-hashmap.html)
+
 * [浅谈Go语言实现原理 for-range](https://draveness.me/golang/keyword/golang-for-range.html)
+
+* [深度解密Go语言之map](https://qcrao.com/2019/05/22/dive-into-go-map/)
+
+* [深入理解 Go map：赋值和扩容迁移](https://segmentfault.com/a/1190000018632347)
