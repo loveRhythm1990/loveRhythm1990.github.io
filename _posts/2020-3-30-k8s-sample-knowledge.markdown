@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "k8s存储的一些零碎知识"
+title:      "k8s存储的一些概念"
 date:       2020-03-30 10:10:00
 author:     "weak old dog"
 header-img-credit: false
@@ -8,6 +8,8 @@ tags:
     - k8s
     - 存储
 ---
+
+本文主要参考《深入剖析Kubernetes》张磊，极客时间，侵权立删，建议购买正版
 
 #### 主机目录作为本地存储的不足
 hostpath或者`local Persistent Volume`作为本地存储时，会将本地的一个目录挂载到容器里面，对于此有下面结论：
@@ -69,9 +71,114 @@ Kubernetes如何定义和区分这两个阶段？在具体的 Volume 插件的�
 * 对于“第一阶段”（Attach），Kubernetes 提供的可用参数是nodeName，即宿主机的名字。
 * 而对于“第二阶段”（Mount），Kubernetes 提供的可用参数是dir，即Volume的宿主机目录。
 
+#### csi插件相关
+我们知道一个volume在k8s里的声明周期有provision/delete，attach/detach，mount/umount等。那csi就是把这些代码给抽象出来了，做成了单独的插件，之前都是in tree的，现在不需要嵌入到k8s代码里面了，成了out tree了。
+在k8s的[CSI文档](https://kubernetes-csi.github.io/docs/sidecar-containers.html)中，列出了所有的sidecar containers列表：
+* external-provisioner
+* external-attacher
+* external-snapshotter
+* external-resizer
+* node-driver-registrar
+* cluster-driver-registrar (deprecated)
+* livenessprobe
 
+上面这些sidecar container是由kubernetes存储小组来开发和维护的。这些container严格来说是可选的，但是非常推荐使用。
+
+CSI组件众多，先看一下图片有个大体印象。
+
+![java-javascript](/img/in-post/storage-csi/Screenshot_1.png)
+
+首先看三个独立的外部组件（External Components），这个在上面的表中也列出来了，是一些sidecar container，即：
+* Driver Registrar, 负责将插件注册到kubelet里面，在具体实现上，Driver Registrar需要请求CSI插件的Identity服务来获取插件信息。这个应该是使用pluginmanager来注册csi插件的，思路就是扫描/var/lib/kubelet/\<plugin name\>/csi.sock
+* External Provisioner组件，负责的正是Provision阶段，在具体实现上，External Provisioner监听（Watch）了APIServer里面的PVC对象。当一个PVC被创建出来的时候，它就会调用CSI Controller的CreateVolume方法，为你创建对应的PV。
+* 最后一个External Attacher组件，负责的是Attach，在具体实现上，它监听了APIServer里 VolumeAttachment对象的变化。VolumeAttachment对象是Kubernetes确认一个Volume可以进入“Attach 阶段”的重要标志，一旦出现了VolumeAttachment对象，External Attacher就会调用CSI Controller服务的ControllerPublish方法，完成它所对应的Volume的 Attach 阶段。
+
+下面看CSI插件里的三个服务：CSI Identity、CSI Controller和CSI Node。
+首先看CSI Identity，这个主要做两件事，第一个是获取当前插件的名字，第二个是获取当前插件支持的Capability，也就是支持的功能，其proto定义如下：
+```protobuf
+service Identity {
+  // 返回插件的版本以及名字信息
+  rpc GetPluginInfo(GetPluginInfoRequest)
+    returns (GetPluginInfoResponse) {}
+  // reports whether the plugin has the ability of serving the Controller interface
+  rpc GetPluginCapabilities(GetPluginCapabilitiesRequest)
+    returns (GetPluginCapabilitiesResponse) {}
+  // called by the CO just to check whether the plugin is running or not
+  rpc Probe (ProbeRequest)
+    returns (ProbeResponse) {}
+}
+```
+而 CSI Controller 服务，定义的则是对 CSI Volume（对应 Kubernetes 里的 PV）的管理接口，比如：创建和删除 CSI Volume、对 CSI Volume 进行 Attach/Dettach（在 CSI 里，这个操作被叫作 Publish/Unpublish），以及对 CSI Volume 进行 Snapshot 等，它们的接口定义如下所示
+```go
+
+service Controller {
+  // provisions a volume
+  rpc CreateVolume (CreateVolumeRequest)
+    returns (CreateVolumeResponse) {}
+    
+  // deletes a previously provisioned volume
+  rpc DeleteVolume (DeleteVolumeRequest)
+    returns (DeleteVolumeResponse) {}
+    
+  // make a volume available on some required node
+  rpc ControllerPublishVolume (ControllerPublishVolumeRequest)
+    returns (ControllerPublishVolumeResponse) {}
+    
+  // make a volume un-available on some required node
+  rpc ControllerUnpublishVolume (ControllerUnpublishVolumeRequest)
+    returns (ControllerUnpublishVolumeResponse) {}
+    
+  ...
+  
+  // make a snapshot
+  rpc CreateSnapshot (CreateSnapshotRequest)
+    returns (CreateSnapshotResponse) {}
+    
+  // Delete a given snapshot
+  rpc DeleteSnapshot (DeleteSnapshotRequest)
+    returns (DeleteSnapshotResponse) {}
+    
+  ...
+}
+```
+CSI controller里面的服务一般是由CSI的那些sidecar container来调用的。并且controller里面的服务并不依赖当前所在的宿主机。
+
+而 CSI Volume 需要在宿主机上执行的操作，都定义在了 CSI Node 服务里面，如下所示：
+```go
+
+service Node {
+  // temporarily mount the volume to a staging path
+  rpc NodeStageVolume (NodeStageVolumeRequest)
+    returns (NodeStageVolumeResponse) {}
+    
+  // unmount the volume from staging path
+  rpc NodeUnstageVolume (NodeUnstageVolumeRequest)
+    returns (NodeUnstageVolumeResponse) {}
+    
+  // mount the volume from staging to target path
+  rpc NodePublishVolume (NodePublishVolumeRequest)
+    returns (NodePublishVolumeResponse) {}
+    
+  // unmount the volume from staging path
+  rpc NodeUnpublishVolume (NodeUnpublishVolumeRequest)
+    returns (NodeUnpublishVolumeResponse) {}
+    
+  // stats for the volume
+  rpc NodeGetVolumeStats (NodeGetVolumeStatsRequest)
+    returns (NodeGetVolumeStatsResponse) {}
+    
+  ...
+  
+  // Similar to NodeGetId
+  rpc NodeGetInfo (NodeGetInfoRequest)
+    returns (NodeGetInfoResponse) {}
+}
+```
 
 #### 参考
+
+[CSI官方文档](https://kubernetes-csi.github.io/docs/introduction.html)
+
 [Cgroup - Linux 的 IO 资源隔离](https://www.v2ex.com/t/251497)
 
 [k8s提供的local volume的static provisioner](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner)

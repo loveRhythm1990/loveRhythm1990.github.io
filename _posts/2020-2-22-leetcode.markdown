@@ -221,6 +221,94 @@ func (this *WordDictionary) searchFromChildren(word string, node *trieNode) bool
 	return false
 }
 ```
+### [实现Trie树](https://leetcode-cn.com/problems/implement-trie-prefix-tree/)
+实现一个 Trie (前缀树)，包含 insert, search, 和 startsWith 这三个操作。
+
+**示例**:
+```go
+Trie trie = new Trie();
+
+trie.insert("apple");
+trie.search("apple");   // 返回 true
+trie.search("app");     // 返回 false
+trie.startsWith("app"); // 返回 true
+trie.insert("app");   
+trie.search("app");     // 返回 true
+```
+**说明**:
+
+你可以假设所有的输入都是由小写字母 a-z 构成的。
+保证所有输入均为非空字符串。
+
+事实证明，只要60行代码就能实现Trie树，之前都是想复杂了
+```go
+type Trie struct {
+    root *Node
+}
+
+type Node struct {
+    children [26]*Node
+    word string
+}
+
+/** Initialize your data structure here. */
+func Constructor() Trie {
+    return Trie{
+        &Node{},
+    }
+}
+
+/** Inserts a word into the trie. */
+func (this *Trie) Insert(word string)  {
+    
+    bs := []byte(word)
+    parent := this.root
+    
+    for i := 0; i < len(bs); i ++ {
+        index := bs[i] - 'a'
+        if parent.children[index] == nil {
+            parent.children[index] = &Node{}
+        }
+        parent = parent.children[index]
+    }
+    parent.word = word
+}
+
+
+/** Returns if the word is in the trie. */
+func (this *Trie) Search(word string) bool {
+    bs := []byte(word)
+    parent := this.root
+    
+    for i := 0; i < len(bs); i++ {
+        index := bs[i] - 'a'
+        if parent.children[index] == nil {
+            return false
+        }
+        parent = parent.children[index]
+    }
+    if parent.word == "" {
+        return false
+    }
+    return true
+}
+
+
+/** Returns if there is any word in the trie that starts with the given prefix. */
+func (this *Trie) StartsWith(prefix string) bool {
+    bs := []byte(prefix)
+    parent := this.root
+    
+    for i := 0; i < len(bs); i++ {
+        index := bs[i] - 'a'
+        if parent.children[index] == nil {
+            return false
+        }
+        parent = parent.children[index]
+    }
+    return true
+}
+```
 
 ### 寻找数组中最大的k个数
 很多题目使用优先级队列实现，这里写一个使用golang实现优先级队列的范例。golang中有堆的实现，可以用来实现优先级队列。对于**最大**的k个数，要使用**最小堆**来实现，在最小堆中，数组的第一个元素是最小的值，每次拿当前值跟这个最小的值比较，如果比最小值大，就把最小的值pop出来，把当前值放进去。
