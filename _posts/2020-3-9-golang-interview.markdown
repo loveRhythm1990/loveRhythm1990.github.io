@@ -120,6 +120,139 @@ i := &v
 答案是几乎没有区别的，都是最终调用了`runtime.newobject`来分配空间的。 
 
 
+##### atomic.Value的实现
+atomic.Value底层是一个空接口类型，对应两个字段，即类型与数据指针：
+```go
+type Value struct {
+	v interface{}
+}
+
+// ifaceWords is interface{} internal representation.
+// 这个跟runtime/types.go中eface类型是一致的
+type ifaceWords struct {
+	typ  unsafe.Pointer
+	data unsafe.Pointer
+}
+```
+atomic.Value只有Load以及Store两个接口，在Store中，多次Store的变量类型必须是一致的，否则会panic。在Store接口中，实际要设置两个值，及`typ`类型指针，以及`data`数据指针。
+为了完成多个字段的原子性写入，可以抓住其中的一个字段，以它的状态来标志整个原子写入的状态。
+
+并且在Store接口中，使用了一个中间指针`^uintptr(0)`，这个当初看的有点奇怪，主要用来标示这个Value是否处在被设置的中间状态。在Load接口中，检查到这个指针就返回nil，标示有store处于中间过程。
+
+atomic的实现中，只涉及到对指针的操作。
+
+参考[Go 语言标准库中 atomic.Value 的前世今生](https://blog.betacat.io/post/golang-atomic-value-exploration/)
+
+##### sync.Map的实现
+同时读写一个普通的map会发生panic:`fatal error: concurrent map read and map write`，写时写，遍历时写，删除时写也会发生panic。
+
+关于sync.Map有如下几个要点：
+1. 空间换时间。 通过冗余的两个数据结构(read、dirty),实现加锁对性能的影响。
+2. 使用只读数据(read)，避免读写冲突。
+3. 动态调整，miss次数多了之后，将dirty数据提升为read。
+4. double-checking。
+5. 延迟删除。 删除一个键值只是打标记，只有在提升dirty的时候才清理删除的数据。
+6. 优先从read读取、更新、删除，因为对read的读取不需要锁。
+
+sync.Map数据结构：
+```go
+type Map struct {
+	// 当涉及到dirty数据的操作的时候，需要使用这个锁
+	mu Mutex
+
+	// 一个只读的数据结构，因为只读，所以不会有读写冲突。
+	// 所以从这个数据中读取总是安全的。
+	// 实际上，实际也会更新这个数据的entries,如果entry是未删除的(unexpunged), 并不需要加锁。如果entry已经被删除了，需要加锁，以便更新dirty数据。
+	// 这是个原子类型
+	read atomic.Value // readOnly
+
+	// dirty数据包含当前的map包含的entries,它包含最新的entries(包括read中未删除的数据,虽有冗余，但是提升dirty字段为read的时候非常快，不用一个一个的复制，而是直接将这个数据结构作为read字段的一部分),有些数据还可能没有移动到read字段中。
+	// 对于dirty的操作需要加锁，因为对它的操作可能会有读写竞争。
+	// 当dirty为空的时候， 比如初始化或者刚提升完，下一次的写操作会复制read字段中未删除的数据到这个数据中。
+	dirty map[interface{}]*entry
+
+	// 当从Map中读取entry的时候，如果read中不包含这个entry,会尝试从dirty中读取，这个时候会将misses加一，
+	// 当misses累积到 dirty的长度的时候， 就会将dirty提升为read,避免从dirty中miss太多次。因为操作dirty需要加锁。
+	misses int
+}
+```
+read的数据类型如下，atomic.Value只能读取和Set一种类型，那在这里就是这个readOnly类型，在atomic.Value这个数据结构中，会有两个指针分别指向readOnly的类型，以及其数据。
+```go
+type readOnly struct {
+	// 是实际底层map中，存的都是指针
+	m       map[interface{}]*entry
+	amended bool // 如果Map.dirty有些数据不在Map.read中的时候，这个值为true
+}
+```
+amended指明Map.dirty中有readOnly.m未包含的数据，所以如果从Map.read找不到数据的话，还要进一步到Map.dirty中查找。
+
+对Map.read的修改是通过原子操作进行的。
+
+虽然read和dirty有冗余数据，但这些数据是通过指针指向同一个数据，所以尽管Map的value会很大，但是冗余的空间占用还是有限的。
+
+readOnly.m和Map.dirty存储的值类型是*entry,它包含一个指针p, 指向用户存储的value值。所有用户设置的Value，都是通过entry这个结构来指向的。所以sync.Map中冗余指的是指针冗余。
+```go
+type entry struct {
+	p unsafe.Pointer // *interface{}
+}
+```
+p有三种值：
+
+* nil: entry已被删除了，并且m.dirty为nil
+* expunged: entry已被删除了，并且m.dirty不为nil，而且这个entry不存在于m.dirty中，那就是在m.read结构中
+* 其它： entry是一个正常的值
+其他内容，下面参考文档说的很详细，已存坚果云。
+
+这里只看存储实现：
+```go
+func (m *Map) Store(key, value interface{}) {
+	read, _ := m.read.Load().(readOnly)
+	if e, ok := read.m[key]; ok && e.tryStore(&value) {
+		return
+	}
+
+	m.mu.Lock()
+	read, _ = m.read.Load().(readOnly)
+	if e, ok := read.m[key]; ok {
+		if e.unexpungeLocked() {
+			// The entry was previously expunged, which implies that there is a
+			// non-nil dirty map and this entry is not in it.
+			m.dirty[key] = e
+		}
+		e.storeLocked(&value)
+	} else if e, ok := m.dirty[key]; ok {
+		e.storeLocked(&value)
+	} else {
+		if !read.amended {
+			// We're adding the first new key to the dirty map.
+			// Make sure it is allocated and mark the read-only map as incomplete.
+			m.dirtyLocked()
+			m.read.Store(readOnly{m: read.m, amended: true})
+		}
+		m.dirty[key] = newEntry(value)
+	}
+	m.mu.Unlock()
+}
+
+// tryStore stores a value if the entry has not been expunged.
+//
+// If the entry is expunged, tryStore returns false and leaves the entry
+// unchanged.
+func (e *entry) tryStore(i *interface{}) bool {
+	for {
+		p := atomic.LoadPointer(&e.p)
+		if p == expunged {
+			return false
+		}
+		// 如果entry不是expunged，则尝试修改，
+		if atomic.CompareAndSwapPointer(&e.p, p, unsafe.Pointer(i)) {
+			return true
+		}
+	}
+}
+```
+
+参考[Go 1.9 sync.Map揭秘](https://colobu.com/2017/07/11/dive-into-sync-Map/)
 ##### 协称、线程、进程的区别
 
 

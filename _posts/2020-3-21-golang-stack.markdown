@@ -40,6 +40,9 @@ func big() {
 在这种情况下，不停地creating以及destroying segments会产生性能问题，因此，在go 1.4之后，改为使用连续栈了。
 
 #### continuous stack
+
+g模型结构体在`src/runtime/runtime2.go`中定义，这个g结构体有两个field:`stackguard0/stackguard1`用来实现栈的自动收缩。
+
 当栈需要扩展时，连续栈的做法如下：
 1. 创建一个新的，更大的stack
 2. 将旧的stack上的内容，拷贝到新的stack上
