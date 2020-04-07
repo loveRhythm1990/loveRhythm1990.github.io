@@ -20,7 +20,19 @@ DeviceMapper在内核中的代码大概如下图所示，也许这张图不够�
 ![java-javascript](/img/in-post/devicemapper/Picture1.png)
 
 ### Device Mapper Target
-一个Target就是实现Device Mapper框架的一个实例，目前有Linear、DM-Crypt、镜像、快照等。我们还可以自定义Target，下面就是实现一个自定义驱动的例子，虽然很简单，但是提供了实现思路，对于理解DeviceMapper的理解也很有好处，真的非常感谢作者。在内核中，Device Mapper主要有三个概念：mapped device、映射表、target device，对于这些概念，IBM的这篇文章写的很详细，真的值得读很多遍[Linux 内核中的 Device Mapper 机制](https://www.ibm.com/developerworks/cn/linux/l-devmapper/index.html)。下面这个图中介绍了这三个概念涉及到的数据结构，对于实现自己的回调函数，主要是实现自己的Target Type类型，Target Type中提供了很多回调函数，比如crt:构造函数，dtr:析构函数，map:映射函数等，我们实现这些函数就好了，但是还是需要理解内核中的一些概念，比如BIO，这个希望自己以后能慢慢掌握。对于这些数据结构的讲解，《存储技术原理分析_基于Linux 2.6内核源代码》这本书中也有很好的说明，不得不说，这也是一本神书，目前应该已经绝版，只能买二手的，真希望有时间能好好研究。
+一个Target就是实现Device Mapper框架的一个实例，目前有Linear、DM-Crypt、镜像、快照等。我们还可以自定义Target，下面就是实现一个自定义驱动的例子，虽然很简单，但是提供了实现思路，对于理解DeviceMapper的理解也很有好处，真的非常感谢作者。在内核中，**Device Mapper主要有三个概念：mapped device、映射表、target device**，对于这些概念，IBM的这篇文章写的很详细，真的值得读很多遍[Linux 内核中的 Device Mapper 机制](https://www.ibm.com/developerworks/cn/linux/l-devmapper/index.html)。
+* mapped device, 对应内核代码dm.c文件定义的mapped_device结构，包括该mapped device相关的锁，注册的请求队列和一些内存池以及它所对应*映射表*的指针域。
+
+* 映射表，对应dm_table.c文件中定义的dm_table结构，该结构包含一个dm_target结构数组，dm_target结构具体描述了mapped_device到它某个target device的映射关系。
+
+*  Target_type 结构主要包含了 target device 对应的 target driver 插件的名字、 定义的构建和删除该类型target device的⽅法、 该类target device对应的IO请求重映射和结束IO的⽅法等。 ⽽表⽰具体的target device的域是dm_target中的private域， 该指针指向mapped device所映射的具体target device对应的结构
+
+下面这个图中介绍了这三个概念涉及到的数据结构，对于实现自己的回调函数，主要是实现自己的Target Type类型，Target Type中提供了很多回调函数，比如:
+* crt:构造函数
+* dtr:析构函数
+* map:映射函数等
+
+我们实现这些函数就好了，但是还是需要理解内核中的一些概念，比如BIO，这个希望自己以后能慢慢掌握。对于这些数据结构的讲解，《存储技术原理分析_基于Linux 2.6内核源代码》这本书中也有很好的说明，不得不说，这也是一本神书，目前应该已经绝版，只能买二手的，真希望有时间能好好研究。
 ![java-javascript](/img/in-post/devicemapper/Picture2.jpg)
 
 [Linux 内核中的 Device Mapper 机制](https://www.ibm.com/developerworks/cn/linux/l-devmapper/index.html)这篇文章中提到实现一个Drive类型需要实现的方法有：
@@ -51,19 +63,19 @@ DeviceMapper在内核中的代码大概如下图所示，也许这张图不够�
 * start:  Starting sector number of the device
 */
 struct my_dm_target {
-        struct dm_dev *dev;
-        sector_t start;
+        struct dm_dev *dev;  /* 对应物理设备的dm_dev结构指针 */
+        sector_t start;      /* 在该物理设备中以扇区为单位的偏移地址start */
 };
 
 
 
 
 /* This is map function of basic target. This function gets called whenever you get a new bio
- * request.（每当收到bio请求的时候就会被调用）.The working of map function is to map a particular bio request to the underlying device. 
+ * request.（每当收到bio请求的时候就会被调用）.The working of map function is to map a particular bio request to the underlying device.（map 函数的作用是将bio映射到底层的物理设备） 
  *The request that we receive is submitted to out device so  bio->bi_bdev points to our device.
  * We should point to the bio-> bi_dev field to bdev of underlying device. Here in this function,
  * we can have other processing like changing sector number of bio request, splitting bio etc. 
- * （我们可以改变请求的sector编号，split bio等）
+ * （我们可以改变请求的sector编号，split bio等，将对mapped device的请求的bio进行分割）
  *
  *  Param : 
  *  ti : It is the dm_target structure representing our basic target
@@ -79,15 +91,18 @@ struct my_dm_target {
  */
 static int basic_target_map(struct dm_target *ti, struct bio *bio,union map_info *map_context)
 {
+        // 参数 dm_target的private执行目标target（或自定义target）
         struct my_dm_target *mdt = (struct my_dm_target *) ti->private;
         printk(KERN_CRIT "\n<<in function basic_target_map \n");
 
+        // 修改bio底层的物理设备为target中的底层设备
         bio->bi_bdev = mdt->dev->bdev;
 
         if((bio->bi_rw & WRITE) == WRITE)
                 printk(KERN_CRIT "\n basic_target_map : bio is a write request.... \n");
         else
                 printk(KERN_CRIT "\n basic_target_map : bio is a read request.... \n");
+        // 提交bio
         submit_bio(bio->bi_rw,bio);
 
 
@@ -118,6 +133,7 @@ basic_target_ctr(struct dm_target *ti,unsigned int argc,char **argv)
                 return -EINVAL;
         }
 
+        // 为自定义dm_target数据结构申请空间
         mdt = kmalloc(sizeof(struct my_dm_target), GFP_KERNEL);
 
         if(mdt==NULL)
@@ -127,6 +143,7 @@ basic_target_ctr(struct dm_target *ti,unsigned int argc,char **argv)
                 return -ENOMEM;
         }       
 
+        // 从第一个参数读取开始的start sector
         if(sscanf(argv[1], "%llu", &start)!=1)
         {
                 ti->error = "dm-basic_target: Invalid device sector";
@@ -152,6 +169,7 @@ basic_target_ctr(struct dm_target *ti,unsigned int argc,char **argv)
                 goto bad;
         }
 
+        // 将自定义my_dm_target结构添加到dm_target的private域
         ti->private = mdt;
 
 
@@ -174,6 +192,7 @@ static void basic_target_dtr(struct dm_target *ti)
         struct my_dm_target *mdt = (struct my_dm_target *) ti->private;
         printk(KERN_CRIT "\n<<in function basic_target_dtr \n");        
         dm_put_device(ti, mdt->dev);
+        // 释放数据结构占用的空间
         kfree(mdt);
         printk(KERN_CRIT "\n>>out function basic_target_dtr \n");               
 }
@@ -186,6 +205,8 @@ static void basic_target_dtr(struct dm_target *ti)
  */
 static struct target_type basic_target = {
         
+        // 这个basic_target是我们使用dmsetup create
+        // 创建设备时的名字
         .name = "basic_target",
         .version = {1,0,0},
         .module = THIS_MODULE,
@@ -195,26 +216,54 @@ static struct target_type basic_target = {
 };
         
 /*---------Module Functions -----------------*/
-
+/* 注册模块相关的代码 */
+// 自定义模块的初始化
 static int init_basic_target(void)
 {
         int result;
+        // dm_register_target这个函数是重点
         result = dm_register_target(&basic_target);
         if(result < 0)
                 printk(KERN_CRIT "\n Error in registering target \n");
         return 0;
 }
 
-
+// 自定义模块的销毁
 static void cleanup_basic_target(void)
 {
         dm_unregister_target(&basic_target);
 }
 
+// 调用module_init初始化自定义模块
 module_init(init_basic_target);
 module_exit(cleanup_basic_target);
 MODULE_LICENSE("GPL");
 ```
+
+在上面代码中`dm_register_target`这个函数是linux提供的注册一个dm_target的函数，是linux提供的，供我们使用的。
+
+另外还有一个比较重要的问题是**device mapper工作在哪一层？感觉是在通用块设备层**
+
+在《极客时间，块设备下》中说道：*不管是直接IO，还是缓存IO，最后都到了submit_bio里面，submit_bio会调用generic_make_request*，`submit_bio`的函数签名为：
+```c
+/**
+ * submit_bio - submit a bio to the block device layer for I/O
+ * @bio: The &struct bio which describes the I/O
+ */
+blk_qc_t submit_bio(struct bio *bio)
+{
+......
+  return generic_make_request(bio);
+}
+```
+bio是通⽤块层I/O请求的数据结构，表⽰上层提交的I/O请求，⼀个bio包含多个page，这些page必
+须对应磁盘上⼀段连续的空间。由于⽂件在磁盘上并不连续存放，⽂件I/O提交到块设备之前，极有可能被拆成多个bio结构；
+
+![java-javascript](/img/in-post/devicemapper/iostack.jpeg)
+
+
+这部分写的无头无脑，日后整理。
+
 
 **Makefile**
 ```c
