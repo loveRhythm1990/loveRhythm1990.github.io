@@ -6,7 +6,7 @@ date:       2019-10-05 17:31:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - k8s
+    - 瞎聊
 ---
 
 
