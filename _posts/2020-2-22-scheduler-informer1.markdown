@@ -329,6 +329,8 @@ k8s中WatchServer的目录文件`kubernetes/staging/src/k8s.io/apiserver/pkg/end
 	w.Header().Set("Transfer-Encoding", "chunked")
 	w.WriteHeader(http.StatusOK)
 ```
+另外，需要注意，`Chunked transfer encoding`仅仅在HTTP/1.1中使用的，HTTP/2是不支持的，HTTP/2提供了自己的流的实现，这个可以参考[Chunked transfer encoding](https://en.wikipedia.org/wiki/Chunked_transfer_encoding)
+
 
 参考：
 

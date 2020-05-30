@@ -8,9 +8,9 @@ tags:
     - golang
 ---
 
-Go 1.11以及1.12版本开始支持Go mod，使用Go mod来管理依赖，本文理解思路以及记录一些常用命令。启用或禁用的go mod的环境变量为``
+Go 1.11以及1.12版本开始支持Go mod，使用Go mod来管理依赖，本文理解思路以及记录一些常用命令。
 
-Go 1.11/1.12版本启用go mod的条件为：1）代码路径在`GOPATH`之外，并且 2）包的根目录含有一个`go.mod`文件，当代码在`GOPATH`下面时，即使含有`go.mod`文件也不启用，。从go 1.13开始，无论代码在不在`GOPATH`路径下，只要有`go.mod`文件，都是启用Go mod的。[官方文档](https://blog.golang.org/using-go-modules)给出的例子如下，是直接在`GOPATH`外面直接创建目录，编写代码：
+Go 1.11/1.12版本启用go mod的条件为：1）代码路径在`GOPATH`之外，并且 2）包的根目录含有一个`go.mod`文件，当代码在`GOPATH`下面时，即使含有`go.mod`文件也不启用。从go 1.13开始，无论代码在不在`GOPATH`路径下，只要有`go.mod`文件，都是启用Go mod的。[官方文档](https://blog.golang.org/using-go-modules)给出的例子如下，是直接在`GOPATH`外面直接创建目录，编写代码：
 ```go
 package hello
 
@@ -38,7 +38,7 @@ golang.org/x/text v0.0.0-20170915032832-14c0d48ead0c
 rsc.io/quote v1.5.2
 rsc.io/sampler v1.3.0
 ```
-其中，`quote`是我们直接引用的，应该是最新的的，但是另外两个不是最近版本的，是`quote`所引用的第三方包，因此，我们可以使用`go get`来获取最新版本。
+其中，`quote`是我们直接引用的，应该是最新的的，但是另外两个不是最新版本的，是`quote`所引用的第三方包，因此，我们可以使用`go get`来获取最新版本。
 
 #### 清空不需要的依赖
 使用`go mod tidy`清空没有用的依赖。
