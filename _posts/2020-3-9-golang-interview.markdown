@@ -80,6 +80,14 @@ func main()  {
 	fmt.Println(i1 == i2) // error
 ```
 
+解释为什么下面输出是false:
+```go
+	e1 := fmt.Errorf("test error1")
+	e2 := fmt.Errorf("test error1")
+
+	fmt.Println(e1 == e2) //输出false
+```
+
 ##### 关于select
 select语句是一种仅能用于通道发送和接收操作的语句。一条selector语句执行时，会选择其中的某个分支并执行。如果select语句中的所有普通case都不满足条件，并且有default，那么default语句会被选中，否则select会阻塞。一个select语句只能包含一个default case，不过它可以放置在该语句的任何位置上。
 
