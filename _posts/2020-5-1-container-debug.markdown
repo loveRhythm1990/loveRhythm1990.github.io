@@ -1,15 +1,12 @@
 ---
 layout:     post
-title:      "记调查一次docker restart命令卡主的问题"
+title:      "restart卡主"
 date:       2020-05-01 20:28:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
     - docker
 ---
-
-#### 问题复现
-k8s版本：1.14.0，Ubuntu版本：16.04，containerd版本：1.2.6
 
 使用下面yaml创建pod
 ```yaml
@@ -68,8 +65,7 @@ root@ubuntu:~# docker logs a46c18158270
 ^C
 ```
 
-#### 问题原因
-在共享pid namespace情况下，containerd在kill容器时并没有kill init进程的子进程，sh进程被kill了，但是sleep进程还存在，导致容器无法退出
+问题原因：在共享pid namespace情况下，containerd在kill容器时并没有kill init进程的子进程，sh进程被kill了，但是sleep进程还存在，导致容器无法退出
 
 相关issue和pr为：
 
@@ -80,16 +76,14 @@ root@ubuntu:~# docker logs a46c18158270
 这个bug是由下面这个问题引入的，之前的containerd没有此问题。
 [Do not KillAll on task delete by default](https://github.com/containerd/containerd/pull/2597)
 
-##### 打印docker的goroutine stack
-使用下面命令向dockerd进程发送SIGUSR1信号，会在`/var/run/docker`目录下面生成docker的goroutine stack，比如：`goroutine-stacks-2020-04-30T213111-0700.log`
+打印docker的goroutine stack：使用下面命令向dockerd进程发送SIGUSR1信号，会在`/var/run/docker`目录下面生成docker的goroutine stack，比如：`goroutine-stacks-2020-04-30T213111-0700.log`
 ```s
 root@ubuntu:/var/run/docker# ps -ef | grep dockerd
 root        836      1  1 May01 ?        00:05:00 /usr/bin/dockerd -H fd:// --containerd=/run/containerd/containerd.sock
 
 root@ubuntu: kill -10 836
 ```
-##### 打印containerd的goroutine stack
-同样是向containerd进程发送SIGUSR1信号：
+打印containerd的goroutine stack：同样是向containerd进程发送SIGUSR1信号：
 ```s
 root@ubuntu:/var/log# ps -ef | grep containerd
 root        831      1  0 May01 ?        00:00:34 /usr/bin/containerd
@@ -100,7 +94,5 @@ root@ubuntu: kill -10 831
 
 参考：
 [How to dump goroutines' stacktraces](https://success.docker.com/article/how-to-dump-goroutines-stacktraces)
-
 下面issue修的是同样的问题。
-
 [Fix kill when shared pid namespace.](https://github.com/containerd/cri/pull/983)
