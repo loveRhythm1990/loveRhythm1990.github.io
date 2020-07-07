@@ -42,6 +42,9 @@ IPtables这些网络基础是学习k8s网络的硬伤，这篇文章总结的很
 
 ![java-javascript](/img/in-post/docker-net/1.jpg){:height="40%" width="40%"}
 
+另外有个iptables-save命令可以记忆一下：
+* iptables-save -- dump 已配置的规则，可以用 > 重定向到一个文件中
+* iptables-restore -- 从之前导出的iptable规则配置文件加载规则。
 
 ### 参考
 

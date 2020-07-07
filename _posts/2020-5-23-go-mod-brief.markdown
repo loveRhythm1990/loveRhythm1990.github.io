@@ -46,6 +46,22 @@ rsc.io/sampler v1.3.0
 #### 复制依赖到vendor目录
 `go mod vendor`，这个命令在项目的根目录建一个vendor目录，并将依赖从mod cache复制到vendor目录。
 
+#### 下载依赖
+go mod download，下载module到本地缓存，这个命令在go1.13挺好用的，在go1.12貌似有些问题。
+其他go mod子命令可以使用go help mod查看。
+
+#### 设置代理
+go1.13默认的代理不能访问，要设置中国区代理：
+
+`go env -w GOPROXY=https://goproxy.cn,direct `
+
+后面的direct表示如果使用这个代理无法访问，则直接访问。如果是go1.12则可能要去掉那个direct。另外使用秘钥访问私有仓库的设置为：
+
+`git config --global url."ssh://git@gitlab.mycompany.com:".insteadOf "https://gitlab.mycompany.com/"`
+
+设置完成之后，可以通过文件`~/.gitconfig`查看。
+
+
 #### GO111MODULE
 控制或者启用GO mod的环境变量，使用如下：
 * If GO111MODULE=off, the go command ignores go.mod files and runs in GOPATH mode.
@@ -54,4 +70,7 @@ rsc.io/sampler v1.3.0
 
 #### 参考
 [golang blog - Using Go Modules](https://blog.golang.org/using-go-modules)
+
 [Go Modules Reference](https://golang.org/ref/mod)
+
+[goproxy配置](https://goproxy.cn/)
