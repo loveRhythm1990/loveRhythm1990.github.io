@@ -29,6 +29,18 @@ jucheng@JM sample % cat testfile | awk 'NR!=1 {sum+=$2} END{print sum/NR}'
 jucheng@JM sample % cat testfile | awk 'NR!=1 {sum+=$2} END{print sum/(NR-1)}'
 892.333
 ```
+###### grep前后
+grep -C 5 foo file 显示file文件里匹配foo字串那行以及上下5行
+
+grep -B 5 foo file 显示foo及前5行
+
+grep -A 5 foo file 显示foo及后5行
+
+另外，grep使用双引号表示不对特殊字符进行转义。
+
+###### kubectl 使用label
+kubectl get pv -l kubernetes.io/hostname=nodename
+
 
 ###### 参考
 [AWK 简明教程](https://coolshell.cn/articles/9070.html)
