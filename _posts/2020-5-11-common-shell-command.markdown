@@ -41,6 +41,16 @@ grep -A 5 foo file 显示foo及后5行
 ###### kubectl 使用label
 kubectl get pv -l kubernetes.io/hostname=nodename
 
+###### 循环读取文件的内容，并逐行删除
+假设要删除文件`files`中的每一行，命令如下。只会这么简单的。
+```s
+#! /bin/bash
+
+for line in `cat files`
+do
+        rm -rf $line
+done
+```
 
 ###### 参考
 [AWK 简明教程](https://coolshell.cn/articles/9070.html)

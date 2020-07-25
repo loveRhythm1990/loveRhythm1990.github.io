@@ -39,7 +39,7 @@ tags:
     - 让调用者（Kubernetes组件，以及sidecar容器）识别驱动，并且知道驱动提供了哪些功能。
 `Identity`服务一共有三个接口，定义如下，`GetPluginCapabilities`返回该plugin拥有的capability。
 
-```
+```s
 service Identity {
   rpc GetPluginInfo(GetPluginInfoRequest)
     returns (GetPluginInfoResponse) {}
@@ -66,6 +66,7 @@ sidecar容器是社区维护的，为了方便开发，减少冗余代码，严�
 * node-driver-registrar
 * cluster-driver-registrar (deprecated)
 * livenessprobe
+
 这里我们只看`external-provisioner`，其git仓库为：[https://github.com/kubernetes-csi/external-provisioner](https://github.com/kubernetes-csi/external-provisioner)
 
 `external-provisioner`的作用是动态provision volume，其调用的接口是`CreateVolume`以及`DeleteVolume`，这两个都是Controller Service中的接口，volume的provision是通过监听PVC来实现的。如果PVC引用了`StorageClass`，并且`StorageClass`中的`Provisioner`字段与CSI驱动`GetPluginInfo`返回的一致（属于Identity Service中的接口），那么可以调用这个驱动的接口来实现provision了。一旦volume成功provision，这个sidecar容器创建一个PV容器来代表这个volume。
