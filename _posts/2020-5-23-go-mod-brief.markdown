@@ -55,12 +55,16 @@ go1.13默认的代理不能访问，要设置中国区代理：
 
 `go env -w GOPROXY=https://goproxy.cn,direct `
 
-后面的direct表示如果使用这个代理无法访问，则直接访问。如果是go1.12则可能要去掉那个direct。另外使用秘钥访问私有仓库的设置为：
+后面的direct表示如果使用这个代理无法访问，则直接访问。另外使用秘钥访问私有仓库的设置为：
 
 `git config --global url."ssh://git@gitlab.mycompany.com:".insteadOf "https://gitlab.mycompany.com/"`
 
 设置完成之后，可以通过文件`~/.gitconfig`查看。
 
+go 1.12可以这么设置代理，（话说goproxy.io是哪个代理？还挺好用的，其网址为：[https://goproxy.io/](https://goproxy.io/)）
+```s
+export GOPROXY=https://goproxy.io
+```
 
 #### GO111MODULE
 控制或者启用GO mod的环境变量，使用如下：
