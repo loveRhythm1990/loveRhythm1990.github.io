@@ -59,6 +59,37 @@ $ xfs_quota -x -c "remove -p" /data/volumes/xfs32m
 ```
 这个是删除所有的project，慎用。
 
+#### 使用配置文件
+也可以使用配置文件来配置xfs quota project
+```s
+# 挂载
+mount -o prjquota /dev/sdb /disks/local-ssd
+
+# 设置id与目标目录的映射
+echo 42:/disks/local-ssd/pv0 >> /etc/projects
+
+# 设置名字与id的映射
+echo pv0:42 >> /etc/projid
+
+# 初始化Project
+xfs_quota -x -c 'project -s pv0' /disks/local-ssd
+
+# 设置limit
+xfs_quota -x -c 'limit -p bsoft=1g bhard=1g pv0' /disks/local-ssd
+```
+
+我们还可以使用自定义的配置文件，使用-D表示目录映射，使用-P表示id映射，比如：
+```s
+# 设置id与目标目录的映射
+echo 42:/disks/local-ssd/pv0 >> /etc/localcfg/projects
+
+# 设置名字与id的映射
+echo pv0:42 >> /etc/localcfg/projid
+
+# 初始化Project
+xfs_quota -D /etc/localcfg/projects -P /etc/localcfg/projid -x -c 'project -s pv0' /disks/local-ssd
+```
+
 #### 参考
 [Linux: Using xfs project quotas to limit capacity within a subdirectory](https://fabianlee.org/2020/01/13/linux-using-xfs-project-quotas-to-limit-capacity-within-a-subdirectory/)
 
