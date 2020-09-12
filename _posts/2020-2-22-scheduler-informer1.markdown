@@ -266,7 +266,7 @@ func (c *controller) Run(stopCh <-chan struct{}) {
 	wait.Until(c.processLoop, time.Second, stopCh)
 }
 ```
-可以看出，是controller根据配置生成一个reflectoer，并运行的，其`processLoop`就是不断调用DeltaFIFO的POP方法，并交给procsss function处理，这个的process function就是`func (s *sharedIndexInformer) HandleDeltas(obj interface{}) error`方法。
+可以看出，是controller根据配置生成一个reflecter，并运行的，其`processLoop`就是不断调用DeltaFIFO的POP方法，并交给procsss function处理，这个的process function就是`func (s *sharedIndexInformer) HandleDeltas(obj interface{}) error`方法。
 其实现如下：
 ```go
 func (s *sharedIndexInformer) HandleDeltas(obj interface{}) error {
@@ -330,6 +330,100 @@ k8s中WatchServer的目录文件`kubernetes/staging/src/k8s.io/apiserver/pkg/end
 	w.WriteHeader(http.StatusOK)
 ```
 另外，需要注意，`Chunked transfer encoding`仅仅在HTTP/1.1中使用的，HTTP/2是不支持的，HTTP/2提供了自己的流的实现，这个可以参考[Chunked transfer encoding](https://en.wikipedia.org/wiki/Chunked_transfer_encoding)
+
+2020.9.9补充：
+对golang来说，chunk是默认支持的，发送请求的时候没有没有特别，服务端可以选择以chunk的形式返回，如果是这样，golang的resp.Body也是自动deChunk的。参考：
+```go
+	// Body represents the response body.
+	//
+	// The response body is streamed on demand as the Body field
+	// is read. If the network connection fails or the server
+	// terminates the response, Body.Read calls return an error.
+	//
+	// The http Client and Transport guarantee that Body is always
+	// non-nil, even on responses without a body or responses with
+	// a zero-length body. It is the caller's responsibility to
+	// close Body. The default HTTP client's Transport may not
+	// reuse HTTP/1.x "keep-alive" TCP connections if the Body is
+	// not read to completion and closed.
+	//
+	// The Body is automatically dechunked if the server replied
+	// with a "chunked" Transfer-Encoding.
+	//
+	// As of Go 1.12, the Body will also implement io.Writer
+	// on a successful "101 Switching Protocols" response,
+	// as used by WebSockets and HTTP/2's "h2c" mode.
+	Body io.ReadCloser
+```
+
+K8s watch的实现代码在：`k8s.io/kubernetes/vendor/k8s.io/apimachinery/pkg/watch/streamwatcher.go`
+```go
+func (r *Request) WatchWithSpecificDecoders(wrapperDecoderFn func(io.ReadCloser) streaming.Decoder, embeddedDecoder runtime.Decoder) (watch.Interface, error) {
+	// We specifically don't want to rate limit watches, so we
+	// don't use r.throttle here.
+	if r.err != nil {
+		return nil, r.err
+	}
+	if r.serializers.Framer == nil {
+		return nil, fmt.Errorf("watching resources is not possible with this client (content-type: %s)", r.content.ContentType)
+	}
+
+	url := r.URL().String()
+	req, err := http.NewRequest(r.verb, url, r.body)
+	if err != nil {
+		return nil, err
+	}
+	if r.ctx != nil {
+		req = req.WithContext(r.ctx)
+	}
+	req.Header = r.headers
+	client := r.client
+	if client == nil {
+		client = http.DefaultClient
+	}
+	r.backoffMgr.Sleep(r.backoffMgr.CalculateBackoff(r.URL()))
+	resp, err := client.Do(req)
+	updateURLMetrics(r, resp, err)
+	if r.baseURL != nil {
+		if err != nil {
+			r.backoffMgr.UpdateBackoff(r.baseURL, err, 0)
+		} else {
+			r.backoffMgr.UpdateBackoff(r.baseURL, err, resp.StatusCode)
+		}
+	}
+	if err != nil {
+		// The watch stream mechanism handles many common partial data errors, so closed
+		// connections can be retried in many cases.
+		if net.IsProbableEOF(err) {
+			return watch.NewEmptyWatch(), nil
+		}
+		return nil, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		defer resp.Body.Close()
+		if result := r.transformResponse(resp, req); result.err != nil {
+			return nil, result.err
+		}
+		return nil, fmt.Errorf("for request '%+v', got status: %v", url, resp.StatusCode)
+	}
+	wrapperDecoder := wrapperDecoderFn(resp.Body)
+	return watch.NewStreamWatcher(restclientwatch.NewDecoder(wrapperDecoder, embeddedDecoder)), nil
+}
+```
+```go
+// NewStreamWatcher creates a StreamWatcher from the given decoder.
+func NewStreamWatcher(d Decoder) *StreamWatcher {
+	sw := &StreamWatcher{
+		source: d,
+		// It's easy for a consumer to add buffering via an extra
+		// goroutine/channel, but impossible for them to remove it,
+		// so nonbuffered is better.
+		result: make(chan Event),
+	}
+	go sw.receive()
+	return sw
+}
+```
 
 
 参考：
