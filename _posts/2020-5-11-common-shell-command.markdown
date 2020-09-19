@@ -38,6 +38,10 @@ grep -A 5 foo file 显示foo及后5行
 
 另外，grep使用双引号表示不对特殊字符进行转义。
 
+grep`或`操作，使用正则表达式，下面是过滤出含有a或者b的行
+
+`grep -E "a|b"`
+
 ###### kubectl 使用label
 kubectl get pv -l kubernetes.io/hostname=nodename
 
