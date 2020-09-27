@@ -8,6 +8,8 @@ tags:
     - k8s
 ---
 
+TODO 这篇文章还需要完善
+
 文档阅读笔记，原文[Kubernetes API Concepts](https://kubernetes.io/docs/reference/using-api/api-concepts/)
 
 #### Standard API terminology 
@@ -26,7 +28,7 @@ Kubernetes generally leverages standard RESTful terminology to describe the API 
 #### Efficient detection of changes 
 为了让client了解当前集群的的状态，所有的K8s都支持watch增量更新，所有的K8s资源都有个`resourceVersion`字段，表示存储在底层数据库的资源的版本，当获取一种资源的集合（collection）的时候，从service端返回的response都包含一个`resourceVersion`，这个`resourceVersion`就可以初始化一个watch。server端会返回在resourceVersion之后发生的所有变化，包括create/delete/update。因此client可以获取当前状态并不会丢失事件，如果watch连接断了，可以起一个新的连接，并从上次断开的resourceVersion开始重新watch。举例说明：
 1. 列出test namespace下的所有pod
-```json
+```s
  GET /api/v1/namespaces/test/pods
  ---
  200 OK
@@ -39,7 +41,7 @@ Kubernetes generally leverages standard RESTful terminology to describe the API 
  }
 ```
 2. 从resourceVersion开始，监听所有的事件，每个事件作为单独的json ojbect返回。
-```json
+```s
 GET /api/v1/namespaces/test/pods?watch=1&resourceVersion=10245
  ---
  200 OK
@@ -59,7 +61,7 @@ GET /api/v1/namespaces/test/pods?watch=1&resourceVersion=10245
 
 ##### Watch bookmarks
 为减轻历史改动时间窗口较小（etcd3的默认5分钟）的问题，引入了`bookmark`watch事件的概念。bookmark事件是一种特殊的事件，这个事件返回的Object只包含`resourceVersion`字段，表明这个字段之前的Object都已经同步给client了。
-```json
+```s
 GET /api/v1/namespaces/test/pods?watch=1&resourceVersion=10245&allowWatchBookmarks=true
 ---
 200 OK
@@ -82,7 +84,7 @@ Content-Type: application/json
 
 为了实现chunk返回，需要添加两个参数`limit`以及`continue`。请求的时候使用limit指定最大的item数量，返回的数据里如果`continue`不为空则说明还有数据需要接受，否则表示数据接收完了，比如，假设一共有1253个pod：
 1. 指定每次最多拿500个。
-```json
+```s
  GET /api/v1/pods?limit=500
  ---
  200 OK
@@ -99,7 +101,7 @@ Content-Type: application/json
  }
 ```
 2. 继续之前的调用，拿下一个500个数据。
-```json
+```s
  GET /api/v1/pods?limit=500&continue=ENCODED_CONTINUE_TOKEN
  ---
  200 OK
@@ -116,7 +118,7 @@ Content-Type: application/json
  }
 ```
 3. 获取剩下的253个pod
-```json
+```s
  GET /api/v1/pods?limit=500&continue=ENCODED_CONTINUE_TOKEN_2
  ---
  200 OK
@@ -137,7 +139,7 @@ Content-Type: application/json
 #### Alternate representations of resources 
 默认K8s以json格式返回数据，content type设置为`application/json`，client为了性能，可以选择使用protobuf，K8s Api支持标准的HTTP协议，只要在Http header里指定`Accept`就好了，例子如下：
 1. 列出集群中所有的Pod，要求以Protobuf的形式返回
-```json
+```s
  GET /api/v1/pods
  Accept: application/vnd.kubernetes.protobuf
  ---
@@ -146,7 +148,7 @@ Content-Type: application/json
  ... binary encoded PodList object
 ```
 2. 发送到时候以protobuf发送（设置Content-Type），接收的时候以json接收
-```json
+```s
  POST /api/v1/namespaces/test/pods
  Content-Type: application/vnd.kubernetes.protobuf
  Accept: application/json
@@ -176,6 +178,7 @@ Resource Version是server内部用来表示资源版本的一个字符串，clie
 get/list/watch支持使用resourceVersion参数。
 
 **Get**
+
 |  resourceVersion unset| resourceVersion is 0  | resourceVersion is set but not 0 |
 |  ----  | ----  | ---- |
 | Most Recent | Any |Not older than|
