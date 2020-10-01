@@ -5,7 +5,7 @@ date:       2020-09-19 10:10:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - 分布式理论
+    - 分布式
 ---
 
 原文地址：[分布式系统：CAP 理论的前世今生](https://developer.aliyun.com/article/700488?spm=a2c6h.13262185.0.0.6ddb76625Af1PX)，作者：肖汉松
