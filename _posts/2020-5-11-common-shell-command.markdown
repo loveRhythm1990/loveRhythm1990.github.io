@@ -56,5 +56,28 @@ do
 done
 ```
 
+###### 查看磁盘读写io
+```s
+iostat -d -m -x 1 10000
+```
+-d: 只看设备
+
+-m: 以MB为单位
+
+-x: 显示扩展数据
+
+1：每秒打印一次
+
+10000： 一共打印10000次
+
+这部分参考：[Linux IO监控与深入分析](https://jaminzhang.github.io/os/Linux-IO-Monitoring-and-Deep-Analysis/)
+
+查看进程写IO
+```s
+pidstat -d 1
+```
+
+-d: 只显示IO
+
 ###### 参考
 [AWK 简明教程](https://coolshell.cn/articles/9070.html)
