@@ -1,0 +1,52 @@
+---
+layout:     post
+title:      "cpuset numa相关"
+date:       2020-11-27 10:10:00
+author:     "weak old dog"
+header-img-credit: false
+tags:
+    - linux
+---
+
+官方文档地址：[https://www.kernel.org/doc/Documentation/cgroup-v1/cpusets.txt](https://www.kernel.org/doc/Documentation/cgroup-v1/cpusets.txt)
+
+#### 基础
+numa (Non-Uniform Memory Access)，主要是为了避免多个cpu竞争总线，这里的总线是指：CPU和内存控制器之间的前端总线 (FSB)。架构图如下，从这里[cgroup 之 cpuset 简介](https://gohalo.me/post/linux-cgroup-cpuset-subsys-introduce.html)盗来的
+
+![java-javascript](/img/in-post/numa/numa.jpg)
+
+
+lscpu命令，会显示有多少个numa，每个numa有多少个cpu。
+
+numactl命令，输出差不多，会显示有多少个numa node，并显示每个node的cpu核数（这里显示的应该是超线程数，也就是逻辑CPU ？逻辑cpu为：物理CPU数量 * 每个物理CPU有多少核 * 超线程数）。
+
+对照下面命令看下：
+```s
+----- 物理 CPU 数量
+$ cat /proc/cpuinfo | grep "physical id" | sort | uniq
+----- 每块 CPU 的核心数
+$ cat /proc/cpuinfo | grep "cores" | uniq
+----- 查看主机总的逻辑线程数
+$ cat /proc/cpuinfo | grep "processor" | wc -l
+```
+
+#### cpusets
+使用cpuset时，需要同时设置`cpuset.cpus`，以及`cpuset.mems`两个配置文件。支持逗号和横线。
+```s
+# echo "0-1, 3-4" > /sys/fs/cgroup/cpuset/foobar/cpuset.cpus
+# echo "0" > /sys/fs/cgroup/cpuset/foobar/cpuset.mems
+```
+应该是多少个numa节点就有多少个mem节点。
+
+#### 问题
+
+如果容器分配的cpu跨numa了，也会产生跨numa的内存访问。
+
+同一个numa节点的L3 cache是共享，绑核了也会产生冲突。
+
+#### 参考
+
+大佬的博客，看不懂系列[【计算机体系结构】NUMA架构详解](https://houmin.cc/posts/b893097a/)
+
+大佬的博客，看不懂系列[INTRODUCTION 2016 NUMA DEEP DIVE SERIES](https://frankdenneman.nl/2016/07/06/introduction-2016-numa-deep-dive-series/)
+
