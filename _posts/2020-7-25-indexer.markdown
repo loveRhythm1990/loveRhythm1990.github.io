@@ -221,6 +221,8 @@ func (c *threadSafeMap) Index(indexName string, obj interface{}) ([]interface{},
 	return list, nil
 }
 ```
+
+
 由上面方法看出，给缓存设定索引，其实就是在底层根据索引函数，把元素的key保存了一边，根据索引查询时，直接根据索引返回key的集合，再根据这些key取出元素，梳理一下相应的数据结构。
 ```go
 type threadSafeMap struct {
@@ -240,4 +242,20 @@ type Index map[string]sets.String
 type Indexers map[string]IndexFunc
 // Indices maps a name to an Index
 type Indices map[string]Index
+```
+
+总结一下：
+
+每个Index（索引）都有缓存数据的一份全集，当然只是absoluteKey的全集就可以了，详细的资源全集只存放在`items`结构体中。这里的absoluteKey就是初始化cache就需要指定的，一般是`DeletionHandlingMetaNamespaceKeyFunc`，通俗地说，每个index都会根据indexFunc生成的key将所有资源划分若干子集，每个子集的元素都是absoluteKey，当根据key来list资源时，时间复杂度就变成O(1)了，因为是map。也由此可以看出，indexer的好处是利于list，是一种使用空间换时间的方式，额外消耗的空间是所有资源的absoluteKey重新复制一遍。（map的key也是消耗空间的）
+
+```go
+// DeletionHandlingMetaNamespaceKeyFunc checks for
+// DeletedFinalStateUnknown objects before calling
+// MetaNamespaceKeyFunc.
+func DeletionHandlingMetaNamespaceKeyFunc(obj interface{}) (string, error) {
+	if d, ok := obj.(DeletedFinalStateUnknown); ok {
+		return d.Key, nil
+	}
+	return MetaNamespaceKeyFunc(obj)
+}
 ```
