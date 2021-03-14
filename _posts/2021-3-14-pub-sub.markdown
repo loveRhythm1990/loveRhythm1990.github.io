@@ -1,0 +1,176 @@
+---
+layout:     post
+title:      "moby中发布订阅模式的实现"
+date:       2021-3-14 00:32:00
+author:     "dm"
+header-img-credit: false
+tags:
+    - go
+    - 齿轮
+---
+
+今天给文档新添加了一个tag`齿轮`，意思就是一些细小的东西，因为是一些细小的东西，分析的时候可以面面俱到，体会设计思路，设计思想，还可以发散一下，把涉及到的知识点看一下。
+moby中有一个发布订阅设计的实现，拿来看看，以后考虑直接用这个。这其实是一个既可以发布消息，也可以发起订阅的组件。发布者和订阅者都持有这个组件的
+引用，其中发布者负责发布消息，订阅者负责取消息。
+
+组件中通过一个map来储存所有的发布者，以及每个发布者对消息的过滤函数。map的key是一个channel，这里要注意一下channel的判等操作，channel在满足下面条件时，是相等的：
+* 都是nil
+* 通过同一个make函数生成的
+不满足上面条件时，channel是不相等的。下面的c1与c2就是不相等的。
+```go
+c1 := make(chan interface{}, 1)
+c2 := make(chan interface{}, 1)
+```
+此组件每次通过Subscribe方法添加订阅者时，都会调用make方法生成一个channel，并存放消息，因此每个订阅者都不可能相等。
+
+读写锁，此组件用了一个读写锁`sync.RWMutex`，而不是简单的`Mutex`，这个锁用来保护对map的访问，当map在结构上有变化时（比如有添加或者删除），则使用写锁；如果是查看订阅者的数量，
+或者向buf中写消息时，使用读锁就够了。在这种情况下，可以同时向多个订阅者发布消息（也就是同时向不同订阅者的channel中写数据，当存在多个goroutine同时发布消息时，也可以同时向一个消费者发送消息，
+channel本身就是线程安全的）
+
+sync.Pool，每次发布者发布消息的时候，都需要一个WaitGroup来等待该发布者向所有的消费者成功发布消息，使用sync.Pool来作为这个WaitGroup的临时缓存，当没有goroutine引用这个wg时，可能会回收，
+但是sync.Pool中有时就不需要重新分配一个，节省时间。
+
+
+```go
+package pubsub // import "github.com/docker/docker/pkg/pubsub"
+
+import (
+	"sync"
+	"time"
+)
+
+// 私有全局变量，使用了临时对象池，临时对象池的New函数是返回一个指向sync.WaitGroup的指针，只有在
+// 临时对象池的Get方法拿不到任何值（任意一个值时，才调用这里的New方法返回一个值）
+var wgPool = sync.Pool{New: func() interface{} { return new(sync.WaitGroup) }}
+
+// NewPublisher creates a new pub/sub publisher to broadcast messages.
+// The duration is used as the send timeout as to not block the publisher publishing
+// messages to other clients if one client is slow or unresponsive.
+// The buffer is used when creating new channels for subscribers.
+func NewPublisher(publishTimeout time.Duration, buffer int) *Publisher {
+	return &Publisher{
+		buffer:      buffer,
+		timeout:     publishTimeout,
+		subscribers: make(map[subscriber]topicFunc),
+	}
+}
+
+// subscriber类型是一个阻塞channel，可以传递任意类型，这里实际含义是一个订阅者感兴趣的消息的集合，发布者往这个channel中写数据
+// 订阅者拿到这个channel之后，从这个channel中读数据
+type subscriber chan interface{}
+// topicFunc是一个函数类型，该类型参数可以是任意类型，返回值是true或者false
+// 订阅者传递这个函数类型，表示是否对某个变量感兴趣
+type topicFunc func(v interface{}) bool
+
+// Publisher is basic pub/sub structure. Allows to send events and subscribe
+// to them. Can be safely used from multiple goroutines.
+type Publisher struct {
+	m           sync.RWMutex
+	buffer      int
+    	timeout     time.Duration
+	subscribers map[subscriber]topicFunc
+}
+
+// 返回当前发布者的订阅者的人数
+func (p *Publisher) Len() int {
+	p.m.RLock()
+	i := len(p.subscribers)
+	p.m.RUnlock()
+	return i
+}
+
+// 下面三个方法都是添加订阅者，返回一个channel，供订阅者消费，可以注册一个topic函数，或者指定channel buffer大小
+// Subscribe adds a new subscriber to the publisher returning the channel.
+func (p *Publisher) Subscribe() chan interface{} {
+	return p.SubscribeTopic(nil)
+}
+
+// SubscribeTopic adds a new subscriber that filters messages sent by a topic.
+func (p *Publisher) SubscribeTopic(topic topicFunc) chan interface{} {
+    // 初始化一个可以存放任意类型的channel，长度为buffer
+	ch := make(chan interface{}, p.buffer)
+	p.m.Lock()
+	p.subscribers[ch] = topic
+	p.m.Unlock()
+	return ch
+}
+
+// SubscribeTopicWithBuffer adds a new subscriber that filters messages sent by a topic.
+// The returned channel has a buffer of the specified size.
+func (p *Publisher) SubscribeTopicWithBuffer(topic topicFunc, buffer int) chan interface{} {
+	ch := make(chan interface{}, buffer)
+	p.m.Lock()
+	p.subscribers[ch] = topic
+	p.m.Unlock()
+	return ch
+}
+
+// Evict removes the specified subscriber from receiving any more messages.
+func (p *Publisher) Evict(sub chan interface{}) {
+	p.m.Lock()
+	_, exists := p.subscribers[sub]
+	if exists {
+		delete(p.subscribers, sub)
+		close(sub)
+	}
+	p.m.Unlock()
+}
+
+// 向所有订阅者发布一个消息
+func (p *Publisher) Publish(v interface{}) {
+	p.m.RLock()
+	if len(p.subscribers) == 0 {
+		p.m.RUnlock()
+		return
+	}
+
+	// 顺序遍历所有的订阅者，如果该订阅者对该消息感兴趣，就向对应的channel发消息，这里向所有订阅者的channel发消息是异步的，但是要
+	// 等到所有发的消息都成功发送之后，发布才算成功，否则通过WaitGroup来阻塞
+	wg := wgPool.Get().(*sync.WaitGroup)
+	for sub, topic := range p.subscribers {
+		wg.Add(1)
+		go p.sendTopic(sub, topic, v, wg)
+	}
+	wg.Wait()
+	wgPool.Put(wg)
+	p.m.RUnlock()
+}
+
+// Close closes the channels to all subscribers registered with the publisher.
+func (p *Publisher) Close() {
+	p.m.Lock()
+	for sub := range p.subscribers {
+		delete(p.subscribers, sub)
+		close(sub)
+	}
+	p.m.Unlock()
+}
+
+// 向订阅者发布一个消息
+func (p *Publisher) sendTopic(sub subscriber, topic topicFunc, v interface{}, wg *sync.WaitGroup) {
+    defer wg.Done()
+    	// 对此消息不感兴趣
+	if topic != nil && !topic(v) {
+		return
+	}
+
+	// send under a select as to not block if the receiver is unavailable
+	if p.timeout > 0 {
+        // 如果设置了超时，就启动一个timer
+        timeout := time.NewTimer(p.timeout)
+		defer timeout.Stop()
+
+		select {
+		case sub <- v:
+		case <-timeout.C:
+		}
+		return
+	}
+
+	// 没有设置timer就一直阻塞，直到写入成功
+	select {
+	case sub <- v:
+	default:
+	}
+}
+```
