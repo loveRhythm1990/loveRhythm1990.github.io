@@ -23,7 +23,7 @@ tags:
 strChan := make(chan string, 3)
 elem := <-strchan
 ```
-在写法`elem, ok := <-strChan`中，变量`ok`表示操作是否成功（并不等价于通道是否关闭）。
+在写法`elem, ok := <-strChan`中，变量`ok`表示操作是否成功（**并不等价于通道是否关闭**）。
 若通道关闭时，通道内没有元素，任何阻塞操作都会立刻返回，此时ok值为false，表示通道关闭了，操作失败。如果通道内还有元素，则虽然通道关闭了，还是会读取成功，ok值为true，直到通道中的元素读完时，才返回操作失败（因为通道关闭了，并不会阻塞），看下面例子：
 ```go
 package main
@@ -53,8 +53,8 @@ func readChan(intChan chan int, wg *sync.WaitGroup) {
 		v, ok := <- intChan
 		if !ok {    // operation fail
 			break
-        }
-        //会将所有1-100的数打印出来
+        	}
+        	//会将所有1-100的数打印出来
 		fmt.Println(v, ok)
 	}
 	wg.Done()
@@ -79,6 +79,8 @@ func readChan(intChan chan int, wg *sync.WaitGroup) {
 select语句是一种仅能用于通道接收和发送操作的专用语句。如果select所有case都不满足条件，并且没有default case，那么当前goroutine就会一直被阻塞于此，直到至少有一个case中的发送或者接收操作可以立即进行为止。如果同时又多个case满足条件，那么运行时系统会通过一个**伪随机**的算法选择一个case，其他的case则被忽略。
 
 在开始执行select语句时，所有跟在case关键字右边的发送语句或接收语句中的通道表达式和元素表达式都会先求值（求值的顺序是**从左到右，自上而下**）。无论它们所在的case语句是否有可能被选择都是这样的。参考下面代码：
+另外需要注意的时，没有被选中的case语句的的channel操作并不会真的发生，只是被求值，只有被选中的case语句，通道操作才会真的发生，即发生channel读操作，或者channel写操作。
+
 ```go
 package main
 
