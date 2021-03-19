@@ -8,9 +8,21 @@ tags:
     - k8s
 ---
 
-我们在容器中，一般使用InClusterConfig来构造Kubernetes ClientSet，并访问K8s Apiserver。那工作原理是什么呢？都涉及到哪些知识点。
+我们在容器中，一般使用InClusterConfig来构造Kubernetes ClientSet，并访问K8s Apiserver。使用示例如下：
+```go
+	// "k8s.io/client-go/kubernetes"
+	// "k8s.io/client-go/rest"
+	config, err := rest.InClusterConfig()
+	if err != nil {
+		klog.Fatalf("Failed to create config: %v", err)
+	}
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		klog.Fatalf("Failed to create client: %v", err)
+	}
+```
 
-InClusterConfig的代码路径为`k8s.io/client-go/rest/config.go`，函数代码并不复杂：
+那工作原理是什么呢？都涉及到哪些知识点。InClusterConfig的代码路径为`k8s.io/client-go/rest/config.go`，函数代码并不复杂：
 ```go
 func InClusterConfig() (*Config, error) {
 	const (
