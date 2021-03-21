@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "cpuset numa相关"
+title:      "cpuset numa相关知识"
 date:       2020-11-27 10:10:00
 author:     "weak old dog"
 header-img-credit: false
@@ -18,7 +18,7 @@ numa (Non-Uniform Memory Access)，主要是为了避免多个cpu竞争总线，
 
 lscpu命令，会显示有多少个numa，每个numa有多少个cpu。
 
-numactl命令，输出差不多，会显示有多少个numa node，并显示每个node的cpu核数（这里显示的应该是超线程数，也就是逻辑CPU ？逻辑cpu为：物理CPU数量 * 每个物理CPU有多少核 * 超线程数）。
+numactl命令，输出差不多，会显示有多少个numa node，并显示每个node的cpu核数（这里显示的应该是超线程数，也就是逻辑CPU，逻辑cpu为：物理CPU数量 * 每个物理CPU有多少核 * 超线程数）。
 
 对照下面命令看下：
 ```s

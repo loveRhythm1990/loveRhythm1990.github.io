@@ -12,9 +12,9 @@ Kubelet有个`Topology Manager`可以对`Guaranteed`的Pod进行绑核，绑核�
 * Pod需要为`Guaranteed`QOS，并且cpu数值必须为整数核数。
 * Kubelet的参数`cpu-manager-policy`必须设置为`static`，这个可以参考[Control CPU Management Policies on the Node](https://kubernetes.io/docs/tasks/administer-cluster/cpu-management-policies/#configuration)
 
-另外如果pod只设置了`limit`没有设置`request`，那么`request`会被设置成跟`limit`一样的值。对于不绑NUMA的容器，限制CPU的策略为使用`cgroup cpu share`来限制使用百分比，使用`cgroup cpu quota`来限制上线，绑核就是设置合适的`cgroup cpu set`，是分配的cpu set都在一个NUMA上。
+另外如果pod只设置了`limit`没有设置`request`，那么`request`会被设置成跟`limit`一样的值。对于不绑NUMA的容器，限制CPU的策略为使用`cgroup cpu share`来限制使用百分比，使用`cgroup cpu quota`来限制上限，绑核就是设置合适的`cgroup cpuset`，使分配的cpuset都在一个NUMA上。
 
-目前`Topology Manager`的主要功能是为Pod中的容器选择cpu，并尽量保证选择的cpu不垮NUMA。如果垮了NUMA，则CPU访问垮NUMA的内存时，代价较大，也就是`Non-Uniform Memory Access`（非一致性内存访问）的含义。绑NUMA对CPU敏感的任务比较有用，比如cpu切换代价比较大的，对L3cache比较敏感的，跨NUMA访问内存比较敏感的等。
+目前`Topology Manager`的主要功能是为Pod中的容器选择cpu，并尽量保证选择的cpu不跨NUMA。如果了NUMA，则CPU访问跨NUMA的内存时，代价较大，也就是`Non-Uniform Memory Access`（非一致性内存访问）的含义。绑NUMA对CPU敏感的任务比较有用，比如cpu切换代价比较大的，对L3cache比较敏感的，跨NUMA访问内存比较敏感的等。
 
 这里[cpuset numa相关](https://loverhythm1990.github.io/2020/11/27/numa/)稍微介绍了一点NUMA的内容，官方文档里也有一张图：
 ![java-javascript](/img/in-post/topology-manager/numa-system.png)
