@@ -403,3 +403,11 @@ var _Greeter_serviceDesc = grpc.ServiceDesc{
            
 ```
 
+重新整理这个文章，分为三部分
+
+1. 基本的grpc，生成了哪些代码，客户端需要做什么事，服务端需要实现什么接口
+2. 流式grpc，分析一个流式grpc的实现。以服务端流为例，说明
+3. 基于grpc的订阅发布系统 
+
+参考：https://eddycjy.com/posts/go/grpc/2018-09-24-stream-client-server/
+https://github.com/chai2010/advanced-go-programming-book/blob/master/ch4-rpc/ch4-04-grpc.md
