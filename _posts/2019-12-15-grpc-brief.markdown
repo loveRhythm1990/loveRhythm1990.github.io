@@ -1,132 +1,79 @@
 ---
 layout:     post
-title:      "grpc入门"
-subtitle:   " \"helloworld\""
+title:      "Golang使用grpc实现基于http的发布订阅模式"
+subtitle:   ""
 date:       2019-12-15 15:25:00
-author:     "weak old dog"
+author:     "decent"
 header-img-credit: false
 tags:
-    - grpc
+    - go
 ---
 
 > 很多协议的标准都是用grpc定义的，对grpc不了解，在理解这些协议的时候也很费劲，此文为简单的grpc入门，主要参考[官方文档](http://doc.oschina.net/grpc?t=56831)，路人直接翻官方链接。
 
-### [gPRC是什么](http://doc.oschina.net/grpc?t=58008)
-在 gRPC 里客户端应用可以像调用本地对象一样直接调用另一台不同的机器上服务端应用的方法，使得您能够更容易地创建分布式应用和服务。与许多 RPC 系统类似，gRPC 也是基于以下理念：定义一个服务，指定其能够被远程调用的方法（包含参数和返回类型）。在服务端实现这个接口，并运行一个 gRPC 服务器来处理客户端调用。在客户端拥有一个存根能够像服务端一样的方法。
+#### gPRC是什么，[http://doc.oschina.net/grpc?t=58008](http://doc.oschina.net/grpc?t=58008)
+在 gRPC 里客户端应用可以像调用本地对象一样直接调用另一台不同的机器上服务端应用的方法，使得您能够更容易地创建分布式应用和服务。与许多 RPC 系统类似，gRPC 也是基于以下理念：定义一个服务，指定其能够被远程调用的方法（包含参数和返回类型）。在服务端实现这个接口，并运行一个 gRPC 服务器来处理客户端调用。
 gRPC 默认使用 protocol buffers，这是 Google 开源的一套成熟的结构数据序列化机制（当然也可以使用其他数据格式如 JSON）。
 
-### 官方helloWorld例子
-使用 protocol buffers 接口定义语言来定义服务方法，用 protocol buffer 来定义参数和返回类型。客户端和服务端均使用服务定义生成的接口代码。
-这里有我们服务定义的例子，在 helloworld.proto 里用 protocol buffers IDL 定义的。Greeter 服务有一个方法 SayHello ，可以让服务端从远程客户端接收一个包含用户名的 HelloRequest 消息后，在一个 HelloReply 里发送回一个 Greeter。
+#### gRPC HelloWorld
+使用protocol buffers接口定义语言来定义服务，`service`关键字定义服务，`message`关键字定义自定义结构体
 ```proto
 syntax = "proto3";
 
 package helloworld;
-
-// The greeting service definition.
+// 服务定义，定义一组服务的方法，及方法的参数，返回值等
 service Greeter {
-  // Sends a greeting
-  rpc SayHello (HelloRequest) returns (HelloReply) {}
+  rpc SayHello (HelloRequest) returns (HelloReply);
 }
-
-// The request message containing the user's name.
+// 自定义结构体
 message HelloRequest {
+  // 编码时用编号1代替名字
   string name = 1;
 }
-
-// The response message containing the greetings
+// 返回类型定义
 message HelloReply {
   string message = 1;
 }
 ```
-用protoc生成go代码，其安装命令为： apt install protobuf-compiler，这生成了 hello.pb.go ，包含了我们生成的客户端和服务端类，此外还有用于填充、序列化、提取 HelloRequest 和 HelloResponse 消息类型的类。
+使用protoc-gen-go内置的gRPC插件生成gRPC代码，hello.pb.go。
 
 `protoc --go_out=plugins=grpc:. hello.proto`
 
-提示没有`protoc-gen-go`，用apt install golang-goprotobuf-dev安装。
-
-生成的go代码中，为client定义了接口，名字是定义的Service的名字（也即`Greeter`）拼接上Client，也即`GreeterClient`，并提供了一个默认实现，通过`NewGreeterClient`即可返回这个默认的实现，也就是，在客户端，用户只需要
-准备好链接以及参数即可。
+生成的go代码中，为自定义结构体定义了Reset以及Get等方法。为定义的Service定义了{ServiceName}Client以及{ServiceName}Server `Interface`。对于{ServiceName}Client接口，有默认的实现（此处生成的默认实现为`greeterClient`），客户端通过下面方法可以获得此默认实现：
 ```go
-type GreeterClient interface {
-	// Sends a greeting
-	SayHello(ctx context.Context, in *HelloRequest, opts ...grpc.CallOption) (*HelloReply, error)
-}
-
-type greeterClient struct {
-	cc *grpc.ClientConn
-}
-
 func NewGreeterClient(cc *grpc.ClientConn) GreeterClient {
 	return &greeterClient{cc}
 }
-
-func (c *greeterClient) SayHello(ctx context.Context, in *HelloRequest, opts ...grpc.CallOption) (*HelloReply, error) {
-	out := new(HelloReply)
-	err := c.cc.Invoke(ctx, "/helloworld.Greeter/SayHello", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
 ```
-生成的代码同样定义了server的接口，名字为`ServiceName+Server`，同样定义了一个结构体，实现了这个接口，这个结构体是以`Unimplemented`开头的，目前对这个结构体的意义还不是很了解，它是不能直接使用的（看返回值）。
-在服务端代码中，需要注册一个grpc server，以及自定义的server。
+通过此默认实现就可以发起请求。
+
+对于{ServiceName}Server接口，没有默认实现，需要服务端实现接口后，通过下面方法注册到grpc:
 ```go
-// GreeterServer is the server API for Greeter service.
-type GreeterServer interface {
-	// Sends a greeting
-	SayHello(context.Context, *HelloRequest) (*HelloReply, error)
-}
-
-// UnimplementedGreeterServer can be embedded to have forward compatible implementations.
-type UnimplementedGreeterServer struct {
-}
-
-func (*UnimplementedGreeterServer) SayHello(ctx context.Context, req *HelloRequest) (*HelloReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SayHello not implemented")
-}
-
 func RegisterGreeterServer(s *grpc.Server, srv GreeterServer) {
 	s.RegisterService(&_Greeter_serviceDesc, srv)
 }
 ```
 
-### 附录：
-开局一张图，内容全靠抄，[gRPC技术栈](https://chai2010.cn/advanced-go-programming-book/ch4-rpc/ch4-04-grpc.html)
-![java-javascript](/img/in-post/grpc/grpc-go-stack.png){:height="60%" width="60%"}
-
-最底层为TCP或Unix Socket协议，在此之上是HTTP/2协议的实现，然后在HTTP/2协议之上又构建了针对Go语言的gRPC核心库。应用程序通过gRPC插件生产的Stub代码和gRPC核心库通信，也可以直接和gRPC核心库通信。
-
-### server端代码
+服务端和客户端代码如下：
 ```go
-// Package main implements a server for Greeter service.
 package main
-
 import (
 	"context"
 	"log"
 	"net"
-
 	"google.golang.org/grpc"
 	"../pb"
 )
+const port = ":50051"
 
-const (
-	port = ":50051"
-)
-
-// server is used to implement helloworld.GreeterServer.
-type server struct {
+type server struct { // 服务端接口实现，这里直接内嵌生成的代码，并进行了代码重写
 	pb.UnimplementedGreeterServer
 }
-
-// SayHello implements helloworld.GreeterServer
+// 方法实现
 func (s *server) SayHello(ctx context.Context, in *pb.HelloRequest) (*pb.HelloReply, error) {
 	log.Printf("Received: %v", in.GetName())
 	return &pb.HelloReply{Message: "Hello " + in.GetName()}, nil
 }
-
 func main() {
 	lis, err := net.Listen("tcp", port)
 	if err != nil {
@@ -142,19 +89,15 @@ func main() {
 		log.Fatalf("failed to serve: %v", err)
 	}
 }
-
 ```
-
-### client端代码
+客户端代码：
 ```go
 package main
-
 import (
 	"context"
 	"log"
 	"os"
 	"time"
-
 	"google.golang.org/grpc"
 	"../pb"
 )
@@ -189,225 +132,170 @@ func main() {
 	log.Printf("Greeting: %s", r.GetMessage())
 }
 ```
+#### gRPC实现发布订阅模式
+在[moby中发布订阅模式的实现](https://loverhythm1990.github.io/2021/03/14/pub-sub/)分析了一个docker的发布订阅模式的实现。在这个实现中，发布者和订阅者都要持有同一个`pubsub`的实现。订阅者通过`pubsub`订阅时，注册过滤函数，并得到一个channel，所有事情都会通过这个channel返回给订阅者。发布者通过`Publish`发布消息时，会遍历所有的订阅者，如果订阅者对此消息感兴趣，就会向之前的channel写入一个数据。
 
-### hello.pb.go
+在这里[advanced-go-programming-book gRPC入门](https://github.com/chai2010/advanced-go-programming-book/blob/master/ch4-rpc/ch4-04-grpc.md)实现了一个gPRC版的发布订阅模式，这里搬过来分析一下。
+
+首先是proto文件：
+```proto
+syntax = "proto3";
+
+package build_in_grpc;
+
+message StrMsg {
+  string value = 1;
+}
+
+service PubsubService {
+  rpc Publish (StrMsg) returns (StrMsg);
+  rpc Subscribe (StrMsg) returns (stream StrMsg);
+}
+```
+注意方法`rpc Subscribe (StrMsg) returns (stream StrMsg)`中的`stream`关键字，表示客户端在发送一次请求之后，服务端流式返回数据。再使用protc生成golang代码，观察生成的代码。
+
+生成的客户端相关代码如下，从代码中可以看出，生成grpc client的方式没有改变，也是先建立一个grpc连接，然后调用`NewPubsubServiceClient`返回一个client。不过这个默认client实现的`Subscribe`接口的返回值变成一个接口`PubsubService_SubscribeClient`这个接口有一个`Recv`方法，因为服务端是流式返回数据，那客户端就靠这个`Recv`方法接收数据了。`Publish`方法没有变化，跟之前一致。
 ```go
-// Code generated by protoc-gen-go. DO NOT EDIT.
-// source: hello.proto
-
-package helloworld
-
-import (
-	context "context"
-	fmt "fmt"
-	proto "github.com/golang/protobuf/proto"
-	grpc "google.golang.org/grpc"
-	codes "google.golang.org/grpc/codes"
-	status "google.golang.org/grpc/status"
-	math "math"
-)
-
-// Reference imports to suppress errors if they are not otherwise used.
-var _ = proto.Marshal
-var _ = fmt.Errorf
-var _ = math.Inf
-
-// This is a compile-time assertion to ensure that this generated file
-// is compatible with the proto package it is being compiled against.
-// A compilation error at this line likely means your copy of the
-// proto package needs to be updated.
-const _ = proto.ProtoPackageIsVersion3 // please upgrade the proto package
-
-// The request message containing the user's name.
-type HelloRequest struct {
-	Name                 string   `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+type PubsubServiceClient interface {
+	Publish(ctx context.Context, in *StrMsg, opts ...grpc.CallOption) (*StrMsg, error)
+	Subscribe(ctx context.Context, in *StrMsg, opts ...grpc.CallOption) (PubsubService_SubscribeClient, error)
 }
 
-func (m *HelloRequest) Reset()         { *m = HelloRequest{} }
-func (m *HelloRequest) String() string { return proto.CompactTextString(m) }
-func (*HelloRequest) ProtoMessage()    {}
-func (*HelloRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_61ef911816e0a8ce, []int{0}
+type pubsubServiceClient struct {
+	cc grpc.ClientConnInterface
 }
 
-func (m *HelloRequest) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_HelloRequest.Unmarshal(m, b)
-}
-func (m *HelloRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_HelloRequest.Marshal(b, m, deterministic)
-}
-func (m *HelloRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_HelloRequest.Merge(m, src)
-}
-func (m *HelloRequest) XXX_Size() int {
-	return xxx_messageInfo_HelloRequest.Size(m)
-}
-func (m *HelloRequest) XXX_DiscardUnknown() {
-	xxx_messageInfo_HelloRequest.DiscardUnknown(m)
+func NewPubsubServiceClient(cc grpc.ClientConnInterface) PubsubServiceClient {
+	return &pubsubServiceClient{cc}
 }
 
-var xxx_messageInfo_HelloRequest proto.InternalMessageInfo
-
-func (m *HelloRequest) GetName() string {
-	if m != nil {
-		return m.Name
-	}
-	return ""
-}
-
-// The response message containing the greetings
-type HelloReply struct {
-	Message              string   `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
-}
-
-func (m *HelloReply) Reset()         { *m = HelloReply{} }
-func (m *HelloReply) String() string { return proto.CompactTextString(m) }
-func (*HelloReply) ProtoMessage()    {}
-func (*HelloReply) Descriptor() ([]byte, []int) {
-	return fileDescriptor_61ef911816e0a8ce, []int{1}
-}
-
-func (m *HelloReply) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_HelloReply.Unmarshal(m, b)
-}
-func (m *HelloReply) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_HelloReply.Marshal(b, m, deterministic)
-}
-func (m *HelloReply) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_HelloReply.Merge(m, src)
-}
-func (m *HelloReply) XXX_Size() int {
-	return xxx_messageInfo_HelloReply.Size(m)
-}
-func (m *HelloReply) XXX_DiscardUnknown() {
-	xxx_messageInfo_HelloReply.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_HelloReply proto.InternalMessageInfo
-
-func (m *HelloReply) GetMessage() string {
-	if m != nil {
-		return m.Message
-	}
-	return ""
-}
-
-func init() {
-	proto.RegisterType((*HelloRequest)(nil), "helloworld.HelloRequest")
-	proto.RegisterType((*HelloReply)(nil), "helloworld.HelloReply")
-}
-
-func init() { proto.RegisterFile("hello.proto", fileDescriptor_61ef911816e0a8ce) }
-
-var fileDescriptor_61ef911816e0a8ce = []byte{
-	// 142 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xe2, 0xce, 0x48, 0xcd, 0xc9,
-	0xc9, 0xd7, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0xe2, 0x02, 0x73, 0xca, 0xf3, 0x8b, 0x72, 0x52,
-	0x94, 0x94, 0xb8, 0x78, 0x3c, 0x40, 0xbc, 0xa0, 0xd4, 0xc2, 0xd2, 0xd4, 0xe2, 0x12, 0x21, 0x21,
-	0x2e, 0x96, 0xbc, 0xc4, 0xdc, 0x54, 0x09, 0x46, 0x05, 0x46, 0x0d, 0xce, 0x20, 0x30, 0x5b, 0x49,
-	0x8d, 0x8b, 0x0b, 0xaa, 0xa6, 0x20, 0xa7, 0x52, 0x48, 0x82, 0x8b, 0x3d, 0x37, 0xb5, 0xb8, 0x38,
-	0x31, 0x1d, 0xa6, 0x08, 0xc6, 0x35, 0xf2, 0xe4, 0x62, 0x77, 0x2f, 0x4a, 0x4d, 0x2d, 0x49, 0x2d,
-	0x12, 0xb2, 0xe3, 0xe2, 0x08, 0x4e, 0xac, 0x04, 0xeb, 0x12, 0x92, 0xd0, 0x43, 0xd8, 0xa7, 0x87,
-	0x6c, 0x99, 0x94, 0x18, 0x16, 0x99, 0x82, 0x9c, 0x4a, 0x25, 0x86, 0x24, 0x36, 0xb0, 0x4b, 0x8d,
-	0x01, 0x01, 0x00, 0x00, 0xff, 0xff, 0xcb, 0x41, 0x4a, 0xeb, 0xb8, 0x00, 0x00, 0x00,
-}
-
-// Reference imports to suppress errors if they are not otherwise used.
-var _ context.Context
-var _ grpc.ClientConn
-
-// This is a compile-time assertion to ensure that this generated file
-// is compatible with the grpc package it is being compiled against.
-const _ = grpc.SupportPackageIsVersion4
-
-// GreeterClient is the client API for Greeter service.
-//
-// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
-type GreeterClient interface {
-	// Sends a greeting
-	SayHello(ctx context.Context, in *HelloRequest, opts ...grpc.CallOption) (*HelloReply, error)
-}
-
-type greeterClient struct {
-	cc *grpc.ClientConn
-}
-
-func NewGreeterClient(cc *grpc.ClientConn) GreeterClient {
-	return &greeterClient{cc}
-}
-
-func (c *greeterClient) SayHello(ctx context.Context, in *HelloRequest, opts ...grpc.CallOption) (*HelloReply, error) {
-	out := new(HelloReply)
-	err := c.cc.Invoke(ctx, "/helloworld.Greeter/SayHello", in, out, opts...)
+func (c *pubsubServiceClient) Publish(ctx context.Context, in *StrMsg, opts ...grpc.CallOption) (*StrMsg, error) {
+	out := new(StrMsg)
+	err := c.cc.Invoke(ctx, "/build_in_grpc.PubsubService/Publish", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-// GreeterServer is the server API for Greeter service.
-type GreeterServer interface {
-	// Sends a greeting
-	SayHello(context.Context, *HelloRequest) (*HelloReply, error)
-}
-
-// UnimplementedGreeterServer can be embedded to have forward compatible implementations.
-type UnimplementedGreeterServer struct {
-}
-
-func (*UnimplementedGreeterServer) SayHello(ctx context.Context, req *HelloRequest) (*HelloReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SayHello not implemented")
-}
-
-func RegisterGreeterServer(s *grpc.Server, srv GreeterServer) {
-	s.RegisterService(&_Greeter_serviceDesc, srv)
-}
-
-func _Greeter_SayHello_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(HelloRequest)
-	if err := dec(in); err != nil {
+func (c *pubsubServiceClient) Subscribe(ctx context.Context, in *StrMsg, opts ...grpc.CallOption) (PubsubService_SubscribeClient, error) {
+	stream, err := c.cc.NewStream(ctx, &_PubsubService_serviceDesc.Streams[0], "/build_in_grpc.PubsubService/Subscribe", opts...)
+	if err != nil {
 		return nil, err
 	}
-	if interceptor == nil {
-		return srv.(GreeterServer).SayHello(ctx, in)
+	x := &pubsubServiceSubscribeClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
 	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/helloworld.Greeter/SayHello",
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
 	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(GreeterServer).SayHello(ctx, req.(*HelloRequest))
-	}
-	return interceptor(ctx, in, info, handler)
+	return x, nil
 }
 
-var _Greeter_serviceDesc = grpc.ServiceDesc{
-	ServiceName: "helloworld.Greeter",
-	HandlerType: (*GreeterServer)(nil),
-	Methods: []grpc.MethodDesc{
-		{
-			MethodName: "SayHello",
-			Handler:    _Greeter_SayHello_Handler,
-		},
-	},
-	Streams:  []grpc.StreamDesc{},
-	Metadata: "hello.proto",
+type PubsubService_SubscribeClient interface {
+	Recv() (*StrMsg, error)
+	grpc.ClientStream
+}
+```
+再看一下服务端代码，`Publish`方法没有改变，不过`Subscribe`方法的参数变成了一个`PubsubService_SubscribeServer`接口，这个接口有一个`Send(*StrMsg)`方法，别慌，这个接口不需要你实现，Server注册到grpc后，被自动被注入这个接口，我们只需要在`Subscribe`接口中使用这个stream就可以了。
+```go
+type PubsubServiceServer interface {
+	Publish(context.Context, *StrMsg) (*StrMsg, error)
+	Subscribe(*StrMsg, PubsubService_SubscribeServer) error
+}
+func RegisterPubsubServiceServer(s *grpc.Server, srv PubsubServiceServer) {
+	s.RegisterService(&_PubsubService_serviceDesc, srv)
+}
+type PubsubService_SubscribeServer interface {
+	Send(*StrMsg) error
+	grpc.ServerStream
+}
+```
+服务端实现如下，也是使用了docker的发布订阅组件。客户端调用`Publish`发布消息时，就检查所有的订阅者，向对应channel发送数据。客户端调用`Subscribe`订阅消息时，返回订阅者的channel，然后就阻塞在该channel上，一旦该channel有消息就通过stream的`Send`方法返回给订阅者。
+```go
+package main
+
+import (
+	"context"
+	"github.com/atmosphere/grpc/build_in_grpc"
+	"github.com/moby/moby/pkg/pubsub"
+	"google.golang.org/grpc"
+	"log"
+	"net"
+	"strings"
+	"time"
+)
+
+type PubSubService struct {
+	pub *pubsub.Publisher
 }
 
-           
+func NewPubsubService() *PubSubService {
+	return &PubSubService{
+		pub: pubsub.NewPublisher(100* time.Millisecond, 10),
+	}
+}
+
+func (p *PubSubService) Publish(ctx context.Context, arg *build_in_grpc.StrMsg) (*build_in_grpc.StrMsg, error){
+	p.pub.Publish(arg.GetValue())
+	return &build_in_grpc.StrMsg{}, nil
+}
+
+func (p *PubSubService) Subscribe(arg *build_in_grpc.StrMsg, steam build_in_grpc.PubsubService_SubscribeServer) error {
+	ch := p.pub.SubscribeTopic(func(v interface{}) bool {
+		if key, ok := v.(string); ok {
+			if strings.HasPrefix(key, arg.GetValue()) {
+				return true
+			}
+		}
+		return false
+	})
+	for v := range ch { // 阻塞在channel上，有消息就返回给客户端
+		log.Println("send a message to client")
+		if err := steam.Send(&build_in_grpc.StrMsg{Value: v.(string)}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func main()  {
+	grpcServer := grpc.NewServer()
+	build_in_grpc.RegisterPubsubServiceServer(grpcServer, NewPubsubService())
+	lis, err := net.Listen("tcp", ":1234")
+	if err != nil {
+		log.Fatal(err)
+	}
+	grpcServer.Serve(lis)
+}
 ```
 
-重新整理这个文章，分为三部分
+`Publish`客户端的实现跟普通grpc一致，代码就不贴了，`Subscribe`的客户端如下，因为`Subscribe`方法的返回值是一个接口，我们可以通过接口的`Recv`方法，不断接收数据。
+```go
+func main()  {
+	conn, err := grpc.Dial("localhost:1234", grpc.WithInsecure())
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer conn.Close()
 
-1. 基本的grpc，生成了哪些代码，客户端需要做什么事，服务端需要实现什么接口
-2. 流式grpc，分析一个流式grpc的实现。以服务端流为例，说明
-3. 基于grpc的订阅发布系统 
-
-参考：https://eddycjy.com/posts/go/grpc/2018-09-24-stream-client-server/
-https://github.com/chai2010/advanced-go-programming-book/blob/master/ch4-rpc/ch4-04-grpc.md
+	client := build_in_grpc.NewPubsubServiceClient(conn)
+	stream, err := client.Subscribe(context.Background(), &build_in_grpc.StrMsg{
+		Value: "golang:",
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	for {
+		reply, err := stream.Recv()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			log.Fatal(err)
+		}
+		fmt.Println(reply.GetValue())
+	}
+}
+```

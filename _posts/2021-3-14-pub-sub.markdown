@@ -5,7 +5,7 @@ date:       2021-3-14 00:32:00
 author:     "dm"
 header-img-credit: false
 tags:
-    - go
+    - golang
     - 齿轮
 ---
 

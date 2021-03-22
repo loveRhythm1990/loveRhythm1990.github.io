@@ -5,7 +5,7 @@ date:       2021-02-09 10:10:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - go
+    - golang
 ---
 
 记录一些工具方法，避免每次都google，当然最好是能直接看文档
