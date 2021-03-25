@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "k8s informer工作流程"
+title:      "关于k8s informer的基本概念与原理"
 date:       2020-02-25 11:50:00
 author:     "weak old dog"
 header-img-credit: false
