@@ -118,6 +118,7 @@ func (f *DeltaFIFO) HasSynced() bool {
 	return f.populated && f.initialPopulationCount == 0
 }
 ```
+另一个问题是，为什么启动Controller之前要先等待缓存同步，一个比较容易想到的原因是，本地cache作为etcd的缓存，应该跟etcd保持一致，如果没有等到cache同步，List的结果或者Get结果有可能现象不一致，比如etcd有，但是本地没有。这个可以参考下[A deep dive into Kubernetes controllers](https://engineering.bitnami.com/articles/a-deep-dive-into-kubernetes-controllers.html)，这个文章我还没看，有可能有出入。
 
 ##### Reflector工作原理
 在上一小节中，启动informer用的是`claimInformer.Run`方法，这个方法创建一个informer机制中的`controller`，并在运行此controller的时候创建一个`reflector`并运行。`Run`方法如下：
@@ -213,6 +214,8 @@ type Deltas []Delta
 
 ###### controller
 controller不介绍了，比较容易理解，就是启动reflector，并消费DeltaFIFO的资源，一方面触发EventHandler，另一方面放到本地cache中。
+
+这里可以说一下Pop消费Delta的方式，因为DeltaFIFO中一个资源可以有多个事件，这个事件列表放在`items map[string]Deltas`中，每次调用Pop弹出元素的时候，每次弹出的都是一个事件列表，然后在`(s *sharedIndexInformer) HandleDeltas(obj interface{}) error`方法中，对每个事件都进行一次分发。
 
 ###### reflector
 在看`reflector`工作原理之前，先看一下`reflector`的一些参数配置。其创建代码在`controller`的Run方法中，

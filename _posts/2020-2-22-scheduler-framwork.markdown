@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "k8s scheduler framework概述"
+title:      "k8s scheduler framework调度流程概述"
 date:       2020-02-22 16:36:00
 author:     "weak old dog"
 header-img-credit: false
@@ -9,7 +9,7 @@ tags:
     - scheduler
 ---
 
-Scheduling Framework定义了一些扩展点，让scheduler更容易定制化。k8s最新版本1.18 release中，已经使用了Scheduler Framework的形式，本文在翻译官方文档的同时，会稍微翻一下1.18的源代码。
+Scheduling Framework定义了一些扩展点，让scheduler更容易定制化。k8s最新版本1.18 release中，已经使用了Scheduler Framework的形式，本文对着文档翻一下K8s的源代码。
 
 Pod在调度框架中的调度过程被分为两个阶段：`Scheduling Cycle`以及`Binding Cycle`，Scheduling cycles是串行执行的，bind cycles是并行执行的。
 
@@ -23,47 +23,58 @@ Pod在调度框架中的调度过程被分为两个阶段：`Scheduling Cycle`�
 type Plugins struct {
 	// QueueSort is a list of plugins that should be invoked when sorting pods in the scheduling queue.
 	QueueSort *PluginSet
-
 	// PreFilter is a list of plugins that should be invoked at "PreFilter" extension point of the scheduling framework.
 	PreFilter *PluginSet
-
 	// Filter is a list of plugins that should be invoked when filtering out nodes that cannot run the Pod.
 	Filter *PluginSet
-
 	// PreScore is a list of plugins that are invoked before scoring.
 	PreScore *PluginSet
-
 	// Score is a list of plugins that should be invoked when ranking nodes that have passed the filtering phase.
 	Score *PluginSet
-
 	// Reserve is a list of plugins invoked when reserving a node to run the pod.
 	Reserve *PluginSet
-
 	// Permit is a list of plugins that control binding of a Pod. These plugins can prevent or delay binding of a Pod.
 	Permit *PluginSet
-
 	// PreBind is a list of plugins that should be invoked before a pod is bound.
 	PreBind *PluginSet
-
 	// Bind is a list of plugins that should be invoked at "Bind" extension point of the scheduling framework.
 	// The scheduler call these plugins in order. Scheduler skips the rest of these plugins as soon as one returns success.
 	Bind *PluginSet
-
 	// PostBind is a list of plugins that should be invoked after a pod is successfully bound.
 	PostBind *PluginSet
-
 	// Unreserve is a list of plugins invoked when a pod that was previously reserved is rejected in a later phase.
 	Unreserve *PluginSet
 }
 ```
 ##### 队列排序（Queue sort）
-这些插件用来对调度队列中的pod进行排序，队列排序插件主要提供一个`less(pod1, pod2)`函数，比较好理解，就是比较一下两个pod，并给出个顺序，只有调度时，只能有一个队列排序插件可以启用。
+这些插件用来对调度队列中的pod进行排序，队列排序插件主要提供一个`Less(pod1, pod2)`函数，比较好理解，就是比较一下两个pod，并给出个顺序，只有调度时，只能有一个队列排序插件可以启用。
+
+K8s默认的队列排序为`const Name = "PrioritySort"`，其是根据pod优先级对Pod排序的
+```go
+func (pl *PrioritySort) Less(pInfo1, pInfo2 *framework.QueuedPodInfo) bool {
+	p1 := corev1helpers.PodPriority(pInfo1.Pod)
+	p2 := corev1helpers.PodPriority(pInfo2.Pod)
+	return (p1 > p2) || (p1 == p2 && pInfo1.Timestamp.Before(pInfo2.Timestamp))
+}
+```
+K8s队列的实现为`PriorityQueue`，代码路径`pkg/scheduler/internal/queue`，是一个`堆`数据结构的实现，堆结构的比较函数Less，就是使用的上面的排序插件的Less函数。
+
+在scheduler的`scheduleOne`方法中，每次调用`sched.NextPod`方法取一个Pod进行调度时，就是从`PriorityQueue`的ActiveQ中取一个Pod，此外PriorityQueue还有多个SubQueue，会专门研究一下。
 
 ##### 预过滤（Pre-filter）
 预过滤插件用来预先处理pod的一些信息，或者检查集群或者pod是否满足特定的条件，如果预过滤插件返回错误，那么调度过程会终止。
 
+以noderesources `Fit`插件为例，这个在`PreFilter`阶段会计算每个Pod的资源请求，计算好之后，写到`CycleState`缓存中。计算算好的资源请求，会在`Filter`阶段消费。
+```go
+func (f *Fit) PreFilter(ctx context.Context, cycleState *framework.CycleState, pod *v1.Pod) *framework.Status {
+	cycleState.Write(preFilterStateKey, computePodResourceRequest(pod))
+	return nil
+}
+```
+写到这里，想到一个问题，对于没有设置Request以及Limit的Pod，也就是BestEffort的Pod，总是能调度成功，是不是在调度时，就认为这些Pod的资源请求为0？看了一下，果然是的，`computePodResourceRequest`就是累加了`container.Resources.Requests`，对于BestEffort类型的Pod，这些值都是0，可以通过kubectl get pod验证一下
+
 ##### 过滤 （Filter）
-Filter插件用来过滤不能运行此pod的node，对于每个node，调度器会按照预先设置的循序调用每个filter plugins，如果任何一个filter插件返回这个节点不可用，那么剩下的插件就不会被执行了。在这个阶段**node的评估过程可以是并行的**。
+Filter插件用来过滤不能运行此pod的node，对于每个node，调度器会按照预先设置的循序调用每个filter plugins，如果任何一个filter插件返回这个节点不可用，那么剩下的插件就不会被执行了。在这个阶段**node的评估过程可以是并行的**。这个过程跟1.9版本的`Predicate`一致，不多说。
 
 ##### Post-filter
 这是一个信息扩展点（information extension point），插件会在一系列通过filter插件的node上调用，插件可以用此扩展点来更新内部状态或者打印日志或者一些metric信息。
@@ -74,12 +85,12 @@ Filter插件用来过滤不能运行此pod的node，对于每个node，调度器
 用来给通过了filter插件的node打分，调度器会为每个node依次调用scoring插件。每个插件会给出一个介于最大值和最小值之间的分数。经过下面的`normalize scoring`阶段之后，调度器会根据每个插件的权重，以及打出的分数来和平所有scoring插件的分数。
 
 ##### Normalize scoring
-归一化。（**这个在代码中没有找到**）
-
-另外，需要执行`pre-reserve`任务的插件，也可以注册此扩展点。
+归一化。
 
 ##### 预留(Reserve)
-这个是之前调度器没有的，文档说一个`informational extension point`，难道也是打印日志用的？这些插件可能要保存一些运行时状态（有状态的插件　stateful plugins），调度器调度完pod之后，node的资源可能要给此pod预留。这个发生在调度器实际将pod bind到node之前。通过这个插件可以避免scheduler因为等待bind成功导致的race condition，（**这听上去不是assume做的事情吗？**），这个是scheduling cycle的最后一步，果然，文档说这个之前被称之为**assume**，低版本的scheduler会利用assume把pod加入都schedulercache中。
+用来预留一些资源，这个是在Scheduler调用`Assume`之后调用的，`Assume`是将Pod加入到SchedulerCache中，这里是执行一些其他资源的预留，其实`Assume`将Pod加入SchedulerCache也是一种资源预留，以`volume_binding`插件为例，这个插件要在Assume Pod之后，进行Assume Volume，调用的方法为`AssumePodVolumes`，该方法做两件事：
+* 将延迟binding的pvc，将这Filter阶段找到的静态pv加入到pv cache中，到了这一步，已经找好pre-binding的pvc了（否则Filter阶段就过不了）
+* 对于需要动态provision的pvc，设置pvc的annotation `volume.kubernetes.io/selected-node`，表示调度到的目标节点。
 
 ##### Permit
 Permit插件用来禁止或者延迟bind某个pod，Permit插件可以做这些事：
@@ -257,13 +268,13 @@ func (g *genericScheduler) Schedule(ctx context.Context, state *framework.CycleS
 	trace := utiltrace.New("Scheduling", utiltrace.Field{Key: "namespace", Value: pod.Namespace}, utiltrace.Field{Key: "name", Value: pod.Name})
 	defer trace.LogIfLong(100 * time.Millisecond)
 
-    //这个basic检查pod所使用的pvc是否存在（从apiserver的get请求没有错），以及是否被删除
+	//这个basic检查pod所使用的pvc是否存在（从apiserver的get请求没有错），以及是否被删除
 	if err := podPassesBasicChecks(pod, g.pvcLister); err != nil {
 		return result, err
 	}
 	trace.Step("Basic checks done")
 
-    // 创建一个schedulercache以及nodeinfo的快照，在调度过程中使用这个快照的信息
+    	// 创建一个schedulercache以及nodeinfo的快照，在调度过程中使用这个快照的信息
 	if err := g.Snapshot(); err != nil {
 		return result, err
 	}
@@ -321,7 +332,7 @@ func (g *genericScheduler) Schedule(ctx context.Context, state *framework.CycleS
 		}, nil
 	}
 
-   // 运行ScorePlugin，在这部分代码中没有发现Normalize插件，framework中也没有类似的方法
+   	// 运行ScorePlugin，在这部分代码中没有发现Normalize插件，framework中也没有类似的方法
 	priorityList, err := g.prioritizeNodes(ctx, state, pod, filteredNodes)
 	if err != nil {
 		return result, err

@@ -79,5 +79,16 @@ pidstat -d 1
 
 -d: 只显示IO
 
+
+###### nc
+在1234端口起一个tcp服务
+```s
+nc -l 1234
+```
+往某个主机的端口发送数据
+```s
+echo -e '{"method":"HelloService.Hello","params":["hello"],"id":1}' | nc localhost 1234
+```
+
 ###### 参考
 [AWK 简明教程](https://coolshell.cn/articles/9070.html)

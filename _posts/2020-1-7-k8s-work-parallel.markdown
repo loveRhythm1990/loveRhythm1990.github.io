@@ -7,6 +7,7 @@ author:     "weak old dog"
 header-img-credit: false
 tags:
     - k8s设计模式
+    - 齿轮
 ---
 
 k8s generic scheduler中判断每个node是否符合条件是并行执行的，具体是通过下面语句：

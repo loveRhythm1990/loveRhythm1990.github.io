@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "k8s scheduler是如何处理binding请求的"
+title:      "K8s scheduler及Apiserver是如何处理binding请求的"
 date:       2021-1-2 17:42:00
 author:     "weak old dog"
 header-img-credit: false
