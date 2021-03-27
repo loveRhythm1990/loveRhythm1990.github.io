@@ -1,187 +1,148 @@
 ---
 layout:     post
-title:      "Kubernetes API Concepts文档阅读"
-date:       2020-08-22 15:22:00
-author:     "weak old dog"
+title:      "基于resourceversion的List与Watch"
+date:       2021-03-26 15:22:00
+author:     "decent"
 header-img-credit: false
 tags:
     - k8s
 ---
 
-TODO 这篇文章还需要完善
+K8s文档[Kubernetes API Concepts](https://kubernetes.io/docs/reference/using-api/api-concepts/)介绍了很多关于ListWatch的一些知识，值得好好研究，这里结合文档进行理解一下。
 
-文档阅读笔记，原文[Kubernetes API Concepts](https://kubernetes.io/docs/reference/using-api/api-concepts/)
+ResourceVersion其实是etcd内部的`ModifiedIndex`，是全局唯一且递增的正整数，每次在etcd集群中对key有update操作的时候就会递增。在K8s集群中，可以看做与具体资源无关的一个逻辑时钟。对于一般资源（比如pod）来说，它的ResourceVersion就是其发生update时的最新版本号，对于List资源来说，其版本号是给客户端构建待返回的List的版本号。
 
-#### Standard API terminology 
-Kubernetes generally leverages standard RESTful terminology to describe the API concepts：
-* **resource type**是在URL中使用的名字，如：pods, namespaces, services
-* 所有的resource type都有一个具体的json表示模式（their object schema），称为kind
-* A list of instances of a resource type is known as a collection
-* A single instance of the resource type is called a resource
-
-所有资源分为cluster scope以及namespaced，访问模式分别为`/apis/GROUP/VERSION/*`，`/apis/GROUP/VERSION/namespaces/NAMESPACE/*`，namespace scoped资源在namespace被删除时，会被级联删除。
-
-有些资源类型有subresource，用这种资源下的subpath来表示
-* Cluster-scoped subresouce: `GET /apis/GROUP/VERSION/RESOURCETYPE/NAME/SUBRESOURCE`
-* Namespace-scoped subresource: `GET /apis/GROUP/VERSION/namespaces/NAMESPACE/RESOURCETYPE/NAME/SUBRESOURCE`
-
-#### Efficient detection of changes 
-为了让client了解当前集群的的状态，所有的K8s都支持watch增量更新，所有的K8s资源都有个`resourceVersion`字段，表示存储在底层数据库的资源的版本，当获取一种资源的集合（collection）的时候，从service端返回的response都包含一个`resourceVersion`，这个`resourceVersion`就可以初始化一个watch。server端会返回在resourceVersion之后发生的所有变化，包括create/delete/update。因此client可以获取当前状态并不会丢失事件，如果watch连接断了，可以起一个新的连接，并从上次断开的resourceVersion开始重新watch。举例说明：
-1. 列出test namespace下的所有pod
-```s
- GET /api/v1/namespaces/test/pods
- ---
- 200 OK
- Content-Type: application/json
- {
-   "kind": "PodList",
-   "apiVersion": "v1",
-   "metadata": {"resourceVersion":"10245"},
-   "items": [...]
- }
+##### ListOptions 数据结构
+先贴一些`ListOptions`的数据结构，后面会介绍部分字段。
+```go
+type ListOptions struct {
+	TypeMeta `json:",inline"`
+	LabelSelector string `json:"labelSelector,omitempty" protobuf:"bytes,1,opt,name=labelSelector"`
+	FieldSelector string `json:"fieldSelector,omitempty" protobuf:"bytes,2,opt,name=fieldSelector"`
+  // 是否是watch请求
+	Watch bool `json:"watch,omitempty" protobuf:"varint,3,opt,name=watch"`
+  // 是否允许server发送BOOKMARK事件，只在watch请求中有效
+	AllowWatchBookmarks bool `json:"allowWatchBookmarks,omitempty" protobuf:"varint,9,opt,name=allowWatchBookmarks"`
+  ResourceVersion string `json:"resourceVersion,omitempty" protobuf:"bytes,4,opt,name=resourceVersion"`
+  // v1.19新加的字段，指定resourceVersion的行为
+	ResourceVersionMatch ResourceVersionMatch `json:"resourceVersionMatch,omitempty" protobuf:"bytes,10,opt,name=resourceVersionMatch,casttype=ResourceVersionMatch"`
+	TimeoutSeconds *int64 `json:"timeoutSeconds,omitempty" protobuf:"varint,5,opt,name=timeoutSeconds"`
+  // 分页时一次response中最多的item数
+	Limit int64 `json:"limit,omitempty" protobuf:"varint,7,opt,name=limit"`
+	// 从server中获取剩下的item，这个字段要跟server返回的continue一致，后者保存在返回结果的ListMeta结构体中
+	Continue string `json:"continue,omitempty" protobuf:"bytes,8,opt,name=continue"`
+}
 ```
-2. 从resourceVersion开始，监听所有的事件，每个事件作为单独的json ojbect返回。
-```s
-GET /api/v1/namespaces/test/pods?watch=1&resourceVersion=10245
- ---
- 200 OK
- Transfer-Encoding: chunked
- Content-Type: application/json
- {
-   "type": "ADDED",
-   "object": {"kind": "Pod", "apiVersion": "v1", "metadata": {"resourceVersion": "10596", ...}, ...}
- }
- {
-   "type": "MODIFIED",
-   "object": {"kind": "Pod", "apiVersion": "v1", "metadata": {"resourceVersion": "11020", ...}, ...}
- }
- ...
-```
-一般K8s server只会保存一段时间内的改动，使用etcd3的集群默认保存过去5分钟的改动，当watch请求因为资源的历史版本不可用而失败的时候，客户端必须识别这种情况下的错误码**410 Gone**，并清除本地缓存，执行list操作，并从list返回的resourceVersion开始watch。大多数客户端有标准的工具做这些事情，在go语言里，这称作`Reflector`，代码在`k8s.io/client-go/cache`。
 
-##### Watch bookmarks
-为减轻历史改动时间窗口较小（etcd3的默认5分钟）的问题，引入了`bookmark`watch事件的概念。bookmark事件是一种特殊的事件，这个事件返回的Object只包含`resourceVersion`字段，表明这个字段之前的Object都已经同步给client了。
+##### Watch与Watch BookMark
+K8s以watch机制来同步资源的增量修改。一般是通过Reflector来实现的，使用watch监听资源变化时，首先通过list接口获取资源全量，调用list时，会返回获得一个ResourceVersion，表示当前的资源版本号，后续watch会根据这个ResourceVersion进行监听，只监听大于这个版本号的事件。
+
+K8s中的etcd3默认值储存5分钟内的事件，当客户端请求一个已经被删除的resourceVersion对应的资源时，就会收到错误码为`410 Gone`的错误。当客户端收到这个错误的时候，应该清除本地cache，重新进行list。
+
+BookMark机制的引入就是定期更新reflector中记录的最新的ResourceVersion，哪怕最新的ResourceVersion没有这个Reflector感兴趣的事件，更新ResourceVersion靠的是`BookMark`事件，这个事件只有资源种类以及版本号，没有具体资源信息，如下：
+```json
+{
+  "type": "ADDED",
+  "object": {"kind": "Pod", "apiVersion": "v1", "metadata": {"resourceVersion": "10596", ...}, ...}
+}
+{
+  "type": "BOOKMARK",
+  "object": {"kind": "Pod", "apiVersion": "v1", "metadata": {"resourceVersion": "12746"} }
+}
+```
+当watch断开重连的时候，只需要根据最新的ResourceVersion进行重新watch，而因为`BookMark`事件的存在，server大概率还是有这个最新的版本号的，即etcd中还存留其数据，这样就不需要进行重新全量list了。如果发起watch的时候，客户端发送的resourceVersion太小，会报下面错误，这个在local volume provisioner中经常遇到。
 ```s
-GET /api/v1/namespaces/test/pods?watch=1&resourceVersion=10245&allowWatchBookmarks=true
+W0224 15:34:39.762384       1 reflector.go:302] k8s.io/client-go/informers/factory.go:133: watch of *v1.PersistentVolume ended with: too old resource version: 8834140265 (8835125434)
+```
+关于这个问题，[当 K8s 集群达到万级规模，阿里巴巴如何解决系统各组件性能问题？](https://zhuanlan.zhihu.com/p/83681938)这篇文章里有更详细的解释，这篇文章写的很好。
+
+##### 通过chunks的方式返回较大的查询数据
+如果server一次返回的数据量较大，会给服务端带来很大的压力，在list的时候可以在List中指定一次获取的资源数（比如一次只拿500个pod），字段是`Limit`；同时server端返回数据中，metadata字段设置了一个`continue`，我们可以拿着这个continue token继续获取剩下的资源（`continue`也是ListOption的一个字段），如果`continue`字段为空，说明没有剩下字段了。这个交互过程如下所示，注意limit以及continue字段的设置`"continue": "ENCODED_CONTINUE_TOKEN"`。
+
+**一次最多获取500个**，返回了一个token:`"continue": "ENCODED_CONTINUE_TOKEN",`
+```s
+GET /api/v1/pods?limit=500
 ---
 200 OK
-Transfer-Encoding: chunked
 Content-Type: application/json
+
 {
-    "type": "ADDED",
-    "object": {"kind": "Pod", "apiVersion": "v1", "metadata": {"resourceVersion": "10596", ...}, ...}
+  "kind": "PodList",
+  "apiVersion": "v1",
+  "metadata": {
+    "resourceVersion":"10245",
+    "continue": "ENCODED_CONTINUE_TOKEN",
+    ...
+  },
+  "items": [...] // returns pods 1-500
 }
-...
+```
+**根据token获取剩下的数据**，直到continue字段为空。
+```s
+GET /api/v1/pods?limit=500&continue=ENCODED_CONTINUE_TOKEN
+---
+200 OK
+Content-Type: application/json
+
 {
-    "type": "BOOKMARK",
-    "object": {"kind": "Pod", "apiVersion": "v1", "metadata": {"resourceVersion": "12746"} }
+  "kind": "PodList",
+  "apiVersion": "v1",
+  "metadata": {
+    "resourceVersion":"10245",
+    "continue": "ENCODED_CONTINUE_TOKEN_2",
+    ...
+  },
+  "items": [...] // returns pods 501-1000
 }
 ```
-在watch request的请求中设置`allowWatchBookmarks=true`来启用bookmark，但是client不能对server对bookmark的行为做任何假设。
 
-#### Retrieving large results sets in chunks 
-在大集群中，list资源集合的时候，数据量可能非常大，可能会影响server以及client的性能，比如，一个集群中可能有数万个pod，每个pod的json数据有1-2k，列出集群内的所有pod返回的response大概有10-20M，这会消耗很多服务端资源，从K8s 1.9开始，服务端开始支持将大的response拆成小数据（chunk）返回，并且所有chunk保持一致性。
 
-为了实现chunk返回，需要添加两个参数`limit`以及`continue`。请求的时候使用limit指定最大的item数量，返回的数据里如果`continue`不为空则说明还有数据需要接受，否则表示数据接收完了，比如，假设一共有1253个pod：
-1. 指定每次最多拿500个。
-```s
- GET /api/v1/pods?limit=500
- ---
- 200 OK
- Content-Type: application/json
- {
-   "kind": "PodList",
-   "apiVersion": "v1",
-   "metadata": {
-     "resourceVersion":"10245",
-     "continue": "ENCODED_CONTINUE_TOKEN",
-     ...
-   },
-   "items": [...] // returns pods 1-500
- }
+##### ListOption 配置resourceversion
+K8s client的`Get`方法，`List`方法以及`Watch`方法都支持在请求时指定`resourceVersion`参数。该参数是个字符串，如果不设置，默认值是空字符串`""`。
+```go
+type GetOptions struct {
+	TypeMeta `json:",inline"`
+	// resourceVersion sets a constraint on what resource versions a request may be served from.
+	// See https://kubernetes.io/docs/reference/using-api/api-concepts/#resource-versions for
+	// details.
+	//
+	// Defaults to unset
+	// +optional
+	ResourceVersion string `json:"resourceVersion,omitempty" protobuf:"bytes,1,opt,name=resourceVersion"`
+}
 ```
-2. 继续之前的调用，拿下一个500个数据。
-```s
- GET /api/v1/pods?limit=500&continue=ENCODED_CONTINUE_TOKEN
- ---
- 200 OK
- Content-Type: application/json
- {
-   "kind": "PodList",
-   "apiVersion": "v1",
-   "metadata": {
-     "resourceVersion":"10245",
-     "continue": "ENCODED_CONTINUE_TOKEN_2",
-     ...
-   },
-   "items": [...] // returns pods 501-1000
- }
-```
-3. 获取剩下的253个pod
-```s
- GET /api/v1/pods?limit=500&continue=ENCODED_CONTINUE_TOKEN_2
- ---
- 200 OK
- Content-Type: application/json
- {
-   "kind": "PodList",
-   "apiVersion": "v1",
-   "metadata": {
-     "resourceVersion":"10245",
-     "continue": "", // continue token is empty because we have reached the end of the list
-     ...
-   },
-   "items": [...] // returns pods 1001-1253
- }
-```
-要注意，在所有返回的数据中，所有的`resourceVersion`都是一致的，均为10245.
+对于`Get`方法在getOption中指定，其行为如下：
 
-#### Alternate representations of resources 
-默认K8s以json格式返回数据，content type设置为`application/json`，client为了性能，可以选择使用protobuf，K8s Api支持标准的HTTP协议，只要在Http header里指定`Accept`就好了，例子如下：
-1. 列出集群中所有的Pod，要求以Protobuf的形式返回
-```s
- GET /api/v1/pods
- Accept: application/vnd.kubernetes.protobuf
- ---
- 200 OK
- Content-Type: application/vnd.kubernetes.protobuf
- ... binary encoded PodList object
-```
-2. 发送到时候以protobuf发送（设置Content-Type），接收的时候以json接收
-```s
- POST /api/v1/namespaces/test/pods
- Content-Type: application/vnd.kubernetes.protobuf
- Accept: application/json
- ... binary encoded Pod object
- ---
- 200 OK
- Content-Type: application/json
- {
-   "kind": "Pod",
-   "apiVersion": "v1",
-   ...
- }
-```
-并不是所有的资源都支持protobuf，尤其是crd。
+**Get:**
 
-#### Resource deletion 
-资源删除分为两步：1) finalization, and 2) removal。当client第一次删除资源的时候，`.metadata.deletionTimestamp`被设置为当前时间，一旦`.metadata.deletionTimestamp`被设置，外部控制器就可以执行一些回收动作，另外需要注意`.metadata.finalizers`的处理最好是无序的，防止死锁。
-
-#### Resource Versions 
-Resource Version是server内部用来表示资源版本的一个字符串，client可以用Resource version来判断资源什么时候被修改了，以及通过resource version来`express data consistency requirements when getting, listing and watching resources`，客户端应该对resource version保持不透明，并且禁止修改，比如，client不能讲resource version视为数字，不能比较大小。
-
-##### ResourceVersion in metadata 
-* v1.meta/ObjectMeta，资源的resource version表示最后的修改作用的版本。
-* v1.meta/ListMeta，资源collection（例如list的response）表示构建这个collection的时候，资源的resource version。
-
-##### The ResourceVersion Parameter
-get/list/watch支持使用resourceVersion参数。
-
-**Get**
-
-|  resourceVersion unset| resourceVersion is 0  | resourceVersion is set but not 0 |
+| 不设置 | 设置为0 | 设置为非零值 |
 |  ----  | ----  | ---- |
-| Most Recent | Any |Not older than|
+| Most Recent | Any | Not older than |
 
-**List**
-list这部分比较复杂，等需要的时候在过来看，
+其中`Most Recent`是指从etcd中获取最新数据，需要透传etcd。
+
+对于`List`方法，在`ListOption`中指定。另外K8s`v1.19+`版本支持参数`resourceVersionMatch`，用来定义resourceVersion的行为，指定`resourceVersionMatch`更直观，语义更清晰一些。鉴于生产环境中用1.19的还比较少，先不考虑用此参数的情况。`List`的行为如下：
+
+| 分页参数 | resourceVersion unset | resourceVersion="0" | resourceVersion="{value other than 0}" |
+| ---- |  ----  | ----  | ---- |
+| limit unset | Most Recent | Any | Not older than |
+| limit=n, continue unset | Most Recent | Any | Exact |
+| limit=n, continue=token	| Continue Token, Exact | Invalid, treated as Continue Token, Exact | Not older than |
+
+从表中可以看出，一旦使用`continue`字段继续读取剩下的数据的时候，就不能设置`resourceVersion`这个字段了。
+
+关于`Most Recent`等字段说明如下:
+* Most Recent: 从ectd拿最新的数据，Return data at the most recent resource version. The returned data must be consistent (i.e. served from etcd via a quorum read)
+* Any: 返回任一版本数据，数据有可能很旧了。
+* Not older than: 至少返回ResourceVersion比这个大的数据。对于List类型返回数据能保证`ListMeta`中的版本号比这个大，这个容易理解，就是构建这个List时的版本号，但是List里面的Item（具体某个资源，比如某个Pod），其`ObjectMeta`中的ResourceVersion有可能比这个小，这个也容易理解，因为Pod发生了修改，才改ResourceVersion的值。
+* Exact: 获取特定版本号，没有了就返回`Gone`
+* Continue Token, Exact: Return data at the resource version of the initial paginated list call. The returned Continue Tokens are responsible for keeping track of the initially provided resource version for all paginated list calls after the initial paginated list call.
+
+watch的选项差不多，不翻译了
+
+| resourceVersion unset | resourceVersion="0" | resourceVersion="{value other than 0}" |
+|  ----  | ----  | ---- |
+| Get State and Start at Most Recent | Get State and Start at Any | Start at Exact |
+
+#### 参考
+[当 K8s 集群达到万级规模，阿里巴巴如何解决系统各组件性能问题？](https://zhuanlan.zhihu.com/p/83681938)
