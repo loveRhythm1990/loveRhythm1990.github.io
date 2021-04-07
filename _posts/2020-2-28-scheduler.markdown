@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "k8s scheduler流程"
+title:      "k8s 1.9版本scheduler调度流程概述"
 date:       2020-02-28 14:46:00
 author:     "weak old dog"
 header-img-credit: false
@@ -9,7 +9,7 @@ tags:
     - scheduler
 ---
 
-k8s 1.9 scheduler概述
+k8s 1.9 scheduler概述，因为之前工作中是基于1.9版本的，还没有引入scheduler framework。
 
 ### 初始化scheduler
 初始化scheduler主要涉及两个结构体: `SchedulerServer`与`Scheduler`，也就是构造这个两个结构体，然后调用`run`方法。初始化SchedulerServer的代码在`plugin/cmd/kube-scheduler/app/server.go`

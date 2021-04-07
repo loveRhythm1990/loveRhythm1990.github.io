@@ -72,6 +72,7 @@ TCP的现代实现包含四种相互影响的拥塞控制算法：慢开始、�
 * 快速恢复：[TODO 忘记了]
 
 此外，发送方采取“超时重传”（retransmission timeout，RTO），这是估计出来回通信延迟 (RTT) 以及RTT的方差。
+
 参考：
 
 [浅谈CLOSE_WAIT](https://blog.huoding.com/2016/01/19/488)
