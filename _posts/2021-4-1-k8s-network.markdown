@@ -6,6 +6,7 @@ author:     "decent"
 header-img-credit: false
 tags:
     - k8s
+    - 网络
 ---
 
 感觉网络涉及的内容挺多的。这里主要参考张磊的《深入剖析Kubernetes》。
