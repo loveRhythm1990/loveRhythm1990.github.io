@@ -21,44 +21,65 @@ tags:
 * 重复关闭的通道会导致panic
 
 #### 生产者消费者
-目前就能想到这么简单的case，以后有复杂的的时候再补充
+目前就能想到这么简单的case，以后有复杂的的时候再补充，补充一个常见的golang面试题：两个goroutine交替打印奇偶数字，并且按照大小顺序输出。使用两个不带缓冲区的channel作为通信，每个goroutine在打印数字前，需要先向channel中写一个数据。
+
 ```go
 package main
 
 import (
 	"fmt"
 	"sync"
-	"time"
 )
 
-func main()  {
-	intChane := make(chan int, 1)
+func main() {
+	oddChan, evenChan := make(chan struct{}), make(chan struct{})
+	odd, even := make(chan int, 5), make(chan int, 5)
+
 	wg := &sync.WaitGroup{}
-	
+
 	wg.Add(1)
-	go produce(intChane, wg)
-	wg.Add(1)
-	go consume(intChane, wg)
+	go producer(odd, even)
+	go printOdd(oddChan, evenChan, odd, wg)
+	go printEven(oddChan, evenChan, even)
+
+	evenChan <- struct{}{}
 
 	wg.Wait()
 }
 
-// WaitGroup Must be a pointer
-func produce(ch chan<- int, wg *sync.WaitGroup)  {
-	for i:=0; i<5;i++ {
-		ch <- i
+func producer(odd, even chan int) {
+	for i := 0; i <= 9; i++ {
+		if i%2 == 0 {
+			even <- i
+		} else {
+			odd <- i
+		}
 	}
-	// close when write over, or consume will never stop
-	close(ch)
-	wg.Done()
 }
 
-func consume(ch <-chan int, wg *sync.WaitGroup)  {
-	for v := range ch {
-		v *= 2
-		fmt.Println("received:", v)
-		time.Sleep(time.Second)
+func printOdd(oddChan, evenChan chan struct{}, odd chan int, wg *sync.WaitGroup) {
+	for v := range odd {
+
+		_ = <-oddChan
+
+		fmt.Println(v)
+		if v == 9 {
+			wg.Done()
+		}
+
+		evenChan <- struct{}{}
 	}
-	wg.Done()
 }
+
+func printEven(oddChan, evenChan chan struct{}, even chan int) {
+	for v := range even {
+
+		_ = <-evenChan
+
+		fmt.Println(v)
+
+		oddChan <- struct{}{}
+	}
+}
+
 ```
