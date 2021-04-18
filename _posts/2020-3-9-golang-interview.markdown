@@ -261,12 +261,137 @@ func (e *entry) tryStore(i *interface{}) bool {
 ```
 
 参考[Go 1.9 sync.Map揭秘](https://colobu.com/2017/07/11/dive-into-sync-Map/)
-##### 协称、线程、进程的区别
 
+##### 零切片 空切片 nil切片
+参考[深度解析 Go 语言中「切片」的三种特殊状态](https://juejin.cn/post/6844903712654098446)。就我个人而言，不太想探究这些问题，然而面试的时候真的会问到，人啊，混口饭吃真不容易。
+
+上面那篇文章也挺有意思，因为Slice的结构为：
+```go
+type slice struct {
+  array unsafe.Pointer
+  length int
+  capcity int
+}
+```
+所以直接将这个结构体转换为了一个[3]int数组，来查看三个字段的值，结论是，空切片的第一个指针指向了同一个地址，也就是golang源代码中的`zerobase`。
+```go
+var s1 []int
+var s2 = []int{}
+var s3 = make([]int, 0)
+var s4 = *new([]int)
+
+var a1 = *(*[3]int)(unsafe.Pointer(&s1))
+var a2 = *(*[3]int)(unsafe.Pointer(&s2))
+var a3 = *(*[3]int)(unsafe.Pointer(&s3))
+var a4 = *(*[3]int)(unsafe.Pointer(&s4))
+fmt.Println(a1)
+fmt.Println(a2)
+fmt.Println(a3)
+fmt.Println(a4)
+
+---------------------
+[0 0 0]
+[824634199592 0 0]
+[824634199592 0 0]
+[0 0 0]
+```
+另外他们还探究出，空切片的json序列化和nil切片的json序列化不一致，反序列化时能根据是`null`还是`[]`来判断是空切片还是nil切片，挺好的。
+```go
+func main() {
+
+	var s1 = Something{}
+	var s2 = Something{[]int{}}
+
+	// 序列化
+	bs1, _ := json.Marshal(s1)
+	bs2, _ := json.Marshal(s2)
+	fmt.Println(string(bs1))
+	fmt.Println(string(bs2))
+
+	// 反序列化
+	unS1 := &Something{}
+	json.Unmarshal(bs1, unS1)
+	unS2 := &Something{}
+	json.Unmarshal(bs2, unS2)
+
+	fmt.Println(unS1.Values == nil) // true
+	fmt.Println(unS2.Values == nil) // false
+}
+
+type Something struct {
+	Values []int
+}
+
+// 输出为：
+// {"Values":null}
+// {"Values":[]}
+// true
+// false
+
+```
+
+##### 协称、线程、进程的区别
+这个问题太头痛了
 
 ##### golang编译相关问题，静态编译/动态编译
+参考[Statically compiling Go programs](https://www.arp242.net/static-go.html)这个头顶一片绿的小伙子总结的不错。
+默认情况下，不使用cgo的话go是静态编译的，但是如果使用了cgo，默认是动态编译。go中cgo用的挺普遍的，比如`os/user`、`net`包都用了cgo。
+
+查看binary是动态链接还是静态链接，可以通过`file`命令来查看：
+```s
+$ file test.dynamic | tr , '\n'
+test.dynamic: ELF 64-bit LSB executable
+ x86-64
+ version 1 (SYSV)
+ dynamically linked
+ interpreter /lib/ld-linux-x86-64.so.2
+ Go BuildID=LxsDWU_fMQ9Cox6y4bSV/fdMBNuZAmOuPSIKb2RXJ/rcazy_d6AbaoNtes-qID/nRiDtV1fOY2eoEVlyqnu
+ not stripped
+
+$ file test.static | tr , '\n'
+test.static:  ELF 64-bit LSB executable
+ x86-64
+ version 1 (SYSV)
+ statically linked
+ Go BuildID=hz56qplN20RU01EMBelb/58lm7IuCas399AWvpycN/BGETSDXvSFKK3BUjfgon/5xa5xLDJTC90556SUlNh
+ not stripped
+```
+注意上面的`dynamically linked`以及`statically linked`，我们还可以使用`ldd`命令来查看二进制文件动态链接了哪些库（必须在二进制文件匹配的操作系统上运行ldd）：
+```s
+$ ldd test.dynamic
+test.dynamic:
+        linux-vdso.so.1 (0x00007ffe00302000)
+        libpthread.so.0 => /usr/lib/libpthread.so.0 (0x00007f3f86f4a000)
+        libc.so.6 => /usr/lib/libc.so.6 (0x00007f3f86d87000)
+        /lib/ld-linux-x86-64.so.2 (0x00007f3f86f80000)
+
+$ ldd test.static
+test.static:
+        not a dynamic executable
+```
+
+强制使用静态链接的方式为：
+```s
+CGO_ENABLED=0 go build
+```
+```s
+go build -ldflags="-extldflags=-static"
+```
+```s
+CGO_ENABLED=0 go build -a -ldflags="-extldflags=-static" .
+```
+参考[完全静态编译一个Go程序](https://colobu.com/2018/07/20/totally-static-Go-builds/)
 
 ##### 如何理解"不要通过共享内存来通信，而应该通过通信来共享内存"
+参考[Share Memory By Communicating](https://blog.golang.org/codelab-share)，传统线程模型中，如果写并发程序，需要对共享的变量加锁，（当然有一些更好用的方式比如阻塞队列），go的并发原语`goroutines and channel`提供了一种更优雅的方式，起源于[Communicating Sequential Processes (CSP)](http://www.usingcsp.com/)模型，这种方式鼓励通过channel来传递消息，而不是通过锁来控制并发，这种方式保证了在同一个时刻，只有一个goroutine在访问数据。
+
+是更高一级的抽象，在进程通信时，我们不需要关注有多少goroutine在引用这个channel，只需要关注这个channel的性质，比如数据类型，读写性质，是否有缓冲区等。
+
+参考[goroutine, channel 和 CSP](http://www.moye.me/2017/05/05/go-concurrency-patterns/)
+
+`Do not communicate by sharing memory; instead, share memory by communicating.`
+
+
 
 ##### for-range实现相关
 
