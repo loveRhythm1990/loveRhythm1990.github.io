@@ -6,7 +6,7 @@ date:       2019-12-15 15:25:00
 author:     "decent"
 header-img-credit: false
 tags:
-    - go
+    - grpc
 ---
 
 在[Golang使用grpc实现基于http的发布订阅模式](https://loverhythm1990.github.io/2019/12/15/grpc-brief/)中，介绍了grpc的一些使用，在本文中希望介绍一些protobuf的一些语法，希望能覆盖工作中的一些case，做到即查即用，同时对protobuf有进一步的认识。

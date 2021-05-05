@@ -6,7 +6,7 @@ date:       2019-12-15 15:25:00
 author:     "decent"
 header-img-credit: false
 tags:
-    - go
+    - grpc
 ---
 
 > 很多协议的标准都是用grpc定义的，对grpc不了解，在理解这些协议的时候也很费劲，此文为简单的grpc入门，主要参考[官方文档](http://doc.oschina.net/grpc?t=56831)，路人直接翻官方链接。

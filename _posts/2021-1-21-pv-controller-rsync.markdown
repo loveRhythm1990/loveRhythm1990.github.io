@@ -5,7 +5,6 @@ date:       2020-11-27 10:10:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - go
     - volume
 ---
 
