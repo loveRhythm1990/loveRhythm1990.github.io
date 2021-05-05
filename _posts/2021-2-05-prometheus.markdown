@@ -94,14 +94,15 @@ Prometheus提供了一些聚合操作，关于聚合操作可以参考官方文�
 * topk (largest k elements by sample value)
 * quantile (calculate φ-quantile (0 ≤ φ ≤ 1) over dimensions)
 这些运算符可以聚合所有的指标，或者根据label聚合，根据label聚合时，有两个关键字`by`和`without`可选。使用方式如下：
-```s
-<aggr-op> [without|by (<label list>)] ([parameter,] <vector expression>)
-```
+
+`<aggr-op> [without|by (<label list>)] ([parameter,] <vector expression>)`
+
 或者将`by`等放在后面。
-```s
-<aggr-op>([parameter,] <vector expression>) [without|by (<label list>)]
-```
+
+`<aggr-op>([parameter,] <vector expression>) [without|by (<label list>)]`
+
 `label list`是一组标签列表，不需要加引号。by我理解是按照label分组的意思（**后面使用的话，这个需要确认一下**），比如
+
 ```s
  sum by (application, group) (http_requests_total)
 ```
