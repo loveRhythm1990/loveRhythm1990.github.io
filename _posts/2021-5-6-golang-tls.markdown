@@ -215,6 +215,61 @@ func loadCA(caFile string) *x509.CertPool {
 }
 ```
 
+上面只是对服务端证书进行认证，如果也需要验证客户端，只与可信任的客户端通信，则也需要对客户端进行通信，方法类似，需要客户端提供证书，并在服务端配置`tls.RequireAndVerifyClientCert`，
+可以参考：[verify certificate in double direction](https://gist.github.com/adisheshsm/5dc412e9a0d81316761373c2e3b283b1)
+
+客户端配置：
+```go
+func createClientConfig(ca, crt, key string) (*tls.Config, error) {
+	caCertPEM, err := ioutil.ReadFile(ca)
+	if err != nil {
+		return nil, err
+	}
+
+	roots := x509.NewCertPool()
+	ok := roots.AppendCertsFromPEM(caCertPEM)
+	if !ok {
+		panic("failed to parse root certificate")
+	}
+
+	cert, err := tls.LoadX509KeyPair(crt, key)
+	if err != nil {
+		return nil, err
+	}
+	return &tls.Config{
+		Certificates: []tls.Certificate{cert},
+		RootCAs:      roots,
+	}, nil
+}
+```
+服务端配置：
+```go
+func createServerConfig(ca, crt, key string) (*tls.Config, error) {
+	caCertPEM, err := ioutil.ReadFile(ca)
+	if err != nil {
+		return nil, err
+	}
+
+	roots := x509.NewCertPool()
+	ok := roots.AppendCertsFromPEM(caCertPEM)
+	if !ok {
+		panic("failed to parse root certificate")
+	}
+
+	cert, err := tls.LoadX509KeyPair(crt, key)
+	if err != nil {
+		return nil, err
+	}
+	return &tls.Config{
+		Certificates: []tls.Certificate{cert},
+		ClientAuth:   tls.RequireAndVerifyClientCert,
+		ClientCAs:    roots,
+	}, nil
+}
+```
+
+关于K8s对于客户端的认证，可以参考：[Kubernetes 中的用户与身份认证授权](https://jimmysong.io/kubernetes-handbook/guide/authentication.html)
+
 #### 参考
 [How to Create Your Own SSL Certificate Authority for Local HTTPS Development](https://deliciousbrains.com/ssl-certificate-authority-for-local-https-development/)
 
