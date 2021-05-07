@@ -33,7 +33,9 @@ openssl req -x509 -new -nodes -key ca.key -subj "/CN=${MASTER_IP}" -days 10000 -
 ```s
 openssl genrsa -out server.key 2048
 ```
+
 4. 配置CSR配置文件，这个CSR文件需要提供给CA，用来签发证书，假设该配置文件名字为：`csr.conf`。
+
 ```s
 [ req ]
 default_bits = 2048
