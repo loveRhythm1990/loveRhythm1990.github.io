@@ -93,6 +93,7 @@ Prometheus提供了一些聚合操作，关于聚合操作可以参考官方文�
 * bottomk (smallest k elements by sample value)
 * topk (largest k elements by sample value)
 * quantile (calculate φ-quantile (0 ≤ φ ≤ 1) over dimensions)
+
 这些运算符可以聚合所有的指标，或者根据label聚合，根据label聚合时，有两个关键字`by`和`without`可选。使用方式如下：
 
 `<aggr-op> [without|by (<label list>)] ([parameter,] <vector expression>)`
