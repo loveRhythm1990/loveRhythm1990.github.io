@@ -51,6 +51,7 @@ CSI，说一些CSI的工作流程，还是以创建一个带pvc的pod为例。
 * bind工作流程
 * scheduler cache的一些问题。
 * batch scheduler、descheduler
+* HPA、VPA、CA
 
 ##### 系统原理
 * 说一下进程、线程、goroutine的区别与联系

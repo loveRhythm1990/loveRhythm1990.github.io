@@ -54,6 +54,7 @@ tags:
         log.Fatal(err)
     }
 ```
+另外需要关注一些，如果对一个文件连续调用`ReadFull`，每次读的时候，偏移都会增加，也就是会接着上次读的内容的继续读下去，不会读重复的内容，每次调用`ReadFull`返回的都不是相同的内容。
 
 ##### 哈希相关
 哈希可以用在校验文件、数据块中，有两种方式：1）输入数据，返回哈希值。2）返回一个writer，往writer里写数据
@@ -83,6 +84,12 @@ func main() {
 	fmt.Println(h.Sum32())
 }
 ```
+`NewIEEE`是使用`IEEE = 0xedb88320`多项式，我们也可以使用下面多项式来使用crc校验。
+```go
+crcTable = crc32.MakeTable(crc32.Castagnoli)
+crc := crc32.New(crcTable)
+```
+
 此外还可以用`hash/fnv`生成hash。跟上述方式一致：
 ```go
 	data := []byte("abcdef")
