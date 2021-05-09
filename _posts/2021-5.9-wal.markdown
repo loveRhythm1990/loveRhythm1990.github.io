@@ -1,0 +1,126 @@
+---
+layout:     post
+title:      "WAL概述"
+date:       2021-5-9 16:53:00
+author:     "weak old dog"
+header-img-credit: false
+tags:
+    - 监控
+---
+
+`WAL`(Write Ahead Log)很久就听说过，但是一直不理解怎么实现的，搜索的时候翻到一个写数据库的damo程序，看了一下，总结下`WAL`的实现。参考的文章为[Writing a Database: Learning By Doing](https://medium.com/@daniel.chia/writing-a-database-learning-by-doing-72480647b978)，这个项目的代码地址为[https://github.com/danchia/ddb](https://github.com/danchia/ddb).
+
+`WAL`的大致思想是在将数据写到数据库之前，先将原始数据（raw record）写到磁盘上，防止在数据落盘之前系统重启了。一般在数据在写到数据库之前需要进行额外处理，比如压缩、格式化等。应用在处理数据之前，先放到内存，然后就给客户端返回成功。如果只是这样，系统一旦重启，内存里的数据就没了，这样数据就丢失了，这个时候就需要WAL，在写内存之前，先将请求的裸数据（全部请求信息），直接写到磁盘普通文件上，基本不做什么处理，然后再写入内存，内存里的数据经处理后，写入数据库，这个时候对应记录的wal就可以删除了。
+
+系统在启动的时候，首先检查WAL，如果WAL存在比数据库新的内容，则将WAL的数据放入内存，并进行处理，然后同步到数据库。
+
+大概画一下这个这个项目[Writing a Database: Learning By Doing](https://medium.com/@daniel.chia/writing-a-database-learning-by-doing-72480647b978)涉及到的几个模块，以及工作流程。
+* memtable，数据写入数据库之前的内存缓存，积攒到一定量才写入数据库
+* wal，wal模块，将写请求、删除请求记录成一个record，然后写入磁盘文件。
+* sst，大概就是数据库实现（这个我没有细看，本文只是记录wal思想）
+
+整个流程就如下所示了，逻辑还是比较简单。但是细节我没有注意，应该还是要注意的。
+![java-javascript](/img/in-post/common/wal.png)
+
+
+##### 写入wal
+写入的代码如下，`LogRecord`是原始数据，`cb func(error)`是写入WAL之后的回调函数，其中`formRecord`是根据原始数据生成一个record日志，然后写入`recordCh`通道，这个是此通道生产者。通道的消费者就从通道中取出消息，然后写入文件（另外需要注意，写文件的时候一定要`flush`，避免只写入buffer cache），
+```go
+func (w *Writer) Append(l *pb.LogRecord, cb func(error)) {
+	glog.V(2).Infof("wal.Append %v", l)
+
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	r, err := w.formRecord(l)
+	if err != nil {
+		cb(err)
+	}
+	r.cb = cb
+
+	w.recordCh <- r
+}
+```
+通道的消费者从通道读数据，并写入磁盘，如果写入磁盘出问题，则通过回调函数返回，否则，执行回调函数。
+```go
+		select {
+		case r := <-w.recordCh:
+			if err := w.writeRawRecord(r); err != nil {
+				r.cb(err)
+			} else {
+				callbacks = append(callbacks, r.cb)
+			}
+		case <-w.closeCh:
+			break Main
+		}
+```
+回调函数定义如下，`apply是写入内存`，`maybeTriggerFlush`是看看内存写了多少了，多的话就写入数据库。
+```go
+func(err error) {
+		trace.FromContext(ctx).Annotate(nil, "appending log done")
+		if err != nil {
+			ch <- err
+			return
+		}
+
+		d.mu.Lock()
+		d.apply(l)
+		d.maybeTriggerFlush()
+		d.mu.Unlock()
+
+		ch <- nil
+	}
+```
+##### 恢复
+启动时，从数据库拿最新的序号，跟wal的序号做对比，如果wal的序号比数据库的序号新，则将wal写入内存。
+```go
+	lastAppliedSeqNo := int64(0)
+	for _, sstMeta := range descriptor.Current.SstMeta {
+		if sstMeta.AppliedUntil > lastAppliedSeqNo {
+			lastAppliedSeqNo = sstMeta.AppliedUntil
+		}
+		sstReader, err := sst.NewReader(filepath.Join(opts.SstDir, sstMeta.Filename), db.blockCache)
+		if err != nil {
+			glog.Fatalf("Error while opening SST: %v", err)
+		}
+		db.ssts = append(db.ssts, sstReader)
+	}
+
+	db.memtable = memtable.New(lastAppliedSeqNo)
+
+	nextSeq, err := db.recoverLog(lastAppliedSeqNo)
+	if err != nil {
+		glog.Fatalf("Failed to recover log file: %v", err)
+	}
+```
+
+##### 校验
+校验是将待写入磁盘的数据进行hash，并将hash结果同样写入磁盘（写入头8个字节），进行读操作，或者传输时，把数据hash，然后与保存在头部的8个字节比较。
+```go
+    var scratch [8]byte
+    // 长度写在前4个字节
+	binary.LittleEndian.PutUint32(scratch[:4], uint32(dataLen))
+    
+    // crc写在后4个字节
+    binary.LittleEndian.PutUint32(scratch[4:], crc)
+
+	curFn := d.filenameFor(d.version)
+	d.version++
+	nextFn := d.filenameFor(d.version)
+	f, err := os.Create(nextFn)
+	if err != nil {
+		return err
+	}
+	w := bufio.NewWriter(f)
+
+    // 先写校验，再写数据
+	if _, err := w.Write(scratch[:]); err != nil {
+		f.Close()
+		return err
+	}
+
+	if _, err := w.Write(data[:]); err != nil {
+		f.Close()
+		return err
+	}
+```
