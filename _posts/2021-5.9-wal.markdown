@@ -2,10 +2,10 @@
 layout:     post
 title:      "WAL概述"
 date:       2021-5-9 16:53:00
-author:     "weak old dog"
+author:     "decent"
 header-img-credit: false
 tags:
-    - 监控
+    - 其他
 ---
 
 `WAL`(Write Ahead Log)很久就听说过，但是一直不理解怎么实现的，搜索的时候翻到一个写数据库的damo程序，看了一下，总结下`WAL`的实现。参考的文章为[Writing a Database: Learning By Doing](https://medium.com/@daniel.chia/writing-a-database-learning-by-doing-72480647b978)，这个项目的代码地址为[https://github.com/danchia/ddb](https://github.com/danchia/ddb).
