@@ -5,7 +5,7 @@ date:       2020-05-11 18:38:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - linux
+    - 运维
 ---
 
 工作中经常涉及一些运维操作，一些shell命令用过了就会忘，以后有shell命令都会放在这里。
@@ -42,43 +42,39 @@ grep`或`操作，使用正则表达式，下面是过滤出含有a或者b的行
 
 `grep -E "a|b"`
 
-###### kubectl 使用label
-kubectl get pv -l kubernetes.io/hostname=nodename
-
-###### 循环读取文件的内容，并逐行删除
-假设要删除文件`files`中的每一行，命令如下。只会这么简单的。
+###### 循环读取文件的内容
+下面是循环读取文件的内容，但是是以空格为分隔符的。
 ```s
 #! /bin/bash
 
-for line in `cat files`
+for line in $(cat files)
 do
         rm -rf $line
 done
 ```
+上面命令可以写成一行：`for line in $(cat files); do echo ${line}; done`，如果要以行为分隔符，可以这么写
+```s
+#!/bin/bash
+cat files | xargs -d "\n" echo
+```
+xargs 用来将前面命令的输出作为后面命令的输入，`-d "\n"`表示以空格为分隔符将输入分割，并把分割后的每一个字符串作为输入传递给后面的命令。xargs 的命令格式为`xargs [-options] [command]`，详细使用方式可以参考[xargs 命令教程](https://ruanyifeng.com/blog/2019/08/xargs-tutorial.html)
 
 ###### 查看磁盘读写io
 ```s
 iostat -d -m -x 1 10000
 ```
--d: 只看设备
-
--m: 以MB为单位
-
--x: 显示扩展数据
-
-1：每秒打印一次
-
-10000： 一共打印10000次
+* -d: 只看设备
+* -m: 以MB为单位
+* -x: 显示扩展数据
+* 1：每秒打印一次
+* 10000： 一共打印10000次
 
 这部分参考：[Linux IO监控与深入分析](https://jaminzhang.github.io/os/Linux-IO-Monitoring-and-Deep-Analysis/)
 
-查看进程写IO
+查看进程写IO，-d: 只显示IO
 ```s
 pidstat -d 1
 ```
-
--d: 只显示IO
-
 
 ###### nc
 在1234端口起一个tcp服务
