@@ -5,7 +5,7 @@ date:       2021-5-6 16:53:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - go
+    - golang
 ---
 
 #### 基本概念

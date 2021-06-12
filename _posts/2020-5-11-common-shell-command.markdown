@@ -86,5 +86,14 @@ nc -l 1234
 echo -e '{"method":"HelloService.Hello","params":["hello"],"id":1}' | nc localhost 1234
 ```
 
+###### 变量的默认值
+如果变量没有定义，或者为空串，则使用默认值：
+```s
+a=${a:-default-value}
+echo ${a}
+```
+输出：default-value
+
+
 ###### 参考
 [AWK 简明教程](https://coolshell.cn/articles/9070.html)
