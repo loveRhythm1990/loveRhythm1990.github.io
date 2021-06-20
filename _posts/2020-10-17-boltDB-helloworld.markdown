@@ -172,6 +172,7 @@ bbolt 的事务可以让用户来手动操控，只需要：
 2. 开始进行操作；
 3. 调用 tx.Commit() 提交事务；
 比如我们可以这样开启一个 read-write 事务：
+
 ```go
 // true 表示可写，如果是只读事务，则设置为 false
 tx, err := db.Begin(true)
@@ -193,6 +194,7 @@ if err := tx.Commit(); err != nil {
 ```
 在 etcd 的实现中，事务是手动操作，并启动一个 goroutine 定期（默认 100ms）进行批量提交。
 我们看一下 db.Update() 的实现（db.View() 的实现与其只有 writable 设置不一样而已）：
+
 ```go
 func (db *DB) Update(fn func(*Tx) error) error {
 	// 创建一个可写的事务
@@ -427,9 +429,13 @@ bbolt 在处理一些结构体的时候，必须做一些底层的指针转换�
   }
 ```
 ### 参考文档
+
 1. [Bolt — an embedded key/value database for Go](https://www.progville.com/go/bolt-embedded-db-golang/)；
+
 2. [Intro to BoltDB: Painless Performant Persistence](https://npf.io/2014/07/intro-to-boltdb-painless-performant-persistence/)；
+
 3. [BoltDB 的优点与缺点](https://zhuanlan.zhihu.com/p/47214093)；
+
 4. [boltdb 源码分析](https://lrita.github.io/2017/05/21/boltdb-overview-0/)
 
 
