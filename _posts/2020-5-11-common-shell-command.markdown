@@ -94,6 +94,27 @@ echo ${a}
 ```
 输出：default-value
 
+###### 安装包管理
+
+**搜索已经安装的docker**
+
+```s
+sudo yum list installed | grep docekr
+
+# 输出
+docker.x86_64 2:1.12.6-16.el7.centos @extras 
+docker-client.x86_64 2:1.12.6-16.el7.centos @extras 
+docker-common.x86_64 2:1.12.6-16.el7.centos @extra
+```
+
+**删除已经安装的docker**
+
+```s
+sudo yum -y remove docker.x86_64
+````
+
+
+研究下 strace
 
 ###### 参考
 [AWK 简明教程](https://coolshell.cn/articles/9070.html)
