@@ -188,3 +188,5 @@ func (c *Cacher) Get(ctx context.Context, key string, resourceVersion string, ob
 	return nil
 }
 ```
+Etcd 在 Kube-apiserver 中的层次可以参考下图：
+![java-javascript](2021-09-14-16-22-25.png)
