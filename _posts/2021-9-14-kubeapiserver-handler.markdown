@@ -45,11 +45,13 @@ Apiserver 中，注册资源处理 handler 的方法是：
 其调用链为：
 
 `server, err := CreateServerChain(completeOptions, stopCh)`
-		|
-		V
+
+&darr;
+
 `kubeAPIServer, err := CreateKubeAPIServer(kubeAPIServerConfig, apiExtensionsServer.GenericAPIServer, admissionPostStartHook)`
-		|
-		V
+
+&darr;
+
 `kubeAPIServer, err := kubeAPIServerConfig.Complete().New(delegateAPIServer)`
 
 在 `New` 方法中，对所有的资源进行了汇总：
@@ -86,35 +88,45 @@ Apiserver 中，注册资源处理 handler 的方法是：
 后面的 `InstallAPIs` 就是进行 handler 注册了。其调用链如下（以 get 请求为例），不得不说，这个调用链挺长的。
 
 `m.InstallAPIs(c.ExtraConfig.APIResourceConfigSource, c.GenericConfig.RESTOptionsGetter, restStorageProviders...); `
-		|
-		V
+
+&darr;
+
 `if err := m.GenericAPIServer.InstallAPIGroups(apiGroupsInfo...); err != nil {`
-		|
-		V
+
+&darr;
+
 `if err := s.installAPIResources(APIGroupPrefix, apiGroupInfo, openAPIModels); err != nil {`
-		|
-		V
+
+&darr;
+
 `if err := s.installAPIResources(APIGroupPrefix, apiGroupInfo, openAPIModels); err != nil {`
-		|
-		V
+
+&darr;
+
 `if err := apiGroupVersion.InstallREST(s.Handler.GoRestfulContainer); err != nil {`
-		|
-		V
+
+&darr;
+
 `apiResources, ws, registrationErrors := installer.Install()`
-		|
-		V
+
+&darr;
+
 `apiResource, err := a.registerResourceHandlers(path, a.group.Storage[path], ws)`
-		|
-		V
+
+&darr;
+
 `handler = restfulGetResourceWithOptions(getterWithOptions, reqScope, isSubresource)`
-		|
-		V
+
+&darr;
+
 `handlers.GetResourceWithOptions(r, &scope, isSubresource)(res.ResponseWriter, req.Request)`
-		|
-		V
+
+&darr;
+
 `getResourceHandler`
-		|
-		V
+
+&darr;
+
 `func getResourceHandler(scope *RequestScope, getter getterFunc) http.HandlerFunc {`
 
 我们看下 `getResourceHandler` 的最终实现，其所在代码路径为 **vendor/k8s.io/apiserver/pkg/endpoints/handlers/get.go**，在 handlers 目录下面还有其他请求的处理函数，比如 `create.go` 以及 `delete.go` 等，均是对应 verb 的处理函数。
