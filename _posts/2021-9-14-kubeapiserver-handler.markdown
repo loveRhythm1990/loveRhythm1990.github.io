@@ -46,11 +46,7 @@ Apiserver 中，注册资源处理 handler 的方法是：
 
 `server, err := CreateServerChain(completeOptions, stopCh)`
 
-&darr;
-
 `kubeAPIServer, err := CreateKubeAPIServer(kubeAPIServerConfig, apiExtensionsServer.GenericAPIServer, admissionPostStartHook)`
-
-&darr;
 
 `kubeAPIServer, err := kubeAPIServerConfig.Complete().New(delegateAPIServer)`
 
