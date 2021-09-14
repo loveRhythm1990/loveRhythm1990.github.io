@@ -74,9 +74,11 @@ http_requests_total{job="prometheus"}[5m]
 
 关于prometheus的时序数列指标以及数据类型，[Understanding the Prometheus rate() function](https://www.metricfire.com/blog/understanding-the-prometheus-rate-function/)有两张图值的看一下：
 ![java-javascript](/img/in-post/monitor/prometheus_range.png)
+
 上面是三个采样指标，指标名称都一样，但是标签不一样，也是通过三个不同的时序序列来表示的。横轴表示时间，上图显示了最近60秒的采样数据，每个指标都是一个序列。上面是一个`Range vector`，有一个时间范围。(**顺便有个思考，因为缺少实战，如果对上面foo求rate，那么每个指标序列应该都有一个平均值**)
 
 ![java-javascript](/img/in-post/monitor/prometheus_instant.png)
+
 这个是一个`Instant vector`，只显示了指标`foo`在某一个时刻的值，但是有三个采样，表示不同的采样指标。这两个图很有代表性。
 
 #### 聚合运算
@@ -108,6 +110,12 @@ Prometheus提供了一些聚合操作，关于聚合操作可以参考官方文�
  sum by (application, group) (http_requests_total)
 ```
 是按照label`application`以及`group`分组，相同的为一组。
+
+我们在监控 Apiserver 时，有时候想要监控请求的 QPS，这个时候我们可以先用 rate 来计算每秒的 qps，然后按照资源（resource）以及方法（verb）来分组，来查看特定资源类型以及请求的 QPS。参考[A Deep Dive into Kubernetes Metrics — Part 4: The Kubernetes API Server](https://blog.freshtracks.io/a-deep-dive-into-kubernetes-metrics-part-4-the-kubernetes-api-server-72f1e1210770)，计算公式为：
+```s
+sum(rate(apiserver_request_count[5m])) by (resource,subresource,verb)
+```
+上面先通过 rate 对 5m 内的请求求平均值，这个平均值也就是一个 QPS，rate 的结果是一个 instant vector，每个 metrics 的 label 组合都是不一样的，然后 sum 的作用就是将这个 instant vector 按照 label 求和，根据哪些 label 由 by 语句指定，所以 sum 的结果也是一个 QPS，但是是根据label组合之后的 QPS。
 
 #### 查询函数
 看一个几个常用查询函数的使用
