@@ -14,14 +14,14 @@ tags:
 
 本文还是以 Deployment 为例进行分析。Deployment 在 **pkg/registry/apps/rest/storage_apps.go** 文件中定义了存储接口，在 **pkg/registry/apps/rest/storage_apps.go**中定义了各个资源版本的存储接口实现，不同的资源版本有：v1beta1 / v1beta2 / v1 等，以 v1beta1 为例，其定义方式为：
 ```go
-	// deployments
-	deploymentStorage, err := deploymentstore.NewStorage(restOptionsGetter)
-	if err != nil {
-		return storage, err
-	}
-	storage["deployments"] = deploymentStorage.Deployment
-	storage["deployments/status"] = deploymentStorage.Status
-	storage["deployments/scale"] = deploymentStorage.Scale
+// deployments
+deploymentStorage, err := deploymentstore.NewStorage(restOptionsGetter)
+if err != nil {
+	return storage, err
+}
+storage["deployments"] = deploymentStorage.Deployment
+storage["deployments/status"] = deploymentStorage.Status
+storage["deployments/scale"] = deploymentStorage.Scale
 ```
 在 Apiserver 中，汇聚所有资源存储接口实现的数据结构是 `APIGroupInfo`，其所在文件为 **vendor/k8s.io/apiserver/pkg/server/genericapiserver.go**，具体实现为：
 ```go
@@ -56,76 +56,56 @@ Apiserver 中，注册资源处理 handler 的方法是：
 
 在 `New` 方法中，对所有的资源进行了汇总：
 ```go
-	restStorageProviders := []RESTStorageProvider{
-		auditregistrationrest.RESTStorageProvider{},
-		authenticationrest.RESTStorageProvider{Authenticator: c.GenericConfig.Authentication.Authenticator, APIAudiences: c.GenericConfig.Authentication.APIAudiences},
-		authorizationrest.RESTStorageProvider{Authorizer: c.GenericConfig.Authorization.Authorizer, RuleResolver: c.GenericConfig.RuleResolver},
-		autoscalingrest.RESTStorageProvider{},
-		batchrest.RESTStorageProvider{},
-		certificatesrest.RESTStorageProvider{},
-		coordinationrest.RESTStorageProvider{},
-		discoveryrest.StorageProvider{},
-		extensionsrest.RESTStorageProvider{},
-		networkingrest.RESTStorageProvider{},
-		noderest.RESTStorageProvider{},
-		policyrest.RESTStorageProvider{},
-		rbacrest.RESTStorageProvider{Authorizer: c.GenericConfig.Authorization.Authorizer},
-		schedulingrest.RESTStorageProvider{},
-		settingsrest.RESTStorageProvider{},
-		storagerest.RESTStorageProvider{},
-		// keep apps after extensions so legacy clients resolve the extensions versions of shared resource names.
-		// See https://github.com/kubernetes/kubernetes/issues/42392
-		// Deployment 在这里
-		appsrest.RESTStorageProvider{},
-		admissionregistrationrest.RESTStorageProvider{},
-		eventsrest.RESTStorageProvider{TTL: c.ExtraConfig.EventTTL},
-	}
-	// 调用 InstallAPIs 进行注册处理
-	if err := m.InstallAPIs(c.ExtraConfig.APIResourceConfigSource, c.GenericConfig.RESTOptionsGetter, restStorageProviders...); err != nil {
-		return nil, err
-	}
+restStorageProviders := []RESTStorageProvider{
+	auditregistrationrest.RESTStorageProvider{},
+	authenticationrest.RESTStorageProvider{Authenticator: c.GenericConfig.Authentication.Authenticator, APIAudiences: c.GenericConfig.Authentication.APIAudiences},
+	authorizationrest.RESTStorageProvider{Authorizer: c.GenericConfig.Authorization.Authorizer, RuleResolver: c.GenericConfig.RuleResolver},
+	autoscalingrest.RESTStorageProvider{},
+	batchrest.RESTStorageProvider{},
+	certificatesrest.RESTStorageProvider{},
+	coordinationrest.RESTStorageProvider{},
+	discoveryrest.StorageProvider{},
+	extensionsrest.RESTStorageProvider{},
+	networkingrest.RESTStorageProvider{},
+	noderest.RESTStorageProvider{},
+	policyrest.RESTStorageProvider{},
+	rbacrest.RESTStorageProvider{Authorizer: c.GenericConfig.Authorization.Authorizer},
+	schedulingrest.RESTStorageProvider{},
+	settingsrest.RESTStorageProvider{},
+	storagerest.RESTStorageProvider{},
+	// keep apps after extensions so legacy clients resolve the extensions versions of shared resource names.
+	// See https://github.com/kubernetes/kubernetes/issues/42392
+	// Deployment 在这里
+	appsrest.RESTStorageProvider{},
+	admissionregistrationrest.RESTStorageProvider{},
+	eventsrest.RESTStorageProvider{TTL: c.ExtraConfig.EventTTL},
+}
+// 调用 InstallAPIs 进行注册处理
+if err := m.InstallAPIs(c.ExtraConfig.APIResourceConfigSource, c.GenericConfig.RESTOptionsGetter, restStorageProviders...); err != nil {
+	return nil, err
+}
 ```
-后面的 `InstallAPIs` 就是进行 handler 注册了。其调用链如下（以 get 请求为例），不得不说，这个调用链挺长的。
+后面的 `InstallAPIs` 就是进行 handler 注册了。从上到下其调用链如下（以 get 请求为例），不得不说，这个调用链挺长的。
 
 `m.InstallAPIs(c.ExtraConfig.APIResourceConfigSource, c.GenericConfig.RESTOptionsGetter, restStorageProviders...); `
 
-&darr;
-
 `if err := m.GenericAPIServer.InstallAPIGroups(apiGroupsInfo...); err != nil {`
 
-&darr;
-
 `if err := s.installAPIResources(APIGroupPrefix, apiGroupInfo, openAPIModels); err != nil {`
 
-&darr;
-
 `if err := s.installAPIResources(APIGroupPrefix, apiGroupInfo, openAPIModels); err != nil {`
-
-&darr;
 
 `if err := apiGroupVersion.InstallREST(s.Handler.GoRestfulContainer); err != nil {`
 
-&darr;
-
 `apiResources, ws, registrationErrors := installer.Install()`
-
-&darr;
 
 `apiResource, err := a.registerResourceHandlers(path, a.group.Storage[path], ws)`
 
-&darr;
-
 `handler = restfulGetResourceWithOptions(getterWithOptions, reqScope, isSubresource)`
-
-&darr;
 
 `handlers.GetResourceWithOptions(r, &scope, isSubresource)(res.ResponseWriter, req.Request)`
 
-&darr;
-
 `getResourceHandler`
-
-&darr;
 
 `func getResourceHandler(scope *RequestScope, getter getterFunc) http.HandlerFunc {`
 
