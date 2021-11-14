@@ -18,7 +18,7 @@ tags:
 
 ### RESTStorage 存储服务通用接口
 
-k8s 中的所有资源都必须实现 `RESTStorage` 接口，在文件 **vendor/k8s.io/apiserver/pkg/registry/rest/rest.go** 中，该接口定义为：
+k8s 中的所有资源都必须实现 `RESTStorage` 接口（所有通过 RESTful API 对外暴露的资源都必须实现 RESTStorage 接口），在文件 **vendor/k8s.io/apiserver/pkg/registry/rest/rest.go** 中，该接口定义为：
 ```go
 type Storage interface {
     New() runtime.Object
