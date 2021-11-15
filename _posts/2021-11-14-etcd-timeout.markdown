@@ -22,8 +22,7 @@ etcd 的日志中，经常有下面的 warning 信息，这个东西本没有好
 ## 分析
 日志是通过函数 `warnOfExpensiveGenericRequest` 打印的。
 ```go
-			plog.Warningf("%srequest %q with result %q took too long (%v) to execute", prefix, reqStringer.String(), result, d)
-
+plog.Warningf("%srequest %q with result %q took too long (%v) to execute", prefix, reqStringer.String(), result, d)
 ```
 从调用处看，调用处不多，逐个分析一下。
 ![java-javascript](/img/in-post/all-in-one/2021-11-14-10-32-14.png)
