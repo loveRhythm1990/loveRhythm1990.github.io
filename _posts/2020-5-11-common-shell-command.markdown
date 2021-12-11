@@ -111,8 +111,69 @@ docker-common.x86_64 2:1.12.6-16.el7.centos @extra
 
 ```s
 sudo yum -y remove docker.x86_64
-````
+```
 
+###### sed 替换某一行
+```s
+sed [options] 'command' file(s)
+```
+
+假设有如下文件：
+```s
+a
+sometext sometext sometext TEXT_TO_BE_REPLACED sometext sometext sometext
+b
+c
+d
+```
+将含有 `TEXT_TO_BE_REPLACED` 的行替换为 `This line is removed by the admin.`命令如下:
+```s
+sed -i '/TEXT_TO_BE_REPLACED/c\This line is removed by the admin.' /tmp/foo
+```
+其中 `-i` 表示直接修改文件，`c` 命令表示将指定行中的所有内容，替换成该选项后面的字符串。该命令的基本格式为：
+```s
+[address]c\用于替换的新文本
+```
+
+###### sed 注释某一行
+比如有下面文件 /tmp/foo
+```s
+This is a 000 line.
+This is 000 yet ano000ther line.
+This is still yet another line.
+```
+注释所有含有 `000` 的行。其命令如下：
+```s
+sed -i '/000/s/^/#/' /tmp/foo
+```
+其中：
+* `/000/` 匹配包含 `000` 的所有行
+* `s` 对匹配的行进行替换。
+* `^` 表示在行的开始，`#` 表示要插入的字符
+
+参考[sed-功能强大的流式文本编辑器](https://wangchujiang.com/linux-command/c/sed.html)
+
+
+###### ansible 基本用法
+比如有一批机器，需要在这些机器上执行一条命令，hosts 文件如下：
+```s
+[all]
+11.37.51.75
+```
+需要查看每个节点的版本内核，命令如下：
+```s
+ansible all -i ./hosts -m command -a "uname -a"
+```
+
+###### ssh 配置免密登录
+一路回车，生成秘钥
+```s
+ssh-keygen
+```
+配置免密登录（-i参数是不是可以不加？）
+```s
+ssh-copy-id -i .ssh/id_rsa.pub  用户名字@192.168.x.xxx
+```
 
 研究下 strace
 
