@@ -14,7 +14,7 @@ tags:
 参考的 etcd 版本为 v3.3.10
 
 ## Overview
-Etcd将raft协议实现为一个library，然后本身作为一个应用使用它。当然，可能是为了推广它所实现的这个library，etcd还额外提供了一个叫[raftexample](https://github.com/etcd-io/etcd/tree/v3.3.10/contrib/raftexample)的示例程序，向用户展示怎样在它所提供的raft library的基础上构建出一个分布式的KV存储引擎。
+Etcd将raft协议实现为一个library，然后本身作为一个应用使用它。当然，可能是为了推广它所实现的这个library，etcd还额外提供了一个叫 [raftexample](https://github.com/etcd-io/etcd/tree/v3.3.10/contrib/raftexample) 的示例程序，向用户 展示怎样在它所提供的raft library的基础上构建出一个分布式的KV存储引擎。
 
 在etcd中，raft作为底层的共识模块，运行在一个goroutine里，通过channel接受上层（etcdserver）传来的消息，并将处理后的结果通过另一个channel返回给上层应用，他们的交互过程大概是这样的：
 ![java-javascript](/img/in-post/all-in-one/2022-01-03-11-26-47.png)
@@ -59,6 +59,7 @@ type Entry struct {
 * Index：当前这个entry在整个raft日志中的位置索引。有了Term和Index之后，一个log entry就能被唯一标识。
 * Type：当前entry的类型，目前etcd支持两种类型：EntryNormal和EntryConfChange，EntryNormal代表当前Entry是对状态机的操作，EntryConfChange则代表对当前集群配置进行更改的操作，比如增加或者减少节点。
 * Data：一个被序列化后的byte数组，代表当前entry真正要执行的操作，比方说如果上面的Type是EntryNormal，那这里的Data就可能是具体要更改的key-value pair，如果Type是EntryConfChange，那Data就是具体的配置更改项ConfChange。raft算法本身并不关心这个数据是什么，它只是把这段数据当做log同步过程中的payload来处理，具体对这个数据的解析则有上层应用来完成。
+
 #### Message
 Raft集群中节点之间的通讯都是通过传递不同的Message来完成的，这个Message结构就是一个非常general的大容器，它涵盖了各种消息所需的字段。
 ```go
@@ -401,6 +402,7 @@ func stepLeader(r *raft, m pb.Message) error {
 ```
 4. 在follower接受完这个log后，会返回一个MsgAppResp消息。
 5. 当leader确认已经有足够多的follower接受了这个log后，它首先会commit这个log，然后再广播一次，告诉别人它的commit状态。这里的实现就有点像两阶段提交了。
+
 ```go
 func stepLeader(r *raft, m pb.Message) error {
     switch m.Type {
