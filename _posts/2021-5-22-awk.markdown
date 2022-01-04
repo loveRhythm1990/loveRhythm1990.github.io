@@ -20,7 +20,18 @@ awk 命令的匹配模式非常灵活，可以是以下任意一种：
 
     表示对于 scores.txt 文件中的每一行，如果以字符 T 开头，则打印出来。另外`/^(Tom|Kon)/`正则表达式表示，以 Tom 或者 Kon 开头。
 
-* 关系表达式：例如`x>34`，判断变量 x 与 34 是否存在大于的关系。比如：
+* 字符串匹配：这里的字符串匹配可能是上面`正则表达式`的一个特例，看一个 [AWK 简明教程](https://coolshell.cn/articles/9070.html) 中的例子，比如我想打印处于 `FIN_WAIT` 状态的连接，可以用下面命令，下面命令匹配的是第六列包含 `FIN` 的行。
+```sh
+$ awk '$6 ~ /FIN/ || NR==1 {print NR,$4,$5,$6}' OFS="\t" netstat.txt
+1       Local-Address   Foreign-Address State
+6       coolshell.cn:80 61.140.101.185:37538    FIN_WAIT2
+9       coolshell.cn:80 116.234.127.77:11502    FIN_WAIT2
+13      coolshell.cn:80 124.152.181.209:26825   FIN_WAIT1
+18      coolshell.cn:80 117.136.20.85:50025     FIN_WAIT2
+```
+其中 `OFS` 表示的是字段分隔符，默认是空格，这里是指定为 tab。
+
+* 关系表达式：例如`x>34`，判断变量 x 与 34 是否存在大于的关系
     
     `awk '$2>80 {print}' scores.txt`
     
@@ -65,3 +76,11 @@ awk的工作流程，反复执行下面 4 个步骤：
 | FS | 字段分隔符 Field split |
 | RS | 记录分隔符 Record split |
 
+另外，提一下 xargs 的用法，下面两个 shell 写法是等价的。
+```sh
+for i in $(kubectl get pods -A | grep "Evicted" | awk '{print $1}'); do kubectl delete pod ${i}; done
+```
+用 xargs 的写法如下，可见 xargs 能读取 awk 每一行的输出，并作为输入，写法上也比 for 循环简单一点。
+```sh
+kubectl get pods -A | grep "Evicted" | awk '{print $1}' | xargs kubectl delete pod 
+```

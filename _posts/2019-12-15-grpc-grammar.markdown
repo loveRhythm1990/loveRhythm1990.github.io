@@ -142,7 +142,7 @@ gogo库基于官方库开发，增加了很多的功能，包括：
 * 可以选择产生测试代码和benchmark代码
 * 其它序列化格式
 
-gogo库的安装方式为：
+gogo库的安装方式如下，下面命令会在 ${GOPATH}/bin 目录下面下载 `protoc-gen-gofast` 二进制文件。
 ```s
 go get github.com/gogo/protobuf/protoc-gen-gofast
 ```
