@@ -13,14 +13,15 @@ tags:
 
 #### 进程日志
 问题发生时的 etcd 日志：
-```sh
+```s
 2021-12-27 08:49:13.292514 I | embed: rejected connection from "172.16.16.22:41266" (error "open /etc/kubernetes/ssl/kube-etcd-172-16-16-26.pem: too many open files in system", ServerName "")
 
 2021-12-27 08:49:13.294184 C | etcdmain: accept tcp [::]:2380: accept4: too many open files in system
 ```
 #### 系统日志
 查看 /var/log/messages
-```sh
+
+```s
 Dec 27 16:48:46 hostname kernel: VFS: file-max limit 65536 reached
 ```
 
@@ -28,16 +29,17 @@ Dec 27 16:48:46 hostname kernel: VFS: file-max limit 65536 reached
 #### 系统层面最大fd
 ##### 配置
 在 `/etc/sysctl.conf` 文件中，添加下面配置：
-```sh
+```s
 fs.file-max = 100000
 ```
 运行 `sysctl -p` 使其生效
 
 ##### 查看
 当前系统配置的最大值
-```sh
+```s
 cat /proc/sys/fs/file-max
 ```
+
 当前系统已经使用的 fd，最左侧为已经使用的，右侧为最大值。
 ```sh
 cat /proc/sys/fs/file-nr
@@ -50,7 +52,7 @@ cat /proc/sys/fs/file-nr
 
 ##### 持久化配置
 修改 `/etc/security/limits.conf` 文件，需要重启
-```sh
+```s
 # /etc/security/limits.conf
 * soft nofile 65535
 * hard nofile 65535
@@ -59,12 +61,13 @@ cat /proc/sys/fs/file-nr
 * 给整个 docker 层面配置：在 docker.service 配置文件中配置。
 配置 `LimitNOFILE=1048576`，
 * 给单个容器配置：在运行容器时，指定 --ulimit 选项。
-```sh
+
+```s
 docker run --ulimit nofile=1024:1024 --rm debian sh -c "ulimit -n" 1024
 ```
 ### 查看进程使用的fd
 #### 在宿主机查看
-```sh
+```s
 ls -l /proc/[pid]/fd
 
 lsof -p [pid]
@@ -82,7 +85,7 @@ lsof -p [pid]
 
 使用 nsenter 进入这个容器的 net namespace，然后通过 netstat 等命令查看
 
-```sh
+```s
 sudo nsenter --net=/var/run/docker/netns/13ea8a963fbf 
 ```
 ### 参考
