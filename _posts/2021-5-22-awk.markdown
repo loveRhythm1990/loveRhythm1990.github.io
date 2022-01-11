@@ -76,6 +76,7 @@ awk的工作流程，反复执行下面 4 个步骤：
 | FS | 字段分隔符 Field split |
 | RS | 记录分隔符 Record split |
 
+
 另外，提一下 xargs 的用法，下面两个 shell 写法是等价的。
 ```sh
 for i in $(kubectl get pods -A | grep "Evicted" | awk '{print $1}'); do kubectl delete pod ${i}; done
@@ -84,3 +85,11 @@ for i in $(kubectl get pods -A | grep "Evicted" | awk '{print $1}'); do kubectl 
 ```sh
 kubectl get pods -A | grep "Evicted" | awk '{print $1}' | xargs kubectl delete pod 
 ```
+
+补充一个通过 uniq 统计和通过 awk 过滤的命令：
+```s
+cat lsof_output | awk '{print $1}' | sort | uniq -c | awk '$1 > 100 {print}'
+```
+* sort: 通过 sort 将相同的行排到一起
+* uniq -c: 计算相同的行的行数，输出的列中，第一行为行数，第二列为对应的行
+* awk '$1 > 100 {print}': 过滤第一列大于 100 的行，并打印
