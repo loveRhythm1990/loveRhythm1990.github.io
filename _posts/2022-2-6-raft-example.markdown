@@ -27,7 +27,7 @@ type Node interface {
 	Ready() <-chan Ready
 	Advance()
 	ReadIndex(ctx context.Context, rctx []byte) error
-    // 省去了其他方法和注释
+        // 省去了其他方法和注释
 }
 ```
 
@@ -64,14 +64,14 @@ func (h *httpKVAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
         
-        // 调用 store 的 Propose 方法，后者写 proposeC
+                // 调用 store 的 Propose 方法，后者写 proposeC
 		h.store.Propose(key, string(v))
 
 		// Optimistic-- no waiting for ack from raft. Value is not yet
 		// committed so a subsequent GET on the key may return old value
 		w.WriteHeader(http.StatusNoContent)
     case r.Method == "GET":
-        // 调用 lookup 查询
+                // 调用 lookup 查询
 		if v, ok := h.store.Lookup(key); ok {
 			w.Write([]byte(v))
 		} else {
@@ -97,7 +97,7 @@ func (h *httpKVAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			NodeID:  nodeId,
 			Context: url,
         }
-        // 直接写 confChangeC channel
+                // 直接写 confChangeC channel
 		h.confChangeC <- cc
 	}
 }
@@ -275,7 +275,7 @@ func (s *kvstore) readCommits(commitC <-chan *string, errorC <-chan error) {
 			log.Fatalf("raftexample: could not decode message (%v)", err)
 		}
         s.mu.Lock()
-        // 写 map
+                // 写 map
 		s.kvStore[dataKv.Key] = dataKv.Val
 		s.mu.Unlock()
 	}
@@ -301,7 +301,7 @@ type raftNode struct {
 从下面代码看，从 raft 模块的 Ready() 接口读到数据之后，立刻写 wal，也就是经过共识的数据写 wal，具体如下：
 ```go
 func (rc *raftNode) serveChannels() {
-    // 省略代码
+        // 省略代码
 	// event loop on raft state machine updates
 	for {
 		select {
@@ -310,7 +310,7 @@ func (rc *raftNode) serveChannels() {
 
 		// store raft entries to wal, then publish over commit channel
         case rd := <-rc.node.Ready():
-            // 写 wal
+                        // 写 wal
 			rc.wal.Save(rd.HardState, rd.Entries)
 			if !raft.IsEmptySnap(rd.Snapshot) {
 				rc.saveSnap(rd.Snapshot)
@@ -325,7 +325,7 @@ func (rc *raftNode) serveChannels() {
 			}
 			rc.maybeTriggerSnapshot()
 			rc.node.Advance()
-            // 省略代码
+                        // 省略代码
 		}
 	}
 }
