@@ -301,7 +301,7 @@ type raftNode struct {
 从下面代码看，从 raft 模块的 Ready() 接口读到数据之后，立刻写 wal，也就是经过共识的数据写 wal，具体如下：
 ```go
 func (rc *raftNode) serveChannels() {
-    // 省略代码
+	// 省略代码
 	// event loop on raft state machine updates
 	for {
 		select {
@@ -325,7 +325,7 @@ func (rc *raftNode) serveChannels() {
 			}
 			rc.maybeTriggerSnapshot()
 			rc.node.Advance()
-            // 省略代码
+			// 省略代码
 		}
 	}
 }
