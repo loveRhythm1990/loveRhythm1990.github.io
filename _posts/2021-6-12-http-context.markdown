@@ -92,6 +92,10 @@ func Hello(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 参考：
 
+[[译]Go net/http 超时机制完全手册](https://colobu.com/2016/07/01/the-complete-guide-to-golang-net-http-timeouts/)
+
+[The complete guide to Go net/http timeouts](https://blog.cloudflare.com/the-complete-guide-to-golang-net-http-timeouts/)
+
 [TCP: About FIN_WAIT_2, TIME_WAIT and CLOSE_WAIT](https://benohead.com/blog/2013/07/21/tcp-about-fin_wait_2-time_wait-and-close_wait/)
 
 [Wireshark过滤规则使用](https://blog.51cto.com/laoyinga/1767613)
