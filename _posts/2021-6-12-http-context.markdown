@@ -64,6 +64,7 @@ func Hello(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	fmt.Println("hello handler has been called in server")
 	_, err := fmt.Fprintf(w, "hello, %s!\n", ps.ByName("name"))
 	// 这个地方，客户端已经超时了，但是服务端发送数据时，不会报错。
+	// 这里输出的错误为 nil
 	fmt.Printf("server write err: %v", err)
 }
 ```
@@ -82,6 +83,7 @@ func Hello(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	time.Sleep(time.Second * 6)
 
 	// 结果发现这个 resp 为 nil，既然为 nil，那肯定不能从 resp.Body 里读数据了，会panic.
+	// 这个地方输出 resp: <nil>
 	fmt.Printf("resp: %v", resp)
 	defer resp.Body.Close()
 
