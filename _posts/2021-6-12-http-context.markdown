@@ -56,6 +56,38 @@ func main() {
 
 ![java-javascript](/img/in-post/common/context.png)
 
+这里还有个问题，客户端把连接关闭了（发送了 fin 报文），服务端写数据会报错吗？根据[tcp 连接的建立与断开](https://loverhythm1990.github.io/2021/04/02/tcp-0/)，四次挥手的过程，及时有一方发送了 fin 报文，另一方仍然是可以发送数据的，看上去是不会报错的，在我们的代码验证中，也是这个样子的.
+```go
+func Hello(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	// sleep 一段时间，等待客户端超时
+	time.Sleep(time.Second * 10)
+	fmt.Println("hello handler has been called in server")
+	_, err := fmt.Fprintf(w, "hello, %s!\n", ps.ByName("name"))
+	// 这个地方，客户端已经超时了，但是服务端发送数据时，不会报错。
+	fmt.Printf("server write err: %v", err)
+}
+```
+另外根据[Go语言TCP Socket编程](https://tonybai.com/2015/11/17/tcp-programming-in-golang/)，服务端调用 `Write()` 只是把数据发送到了自己这段的内核缓冲区，数据发送由内核做的，所以不会报错，这里即使客户端调用 `conn.Close()` 把连接关闭了，服务端调用 `Write()` 仍然不会报错。
+
+那还有个问题，客户端发生了超时，发送了 `fin` 报文，那还能接收数据吗？从 golang 角度来看，应该是不可能了（因为超时之后，返回了一个 nil 的 response），看下面例子：
+```go
+	resp, err := http.DefaultClient.Do(req.WithContext(ctx))
+	if err != nil {
+		fmt.Printf("request do err: %v\n", err)
+		// 这里发生了报错，并不 return 或者 panic
+		//log.Fatal(err)
+		//return
+	}
+	// 等待几秒，这个时候，服务端应该已经发送数据了
+	time.Sleep(time.Second * 6)
+
+	// 结果发现这个 resp 为 nil，既然为 nil，那肯定不能从 resp.Body 里读数据了，会panic.
+	fmt.Printf("resp: %v", resp)
+	defer resp.Body.Close()
+
+	io.Copy(os.Stdout, resp.Body)
+```
+
 参考：
 
 [TCP: About FIN_WAIT_2, TIME_WAIT and CLOSE_WAIT](https://benohead.com/blog/2013/07/21/tcp-about-fin_wait_2-time_wait-and-close_wait/)
