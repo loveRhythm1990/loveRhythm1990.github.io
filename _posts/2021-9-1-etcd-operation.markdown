@@ -19,25 +19,23 @@ etcdctl 常见数据读写操作参考[Interacting with etcd](https://etcd.io/do
 ### 基本操作
 
 1. 查看 etcd 集群 metrics，加上 sudo 的原因是可能没有权限读取证书文件。
-```s
-sudo curl --cert /path/to/cert.pem --key /path/to/key.pem  https://<etcd-server>:2379/metrics -k
-```
+
+`sudo curl --cert /path/to/cert.pem --key /path/to/key.pem  https://<etcd-server>:2379/metrics -k`
 
 2. 查看集群节点列表，这个需要带上 `--cacert` 参数，主要注意的是，etcd 有可能跟 k8s 集群共用一个 ca（这个取决于部署方式），另外 `write-out` 可以选择 json、sample、table 等。
-```s
- sudo ./etcdctl --endpoints=https://<etcd-server>:2379 --cert=/etc/kubernetes/ssl/kube-etcd-<host>.pem --key=/etc/kubernetes/ssl/kube-etcd-<host>-key.pem --cacert=/etc/kubernetes/ssl/ca.pem  member list --write-out="table"
-```
+
+`sudo ./etcdctl --endpoints=https://<etcd-server>:2379 --cert=/etc/kubernetes/ssl/kube-etcd-<host>.pem --key=/etc/kubernetes/ssl/kube-etcd-<host>-key.pem --cacert=/etc/kubernetes/ssl/ca.pem  member list --write-out="table"`
+
 etcdctl 工具可以再 etcd release 中下载，比如：[https://github.com/etcd-io/etcd/releases/tag/v3.4.3](https://github.com/etcd-io/etcd/releases/tag/v3.4.3)
 
 3. 获取 etcd 中所有的 key
-```s
- sudo ./etcdctl --endpoints=https://<etcd-server>:2379 --cert=/etc/kubernetes/ssl/kube-etcd-<host>.pem --key=/etc/kubernetes/ssl/kube-etcd-<host>-key.pem --cacert=/etc/kubernetes/ssl/ca.pem get / --prefix --keys-only
-```
+
+`sudo ./etcdctl --endpoints=https://<etcd-server>:2379 --cert=/etc/kubernetes/ssl/kube-etcd-<host>.pem --key=/etc/kubernetes/ssl/kube-etcd-<host>-key.pem --cacert=/etc/kubernetes/ssl/ca.pem get / --prefix --keys-only`
 
 4. 查看所有集群节点的状态，这个时候需要将集群中所有的节点列表都添加进去了，（可以找到 kube-apiserver 的启动参数 --etcd-servers 进行一键复制，这个参数也指定了所有的 etcd 节点列表）
-```s
-sudo ./etcdctl --endpoints=https://<etcd-server>:2379 --cert=/etc/kubernetes/ssl/kube-etcd-<host>.pem --key=/etc/kubernetes/ssl/kube-etcd-<host>-key.pem --cacert=/etc/kubernetes/ssl/ca.pem get / --prefix --keys-only
-```
+
+`sudo ./etcdctl --endpoints=https://<etcd-server>:2379 --cert=/etc/kubernetes/ssl/kube-etcd-<host>.pem --key=/etc/kubernetes/ssl/kube-etcd-<host>-key.pem --cacert=/etc/kubernetes/ssl/ca.pem get / --prefix --keys-only`
+
 输出如下，包含了节点的 ID，数据库大小，是不是 leader，raft term 以及 raft index 等。
 ```s
 +----------------------------+------------------+---------+---------+-----------+------------+-----------+------------+--------------------+--------+
@@ -48,6 +46,8 @@ sudo ./etcdctl --endpoints=https://<etcd-server>:2379 --cert=/etc/kubernetes/ssl
 | https://10.73.247.217:2379 | b5b8154918511716 |   3.4.3 |  1.2 GB |     false |      false |      1455 | 1540134058 |         1540134058 |        |
 +----------------------------+------------------+---------+---------+-----------+------------+-----------+------------+--------------------+--------+
 ```
+5. 查看 etcd 是否健康
+`ETCDCTL_API=3 etcdctl --cacert=/opt/kubernetes/ssl/ca.pem --cert=/opt/kubernetes/ssl/server.pem --key=/opt/kubernetes/ssl/server-key.pem --endpoints=https://192.168.1.36:2379,https://192.168.1.37:2379,https://192.168.1.38:2379 endpoint health`
 
 ### 备份以及恢复
 备份以及恢复的思路，就是将之前的 etcd 全部数据拷贝一份，然后生成一个新的 etcd 集群，对于坏掉的 etcd 节点，踢掉后，找个新的节点加进去。
