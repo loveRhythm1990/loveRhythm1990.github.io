@@ -47,6 +47,7 @@ etcdctl 工具可以再 etcd release 中下载，比如：[https://github.com/et
 +----------------------------+------------------+---------+---------+-----------+------------+-----------+------------+--------------------+--------+
 ```
 5. 查看 etcd 是否健康
+
 `ETCDCTL_API=3 etcdctl --cacert=/opt/kubernetes/ssl/ca.pem --cert=/opt/kubernetes/ssl/server.pem --key=/opt/kubernetes/ssl/server-key.pem --endpoints=https://192.168.1.36:2379,https://192.168.1.37:2379,https://192.168.1.38:2379 endpoint health`
 
 ### 备份以及恢复
