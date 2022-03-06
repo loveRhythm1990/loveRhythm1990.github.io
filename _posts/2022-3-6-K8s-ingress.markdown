@@ -141,3 +141,5 @@ server {
 
 2. 在支持 `LoadBalancer` service 的 K8s 集群中，需要给 ingress controller 分配一个 external IP 或者一个 FQDN，参考 [ingress-nginx-online testing](https://github.com/kubernetes/ingress-nginx/blob/main/docs/deploy/index.md#online-testing)，这个具体是怎么工作的？
 
+### 参考
+[k8s ingress原理及ingress-nginx部署测试](https://segmentfault.com/a/1190000019908991)
