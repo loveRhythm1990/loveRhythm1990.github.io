@@ -94,7 +94,7 @@ Upgrade: websocket
 Connection: Upgrade
 ```
 完整的 nginx 代理 websocket 配置如下 `websocket.conf`：
-```json
+```s
 map $http_upgrade $connection_upgrade {
     default upgrade;
     '' close;
