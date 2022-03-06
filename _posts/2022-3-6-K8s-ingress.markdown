@@ -5,8 +5,7 @@ date:       2022-3-6 10:10:00
 author:     "decent"
 header-img-credit: false
 tags:
-	- k8s
-	- 网络
+  - k8s
 ---
 
 这几天一直在排查一个 websocket 连接不断断开的问题，场景大概是：K8s 集群外面的浏览器访问集群内部的服务，集群外 client 访问集群内内部服务是通过 ingress-nginx 来实现的，其部署方式是 hostnetwork，也就是直接以宿主机服务的方式部署在 master 节点的，监听的是 80 以及 443 端口。我们的现象是我们的前端 websocket 连接不断断开，排查的原因是因为我们配置的 ingress-nginx 没有配置网络超时时间，默认是 60s，也就是说，如果 websocket 60s 不发送数据或者 60s 不接收数据，连接就有可能断开了。因为之前没怎么关注过 ingress 这个资源，本文总结下其相关使用。文末还有几个问题，有时间继续补充下。
@@ -94,9 +93,9 @@ spec:
 	
 	在看一个 ingress 资源详细信息的时候，在 status 中如下信息，这三个 ip 是 ingress-nginx 三个 pod 的 IP，这个负载均衡是怎么做的？
 	```yaml
-	status:
-  	  loadBalancer:
-    	ingress:
+    status:
+      loadBalancer:
+        ingress:
         - ip: 10.72.220.155
         - ip: 10.73.245.148
         - ip: 10.73.246.123
