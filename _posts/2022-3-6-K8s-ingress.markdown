@@ -88,6 +88,44 @@ spec:
        servicePort: 8000
 ```
 
+如果直接使用 nginx 来代理 websocket，可以参考[nginx反向代理WebSocket](https://www.xncoding.com/2018/03/12/fullstack/nginx-websocket.html)，最主要的是让 http 连接升级为 websocket 连接
+```s
+Upgrade: websocket
+Connection: Upgrade
+```
+完整的 nginx 代理 websocket 配置如下 `websocket.conf`：
+```json
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    '' close;
+}
+
+upstream websocket {
+    server localhost:8282; # appserver_ip:ws_port
+}
+
+server {
+     server_name test.enzhico.net;
+     listen 443 ssl;
+     location / {
+         proxy_pass http://websocket;
+         proxy_read_timeout 300s;
+         proxy_send_timeout 300s;
+         
+         proxy_set_header Host $host;
+         proxy_set_header X-Real-IP $remote_addr;
+         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+         
+         proxy_http_version 1.1;
+         proxy_set_header Upgrade $http_upgrade;
+         proxy_set_header Connection $connection_upgrade;
+     }
+    ssl_certificate /etc/letsencrypt/live/test.enzhico.net/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/test.enzhico.net/privkey.pem;
+}
+```
+上面配置中包含 ssl 证书，client 跟 nginx 是通过 `wss://` 通信的（443 端口），nginx 跟 backend server 是通过 `ws://` 通信的（localhost:8282）。
+
 ### 遗留问题
 1. ingress 中的负载均衡是怎么做的？
 	
