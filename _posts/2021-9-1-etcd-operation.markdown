@@ -34,7 +34,7 @@ etcdctl 工具可以再 etcd release 中下载，比如：[https://github.com/et
 
 4. 查看所有集群节点的状态，这个时候需要将集群中所有的节点列表都添加进去了，（可以找到 kube-apiserver 的启动参数 --etcd-servers 进行一键复制，这个参数也指定了所有的 etcd 节点列表）
 
-`sudo ./etcdctl --endpoints=https://<etcd-server>:2379 --cert=/etc/kubernetes/ssl/kube-etcd-<host>.pem --key=/etc/kubernetes/ssl/kube-etcd-<host>-key.pem --cacert=/etc/kubernetes/ssl/ca.pem get / --prefix --keys-only`
+`sudo ./etcdctl --endpoints=https://<etcd-server>:2379 --cert=/etc/kubernetes/ssl/kube-etcd-<host>.pem --key=/etc/kubernetes/ssl/kube-etcd-<host>-key.pem --cacert=/etc/kubernetes/ssl/ca.pem endpoint status --write-out=table`
 
 输出如下，包含了节点的 ID，数据库大小，是不是 leader，raft term 以及 raft index 等。
 ```s
@@ -49,6 +49,19 @@ etcdctl 工具可以再 etcd release 中下载，比如：[https://github.com/et
 5. 查看 etcd 是否健康
 
 `ETCDCTL_API=3 etcdctl --cacert=/opt/kubernetes/ssl/ca.pem --cert=/opt/kubernetes/ssl/server.pem --key=/opt/kubernetes/ssl/server-key.pem --endpoints=https://192.168.1.36:2379,https://192.168.1.37:2379,https://192.168.1.38:2379 endpoint health`
+
+6. Compact Etcd
+Compact 对 etcd 数据没有影响，下面两条命令一起执行。
+
+`rev=$(sudo etcdctl --endpoints=https://host1:2379 --cert=/etc/kubernetes/ssl/kube-etcd-host1.pem --key=/etc/kubernetes/ssl/kube-etcd-host1-key.pem --cacert=/etc/kubernetes/ssl/kube-ca.pem endpoint status --write-out="json" | egrep -o '"revision":[0-9]*' | egrep -o '[0-9].*')`
+
+`sudo etcdctl --endpoints=https://host1:2379 --cert=/etc/kubernetes/ssl/kube-etcd-host1.pem --key=/etc/kubernetes/ssl/kube-etcd-host1-key.pem --cacert=/etc/kubernetes/ssl/kube-ca.pem compact $rev`
+
+7. 清理碎片
+compact 会产生碎片，defrag 清理碎片，etcd 磁盘容量较大时可用，参考文档[defrag](https://etcd.io/docs/v3.2/op-guide/maintenance/#defragmentation)
+
+`sudo etcdctl --endpoints=https://host1:2379 --cert=/etc/kubernetes/ssl/kube-etcd-host1.pem --key=/etc/kubernetes/ssl/kube-etcd-host1-key.pem --cacert=/etc/kubernetes/ssl/kube-ca.pem defrag`
+
 
 ### 备份以及恢复
 备份以及恢复的思路，就是将之前的 etcd 全部数据拷贝一份，然后生成一个新的 etcd 集群，对于坏掉的 etcd 节点，踢掉后，找个新的节点加进去。
