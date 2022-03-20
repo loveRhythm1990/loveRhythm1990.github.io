@@ -1,12 +1,13 @@
 ---
 layout:     post
 title:      "Etcd: sync wal 时间过长导致切主"
-date:       2022-2-10 10:10:00
+date:       2022-3-20 10:10:00
 author:     "decent"
 header-img-credit: false
 tags:
     - etcd
 ---
+
 
 ### 切主
 一次 K8s 集群中的 Etcd 发生了切主，导致了很多请求超时。排查下来是 sync wal 过长导致的。记录下问题现场以及线索。学习 Etcd 不容易，杂事又特别多，一点一点积累。
