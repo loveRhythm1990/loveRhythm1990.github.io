@@ -247,3 +247,9 @@ func (r *raftNode) start(rh *raftReadyHandler) {
 ## 参考
 [《深入浅出 etcd》part 2 – 解析 etcd 的心跳和选举机制](https://www.infoq.cn/article/y2lv9mymjc9hnisiaeht)
 
+[grpc: Server.processUnaryRPC failed to write status connection error: desc = "transport is closing #12895](https://github.com/etcd-io/etcd/issues/12895): 这个 issue 说 `transport is closing` 是给 client 写返回数据的时候，client 关闭了，比如重启了 kube-apiserver。
+
+
+[Etcd-tuning parameters](https://etcd.io/docs/v3.4/tuning/)
+
+[proposal dropped easily when connection with leader lost #3380](https://github.com/etcd-io/etcd/issues/3380): 这个 issue 考虑切主的时候，要不要把请求缓存起来，并转发，后来考虑了一下，说不要。因此，只要发生了切主，就会发生超时。
