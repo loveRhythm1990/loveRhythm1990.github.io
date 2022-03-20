@@ -5,7 +5,7 @@ date:       2022-2-10 10:10:00
 author:     "decent"
 header-img-credit: false
 tags:
-	- etcd
+    - etcd
 ---
 
 ### 切主
