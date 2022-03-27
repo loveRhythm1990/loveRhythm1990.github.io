@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "etcd put 请求处理过程：client 发送请求到 EtcdServer"
+title:      "Etcd put 请求处理过程：client 发送请求到 EtcdServer"
 date:       2021-11-03 10:10:00
 author:     "decent"
 header-img-credit: false
