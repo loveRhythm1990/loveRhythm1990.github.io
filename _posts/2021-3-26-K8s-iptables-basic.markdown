@@ -88,12 +88,15 @@ Hello World
 [decent@master1 resources]$ curl 10.42.0.4:8080    
 Hello World
 ```
-对于 NodePort 类型的 Service，kube-proxy 会在每个节点上把对应的端口开启，可以使用 `lsof -i:30610` 命令验证如下。
+对于 NodePort 类型的 Service，kube-proxy 会在每个节点上把对应的端口开启，可以使用 `lsof -i:30610` 命令验证如下。[Kubernetes Services and Iptables](https://msazure.club/kubernetes-services-and-iptables/)
+中对此的解释为：占据这个端口，防止其他应用使用这个端口。
 ```s
 [ha@VM-16-29-centos ~]$ sudo lsof -i:30610
 COMMAND    PID USER   FD   TYPE    DEVICE SIZE/OFF NODE NAME
 kube-prox 3571 root   11u  IPv6 534804567      0t0  TCP *:30610 (LISTEN)
 ```
+另外，kube-proxy 代码中关于这个注释也挺有意思（根据注释的意思，应该是用 `bind()` 调用就够了，但是 `bind()` 调用时，使用 `ss` 以及 `netstat` 命令看不到端口信息）：
+> Hold the actual port open, even though we use iptables to redirect it.  This ensures that a) it's safe to take and b) that stays true. NOTE: We should not need to have a real listen()ing socket - bind() should be enough, but I can't figure out a way to e2e test without it.  Tools like 'ss' and 'netstat' do not show sockets that are bind()ed but not listen()ed, and at least the default debian netcat has no way to avoid about 10 seconds of retries.
 
 我们在一个节点上执行 `iptables -S -t nat `命令查看该 service 生成的 iptables 规则，其中 `-S` 表示 `--list-rules `，即打印规则。
 ```s
@@ -124,10 +127,12 @@ kube-prox 3571 root   11u  IPv6 534804567      0t0  TCP *:30610 (LISTEN)
 -A KUBE-SVC-DZ6LTOHRG6HQWHYE -m comment --comment "default/hello-world" -j KUBE-SEP-65EI7GDZIRLR2RCT
 ```
 
-首先看第一条，这一条将所有的报文都转发到 `KUBE-SERVICES` 链，并且这些 rule 有个注释 `kubernetes service portals`，其中 `-m comment` 表示使用 comment 扩展模块给 rule 添加注释，参考[Linux: Add Comment to IPTables Rule](https://stackpointer.io/unix/linux-add-comment-to-iptables-rule/641/).
+首先看前两条，前两条将**所有的报文**都转发到 `KUBE-SERVICES` 链。并且这些 rule 有个注释 `kubernetes service portals`，其中 `-m comment` 表示使用 comment 扩展模块给 rule 添加注释，参考[Linux: Add Comment to IPTables Rule](https://stackpointer.io/unix/linux-add-comment-to-iptables-rule/641/).
 ```s
 -A PREROUTING -m comment --comment "kubernetes service portals" -j KUBE-SERVICES
+-A OUTPUT -m comment --comment "kubernetes service portals" -j KUBE-SERVICES
 ```
+其中，PREROUTING 用来处理所有外面进入（inbound）的流量，OUTPUT 用来处理所有出去的流量（outbound）。
 
 继续分析，通过节点的 `30610` 端口访问 NodePort，会进入以下链。【【 这里顺便补充一下 ClusterIP 类型的 Service 匹配机制，后者是在 `KUBE-SERVICES` 链中匹配的，具体规则为：`-A KUBE-SERVICES -d 192.168.0.1/32 -p tcp -m comment --comment "default/kubernetes:https cluster IP" -m tcp --dport 443 -j KUBE-SVC-NPX46M4PTMTKRN6Y`，也就是通过 clusterIP（这里为192.168.0.1），以及 Port 443 匹配的，其他规则跟 NodePort 是一致的】】
 ```s
@@ -170,7 +175,72 @@ KUBE-SEP-ZI6BFS3EG32KA2XC 链的具体作用就是将请求通过 DNAT 发送到
 -A KUBE-POSTROUTING -m comment --comment "kubernetes service traffic requiring SNAT" -j MASQUERADE
 ```
 
+### 配置了 sessionAffinity 的 Service
+主要参考[Kubernetes Services and Iptables](https://msazure.club/kubernetes-services-and-iptables/)，`sessionAffinity`主要功能是让客户端固定访问特定的后端（Pod），可以参考 Kubernetes 官方文档。
+配置 
+```yml
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-sa
+spec:
+  sessionAffinity: ClientIP
+  ports:
+  - port: 6379
+  selector:
+    app: redis
+```
+生成的规则主要使用了 iptables 的 `recent` 模块，可参考[iptables-extensions.man](https://ipset.netfilter.org/iptables-extensions.man.html)。
+```s
+-A KUBE-SVC-YUZPDSCUOF7FG5LD -m recent --rcheck --seconds 10800 --reap --name KUBE-SEP-6MUUJB4K75LGZXHS --mask 255.255.255.255 --rsource -j KUBE-SEP-6MUUJB4K75LGZXHS
+-A KUBE-SVC-YUZPDSCUOF7FG5LD -m recent --rcheck --seconds 10800 --reap --name KUBE-SEP-F5DCISRHJOTG66JA --mask 255.255.255.255 --rsource -j KUBE-SEP-F5DCISRHJOTG66JA
+-A KUBE-SVC-YUZPDSCUOF7FG5LD -m statistic --mode random --probability 0.50000000000 -j KUBE-SEP-6MUUJB4K75LGZXHS
+-A KUBE-SVC-YUZPDSCUOF7FG5LD -j KUBE-SEP-F5DCISRHJOTG66JA
+
+-A KUBE-SEP-6MUUJB4K75LGZXHS -s 10.244.1.69/32 -j KUBE-MARK-MASQ
+-A KUBE-SEP-6MUUJB4K75LGZXHS -p tcp -m recent --set --name KUBE-SEP-6MUUJB4K75LGZXHS --mask 255.255.255.255 --rsource -m tcp -j DNAT --to-destination 10.244.1.69:6379
+```
+
+### 假如 Service 没有后端 Pod
+没有后端 Pod，访问的时候就报错了，参考[Kubernetes Services and Iptables](https://msazure.club/kubernetes-services-and-iptables/)，报错信息为：`ICMP 10.0.8.126 tcp port 6379 unreachable`
+```s
+-A KUBE-SERVICES -d 10.0.8.126/32 -p tcp -m comment --comment "default/redis-none: has no endpoints" -m tcp --dport 6379 -j REJECT --reject-with icmp-port-unreachable
+```
+
+### Headless Service
+Headless Service 是指没有 VIP 的 Service，其定义如下：
+```yml
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-headless
+spec:
+  clusterIP: None
+  ports:
+  - port: 6379
+  selector:
+    app: redis
+```
+通过 coredns 解析 headless Service 域名。
+```s
+#nslookup redis-headless.default.svc.cluster.local 10.0.0.10
+Server:		10.0.0.10
+Address:	10.0.0.10#53
+
+Name:	redis-headless.default.svc.cluster.local
+Address: 10.244.1.69
+Name:	redis-headless.default.svc.cluster.local
+Address: 10.244.1.70
+```
+headless Service 没有 iptables 生成。
+
 ### 参考
+
+[kubernetes 官方文档--Using Source IP](https://kubernetes.io/docs/tutorials/services/source-ip/)
+
+[Kubernetes Services and Iptables](https://msazure.club/kubernetes-services-and-iptables/)
+
+[kube-proxy iptables规则分析](http://kuring.me/post/kube-proxy-iptables/)
 
 [kubernetes网络之service](https://cvvz.github.io/post/k8s-network-service/)
 

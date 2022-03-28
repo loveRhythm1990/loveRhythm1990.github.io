@@ -132,10 +132,18 @@ iptables --policy OUTPUT ACCEPT
 ```
 
 3) 配置防火墙规则策略
-防火墙策略一般分为通和不通两种。如果默认策略是“全通”，例如上文的 policy ACCEPT，就要定义一些策略来**封堵**；反之，如果默认策略是“全不通”，例如上文的 policy DROP，就要定义一些策略来**解封**。如果是做访问控制列表（ACL），即俗称的白名单，则用解封策略更常用。我们将用几个实际的例子来说明。
+防火墙策略一般分为通和不通两种。如果默认策略是"全通"，例如上文的 policy ACCEPT，就要定义一些策略来**封堵**；反之，如果默认策略是"全不通"，例如上文的 policy DROP，就要定义一些策略来**解封**。如果是做访问控制列表（ACL），即俗称的白名单，则用解封策略更常用。我们将用几个实际的例子来说明。
+
+3.0) 查看某个表中，某个链上的规则，比如查看 nat 表的 KUBE-SVC-Y5VDFIEGM3DY2PZE 链，也就是 Kube-proxy 生成的负载均衡链。上面有两个规则，一个是 50% 的概率 jump 到 KUBE-SEP-IFV44I3EMZAL3LH3 链。一个是 jump 到 KUBE-SEP-6PNQETFAD2JPG53P 链。
+```s
+[decent@node1 ~]$ iptables -nvL KUBE-SVC-Y5VDFIEGM3DY2PZE -t nat
+pkts  bytes target                     prot opt in     out     source               destination
+0     0     KUBE-SEP-IFV44I3EMZAL3LH3  all  --  *      *       0.0.0.0/0            0.0.0.0/0            /* default/nginx-svc:80 */ statistic mode random probability 0.50000000000
+1    60     KUBE-SEP-6PNQETFAD2JPG53P  all  --  *      *       0.0.0.0/0            0.0.0.0/0            /* default/nginx-svc:80 */
+```
+通过这个命令也可以理解 iptable 中：`表 -> 链 -> 规则` 的逻辑。一个链上可以有多个规则（上面是有两个），每个规则是顺序匹配的。一个链上的规则匹配完了之后，返回上一个链继续匹配。
 
 3.1) 允许配置 SSH 连接，（默认配置的是 filter 表）
-
 ```s
 iptables -A INPUT -s 10.20.30.40/24 -p tcp --dport 22 -j ACCEPT
 ```
@@ -219,3 +227,5 @@ iptables -t nat -A POSTROUTING -s 10.8.0.0/16 -j MASQUERADE
 [docker网络文档](https://docs.docker.com/network/)
 
 [IPtables中SNAT、DNAT和MASQUERADE的含义](https://blog.csdn.net/jk110333/article/details/8229828)
+
+[kube-proxy iptables规则分析](http://kuring.me/post/kube-proxy-iptables/)
