@@ -10,6 +10,22 @@ tags:
 
 记录一些工具方法，避免每次都google，当然最好是能直接看文档
 
+##### Reader/Writer 接口
+`Reader` 接口和 `Writer` 接口声明一致，参数都有一个缓冲区 buffer，返回值为数字 `n`，以及一个错误。
+```go
+type Reader interface {
+	Read(p []byte) (n int, err error)
+}
+```
+`Reader` 接口将数据从底层数据流读到参数缓冲区，因为缓冲区是一个字节 Slice `p []byte`，所以做多也就读 `len(p)` 个字节。
+```go
+type Writer interface {
+	Write(p []byte) (n int, err error)
+}
+```
+`Writer` 接口将参数缓冲区的数据写到底层数据流，返回写入的字节数 `n` 和遇到的错误，如果 `n` 小于 `len(p)`，是一定有错误的。`Reader` `Writer` 接口的数据流向如下。
+![](/img/in-post/all-in-one/2022-03-30-21-05-33.png)
+
 ##### 读写
 `WriteFile`和`ReadFile`在读写完成后，会自动把文件close掉。`WriteFile`会覆盖文件内容。（追加可以在打开文件时，使用`os.O_APPEND`标志）
 ```go
