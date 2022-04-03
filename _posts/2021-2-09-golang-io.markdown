@@ -23,7 +23,7 @@ type Writer interface {
 	Write(p []byte) (n int, err error)
 }
 ```
-`Writer` 接口将参数缓冲区的数据写到底层数据流，返回写入的字节数 `n` 和遇到的错误，如果 `n` 小于 `len(p)`，是一定有错误的。`Reader` `Writer` 接口的数据流向如下。
+`Writer` 接口将参数缓冲区的数据写到底层数据流，返回写入的字节数 `n` 和遇到的错误，如果 `n` 小于 `len(p)`，是一定有错误的。`Reader` `Writer` 接口的数据流向如下。(针对接口的实现者而言，数据流向是这样)
 ![](/img/in-post/all-in-one/2022-03-30-21-05-33.png)
 
 ##### 读写
