@@ -8,7 +8,7 @@ tags:
     - k8s
 ---
 
-之前在[关于k8s informer的基本概念与原理](https://loverhythm1990.github.io/2020/02/25/scheduler-informer1/)中介绍过informer的一些东西，但是没怎么讲清楚，这里再梳理一下知识点。还是以项目[sig-storage-lib-external-provisioner](https://github.com/kubernetes-sigs/sig-storage-lib-external-provisioner)为例，这些项目逻辑比较简单，相对容易分析，下面文中所称的`项目`都指该项目。
+之前在[关于k8s informer的基本概念与原理](https://loverhythm1990.github.io/2020/02/25/informer-basic-scheduler/)中介绍过informer的一些东西，但是没怎么讲清楚，这里再梳理一下知识点。还是以项目[sig-storage-lib-external-provisioner](https://github.com/kubernetes-sigs/sig-storage-lib-external-provisioner)为例，这些项目逻辑比较简单，相对容易分析，下面文中所称的`项目`都指该项目。
 
 ##### 主体流程
 这里主要是说从声明一个informer，到启动这个informer的过程，这个应该都比较熟悉了。这里再复习一下相关的数据结构，以及它们之间的相互关系。
