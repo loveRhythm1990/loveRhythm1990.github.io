@@ -425,6 +425,11 @@ func NewStreamWatcher(d Decoder) *StreamWatcher {
 }
 ```
 
+2022.4.29 补充：
+
+Http2 并不是使用 `Chunked Transfer Encoding`，引入了以 Frame 为单位来进行传输。client-go 具体是使用 http1.1 还是 http2，是有一个协商过程的，这个可以查下 ALPN（Application-Layer Protocol negotiation）。
+具体参考[K8s 如何提供更高效稳定的编排能力？K8s Watch 实现机制浅析](https://mp.weixin.qq.com/s/0H0sYPBT-9JKOle5Acd_IA)
+
 
 参考：
 
