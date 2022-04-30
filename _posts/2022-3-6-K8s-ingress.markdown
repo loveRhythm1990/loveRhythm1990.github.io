@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "K8s ingress 原理及应用"
+title:      "Ingress-nginx 原理、应用及灰度发布"
 date:       2022-3-6 10:10:00
 author:     "decent"
 header-img-credit: false
@@ -125,6 +125,17 @@ server {
 }
 ```
 上面配置中包含 ssl 证书，client 跟 nginx 是通过 `wss://` 通信的（443 端口），nginx 跟 backend server 是通过 `ws://` 通信的（localhost:8282）。
+
+### 金丝雀发布
+金丝雀发布也叫 `canary` 发布，[从概念、部署到优化，Kubernetes Ingress 网关的落地实践](https://mp.weixin.qq.com/s/SzKrpsKiL60_TIjtuy7BIQ) 这篇阿里的文章中介绍了通过 Ingress 来实现恢复发布的功能；[示例十二 - 使用 Ingress-Nginx 进行灰度发布](https://v2-1.docs.kubesphere.io/docs/zh-CN/quick-start/ingress-canary/) KubeSphere 在这篇文章中进行了示例。
+
+总体原理如下图，控制灰度的那个 Ingress 需要加上额外的 annotation，**同时发过来的请求，比如带有特定的 header**。比如在 KubeSphere 的示例中，通过 curl 添加了 header:
+```s
+$ for i in $(seq 1 10); do curl -s -H "canary: other-value" --resolve kubesphere.io:30205:192.168.0.88 kubesphere.io:30205 | grep "Hostname"; done
+```
+![](/img/in-post/all-in-one/2022-04-30-15-16-25.png){:height="60%" width="60%"}
+
+Ingress-nginx 支持的灰度有两种策略，一种是根据 header，一种是按比例进行灰度，分别由 annotation `nginx.ingress.kubernetes.io/canary-by-header` 以及 `nginx.ingress.kubernetes.io/canary-weight` 控制。关于 annotation 的详细叙述，可以查看 ingress-nginx 的文档：[https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/annotations/#canary](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/annotations/#canary)
 
 ### 遗留问题
 1. ingress 中的负载均衡是怎么做的？
