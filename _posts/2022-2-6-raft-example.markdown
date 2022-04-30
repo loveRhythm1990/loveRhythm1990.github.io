@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "etcd raft 模块应用案例解析：raftexample"
+title:      "Etcd raft 模块应用案例解析：raftexample"
 date:       2022-2-6 10:10:00
 author:     "decent"
 header-img-credit: false

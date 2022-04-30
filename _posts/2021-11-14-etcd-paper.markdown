@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "《In search of an Understandable Consensus Algorithm》etcd 论文简析"
+title:      "《In search of an Understandable Consensus Algorithm》Etcd 论文简析"
 date:       2021-12-11 10:10:00
 author:     "weak old dog"
 header-img-credit: false

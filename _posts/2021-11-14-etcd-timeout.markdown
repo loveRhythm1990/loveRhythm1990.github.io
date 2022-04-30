@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "关于 etcd 超时：read-only request took too long to execute 的零零碎碎"
+title:      "关于 Etcd 超时：read-only request took too long to execute 的零零碎碎"
 date:       2021-11-14 10:10:00
 author:     "weak old dog"
 header-img-credit: false

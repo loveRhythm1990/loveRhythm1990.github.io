@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "etcd 常见运维"
+title:      "Etcd 集群运维基础"
 date:       2021-08-28 10:10:00
 author:     "decent"
 header-img-credit: false

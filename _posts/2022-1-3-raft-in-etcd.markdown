@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "Raft 在 etcd 中的实现【转载】"
+title:      "Raft 在 Etcd 中的实现【转载】"
 date:       2022-1-3 10:10:00
 author:     "decent"
 header-img-credit: false

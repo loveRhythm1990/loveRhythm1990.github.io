@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "etcd安装、部署、测试"
+title:      "Etcd 安装、部署、测试"
 date:       2021-08-28 10:10:00
 author:     "weak old dog"
 header-img-credit: false
