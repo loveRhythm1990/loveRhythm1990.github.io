@@ -135,7 +135,7 @@ $ for i in $(seq 1 10); do curl -s -H "canary: other-value" --resolve kubesphere
 ```
 ![](/img/in-post/all-in-one/2022-04-30-15-16-25.png){:height="60%" width="60%"}
 
-Ingress-nginx 支持的灰度有两种策略，一种是根据 header，一种是按比例进行灰度，分别由 annotation `nginx.ingress.kubernetes.io/canary-by-header` 以及 `nginx.ingress.kubernetes.io/canary-weight` 控制。关于 annotation 的详细叙述，可以查看 ingress-nginx 的文档：[https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/annotations/#canary](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/annotations/#canary)
+Ingress-nginx 支持的灰度有两种策略，一种是根据 header，一种是按比例进行灰度（这种按比例将请求分到不同版本的行为也称为蓝绿发布，即即存在"蓝"版本，也存在"绿"版本），分别由 annotation `nginx.ingress.kubernetes.io/canary-by-header` 以及 `nginx.ingress.kubernetes.io/canary-weight` 控制。关于 annotation 的详细叙述，可以查看 ingress-nginx 的文档：[https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/annotations/#canary](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/annotations/#canary)
 
 ### 遗留问题
 1. ingress 中的负载均衡是怎么做的？
