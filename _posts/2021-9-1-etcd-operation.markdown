@@ -146,6 +146,50 @@ $ etcd \
   --listen-peer-urls http://host3:2380 &
 ```
 
+#### 从数据库文件恢复
+etcd 的数据文件路径为 `member/snap/db`，也可以通过此文件来恢复 etcd 集群，假设目前我们有一个 db 文件，想通过这个文件来恢复出三个节点的 etcd 集群，其操作步骤如下，以 goreman 为例。
+
+a.首先我们有一个 etcd 集群，我们向里面写入一些数据。其数据文件放在了：/Users/decent/etcd/restore/m1.etcd/member/snap/db
+```s
+$ etcdctl put hello world519 –-endpoints=http://127.0.0.1:2379
+$ etcdctl get hello --endpoints=http://127.0.0.1:2379
+hello
+world519
+```
+b. 现在我们假设这个 etcd 故障了，我们直接 ctrl+C 这个进程。然后通过下面命令恢复出三个 etcd 集群，因为数据库文件没有hash，所以要添加 `--skip-hash-check=true`，跳过一致性 hash 检查
+```s
+ETCDCTL_API=3 etcdctl snapshot restore /Users/decent/etcd/restore/m1.etcd/member/snap/db --name m1 --initial-cluster m1=http://127.0.0.1:2380,m2=http://127.0.0.1:23802,m3=http://127.0.0.1:23803 --initial-cluster-token etcd-cluster-example --initial-advertise-peer-urls http://127.0.0.1:2380 --skip-hash-check=true
+
+ETCDCTL_API=3 etcdctl snapshot restore /Users/decent/etcd/restore/m1.etcd/member/snap/db --name m2 --initial-cluster m1=http://127.0.0.1:2380,m2=http://127.0.0.1:23802,m3=http://127.0.0.1:23803 --initial-cluster-token etcd-cluster-example --initial-advertise-peer-urls http://127.0.0.1:23802 --skip-hash-check=true
+
+ETCDCTL_API=3 etcdctl snapshot restore /Users/decent/etcd/restore/m1.etcd/member/snap/db --name m3 --initial-cluster m1=http://127.0.0.1:2380,m2=http://127.0.0.1:23802,m3=http://127.0.0.1:23803 --initial-cluster-token etcd-cluster-example --initial-advertise-peer-urls http://127.0.0.1:23803 --skip-hash-check=true
+```
+
+c. 启动 etcd
+```s
+etcd --name m1 --listen-client-urls http://127.0.0.1:2379 --advertise-client-urls http://127.0.0.1:2379 --listen-peer-urls http://127.0.0.1:2380 &
+
+etcd --name m2 --listen-client-urls http://127.0.0.1:23792 --advertise-client-urls http://127.0.0.1:23792 --listen-peer-urls http://127.0.0.1:23802 &
+
+etcd --name m3 --listen-client-urls http://127.0.0.1:23793 --advertise-client-urls http://127.0.0.1:23793 --listen-peer-urls http://127.0.0.1:23803 &
+```
+
+d. 查看数据以及 endpoints 状态
+```s
+decent@Mac ~/e/r/cluster> etcdctl --endpoints=http://127.0.0.1:2379,http://127.0.0.1:23792,http://127.0.0.1:23793  endpoint status -w table
++------------------------+------------------+---------+---------+-----------+------------+-----------+------------+--------------------+--------+
+|        ENDPOINT        |        ID        | VERSION | DB SIZE | IS LEADER | IS LEARNER | RAFT TERM | RAFT INDEX | RAFT APPLIED INDEX | ERRORS |
++------------------------+------------------+---------+---------+-----------+------------+-----------+------------+--------------------+--------+
+|  http://127.0.0.1:2379 |  ee6f4291b9a87a3 |   3.4.3 |   29 kB |      true |      false |         2 |          8 |                  8 |        |
+| http://127.0.0.1:23792 | 544c86a797494ec2 |   3.4.3 |   29 kB |     false |      false |         2 |          8 |                  8 |        |
+| http://127.0.0.1:23793 | a0d7b0a318001c20 |   3.4.3 |   29 kB |     false |      false |         2 |          8 |                  8 |        |
++------------------------+------------------+---------+---------+-----------+------------+-----------+------------+--------------------+--------+
+
+decent@Mac ~/e/r/cluster> etcdctl --endpoints=http://127.0.0.1:2379,http://127.0.0.1:23792,http://127.0.0.1:23793 get hello
+hello
+world519
+```
+
 ### 参考
 [Operating etcd clusters for Kubernetes](https://kubernetes.io/docs/tasks/administer-cluster/configure-upgrade-etcd/)
 
