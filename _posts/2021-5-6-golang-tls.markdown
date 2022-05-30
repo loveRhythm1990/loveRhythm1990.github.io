@@ -35,7 +35,6 @@ openssl genrsa -out server.key 2048
 ```
 
 4. 配置CSR配置文件，这个CSR文件需要提供给CA，用来签发证书，假设该配置文件名字为：`csr.conf`。
-
 ```s
 [ req ]
 default_bits = 2048
@@ -73,10 +72,7 @@ subjectAltName=@alt_names
 ```
 这里主要关注`alt_names`字段，这个是服务端程序所运行的主机域名或者IP。签发的证书只能这个IP用。
 
-我们也可以不使用配置文件，直接使用下面命令生成csr，会通过交互的方式生成csr。
-```s
-openssl req -new -key server.key -out server.csr
-```
+> 我们也可以不使用配置文件，直接使用下面命令生成csr，会通过交互的方式生成csr。`openssl req -new -key server.key -out server.csr`
 
 5. 根据配置文件，生成CSR证书
 ```s
