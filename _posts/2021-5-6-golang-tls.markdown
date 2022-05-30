@@ -21,20 +21,22 @@ CA([Certificate Authority](https://en.wikipedia.org/wiki/Certificate_authority))
 
 K8s文档[Certificates](https://kubernetes.io/docs/tasks/administer-cluster/certificates/)介绍了整个流程：
 
-1. 生成2048bit的私钥，自签名CA的私钥。
+a. 生成2048bit的私钥，自签名CA的私钥。
 ```s
 openssl genrsa -out ca.key 2048
 ```
-2. 生成私钥对应的证书`ca.crt`，自签名CA的证书，也就是`Root Certificate`，这个证书需要分发到各个客户端设备中，或者在编写客户端代码的时候直接提供。
+
+b. 生成私钥对应的证书`ca.crt`，自签名CA的证书，也就是`Root Certificate`，这个证书需要分发到各个客户端设备中，或者在编写客户端代码的时候直接提供。
 ```s
 openssl req -x509 -new -nodes -key ca.key -subj "/CN=${MASTER_IP}" -days 10000 -out ca.crt
 ```
-3. 生成应用程序服务端私钥，server.key
+
+c. 生成应用程序服务端私钥，server.key
 ```s
 openssl genrsa -out server.key 2048
 ```
 
-4. 配置CSR配置文件，这个CSR文件需要提供给CA，用来签发证书，假设该配置文件名字为：`csr.conf`。
+d. 配置CSR配置文件，这个CSR文件需要提供给CA，用来签发证书，假设该配置文件名字为：`csr.conf`。
 ```s
 [ req ]
 default_bits = 2048
@@ -71,20 +73,21 @@ extendedKeyUsage=serverAuth,clientAuth
 subjectAltName=@alt_names
 ```
 这里主要关注`alt_names`字段，这个是服务端程序所运行的主机域名或者IP。签发的证书只能这个IP用。
-
 > 我们也可以不使用配置文件，直接使用下面命令生成csr，会通过交互的方式生成csr。`openssl req -new -key server.key -out server.csr`
 
-5. 根据配置文件，生成CSR证书
+e. 根据配置文件，生成CSR证书
 ```s
 openssl req -new -key server.key -out server.csr -config csr.conf
 ```
-6. 使用ca.key和ca.crt以及csr签发证书，生成的`server.crt`文件，就是server端启动https server时需要的。
+
+f. 使用ca.key和ca.crt以及csr签发证书，生成的`server.crt`文件，就是server端启动https server时需要的。
 ```s
 openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key \
 -CAcreateserial -out server.crt -days 10000 \
 -extensions v3_ext -extfile csr.conf
 ```
-7. 查看证书
+
+g. 查看证书
 ```s
 openssl x509  -noout -text -in ./server.crt
 ```
@@ -111,9 +114,9 @@ openssl req -new -key dev.deliciousbrains.com.key -out dev.deliciousbrains.com.c
 openssl x509 -req -in dev.deliciousbrains.com.csr -CA myCA.pem -CAkey myCA.key -CAcreateserial \
 -out dev.deliciousbrains.com.crt -days 825 -sha256 -extfile dev.deliciousbrains.com.ext
 ```
+
 `dev.deliciousbrains.com.ext`配置文件如下
 ```s
-
 authorityKeyIdentifier=keyid,issuer
 basicConstraints=CA:FALSE
 keyUsage = digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment
@@ -268,7 +271,6 @@ func createServerConfig(ca, crt, key string) (*tls.Config, error) {
 
 #### 参考
 [How to Create Your Own SSL Certificate Authority for Local HTTPS Development](https://deliciousbrains.com/ssl-certificate-authority-for-local-https-development/)
-
 
 [What is a CSR (Certificate Signing Request)?](https://www.sslshopper.com/what-is-a-csr-certificate-signing-request.html)
 
