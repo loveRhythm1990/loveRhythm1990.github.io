@@ -499,9 +499,11 @@ I0601 04:49:01.487830    5373 csi_plugin.go:1039] Failed to contact API server w
 经过使用 ntp 同步时间后解决
 ```s
 #安装ntpdate
-yum -y install ntpdate
+sudo yum -y install ntpdate
 #同步时间
-ntpdate -u  pool.ntp.org
+sudo ntpdate -u  pool.ntp.org
+#设置时区
+sudo timedatectl set-timezone Asia/Shanghai
 date
 ```
 
