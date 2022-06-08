@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "Etcd 在 rke 环境下通过 learner 实现灾备"
+title:      "Etcd 在 rke 环境下通过 learner 实现灾备-操作记录"
 date:       2022-6-1 10:10:00
 author:     "decent"
 header-img-credit: false

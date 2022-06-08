@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "Etcd 灾备折腾之 force new cluster 以及 learner"
+title:      "Etcd 灾备 force new cluster 以及 learner - 操作记录"
 date:       2022-5-30 10:10:00
 author:     "decent"
 header-img-credit: false
