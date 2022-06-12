@@ -220,6 +220,8 @@ hello-world   10.42.4.57:8080,10.42.4.58:8080   5h25m
 kubernetes    192.168.31.103:6443               5h29m
 ```
 
+这里关注一下 `kubernetes` 这个 `endpoints`，
+
 ### 尝试重启 kube-apiserver，修改 --etcd-servers 参数
 我们使用 `docker run --rm -v /var/run/docker.sock:/var/run/docker.sock assaflavie/runlike kube-apiserver` 命令得到 kube-apiserver 的运行参数如下：
 
