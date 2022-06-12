@@ -615,3 +615,114 @@ services:
     creation: ""
     backup_config: null
 ```
+
+### rke 可以直接移除两个 master 节点吗？
+如果我们集群有三个 etcd 节点，两个节点挂了，那么可以直接移除 `cluster.yaml` 中的两个 etcd 节点来恢复集群吗？操作了下，感觉是不可以的，`rke up`日志如下：
+```s
+time="2022-06-12T14:33:56+08:00" level=info msg="Running RKE version: v1.2.7"
+time="2022-06-12T14:33:56+08:00" level=info msg="Initiating Kubernetes cluster"
+time="2022-06-12T14:33:56+08:00" level=info msg="[certificates] GenerateServingCertificate is disabled, checking if there are unused kubelet certificates"
+time="2022-06-12T14:33:56+08:00" level=info msg="[certificates] Generating admin certificates and kubeconfig"
+time="2022-06-12T14:33:56+08:00" level=info msg="Successfully Deployed state file at [./cluster.rkestate]"
+time="2022-06-12T14:33:56+08:00" level=info msg="Building Kubernetes cluster"
+time="2022-06-12T14:33:56+08:00" level=info msg="[dialer] Setup tunnel for host [192.168.31.105]"
+time="2022-06-12T14:33:56+08:00" level=info msg="[dialer] Setup tunnel for host [192.168.31.103]"
+time="2022-06-12T14:33:56+08:00" level=info msg="[dialer] Setup tunnel for host [192.168.31.104]"
+time="2022-06-12T14:33:59+08:00" level=warning msg="Failed to set up SSH tunneling for host [192.168.31.104]: Can't retrieve Docker Info: error during connect: Get \"http://%2Fvar%2Frun%2Fdocker.sock/v1.24/info\": Failed to dial ssh using address [192.168.31.104:22]: dial tcp 192.168.31.104:22: connect: no route to host"
+time="2022-06-12T14:33:59+08:00" level=warning msg="Removing host [192.168.31.104] from node lists"
+time="2022-06-12T14:33:59+08:00" level=info msg="[network] No hosts added existing cluster, skipping port check"
+time="2022-06-12T14:33:59+08:00" level=info msg="[certificates] kube-apiserver certificate changed, force deploying certs"
+time="2022-06-12T14:33:59+08:00" level=info msg="[certificates] Deploying kubernetes certificates to Cluster nodes"
+time="2022-06-12T14:33:59+08:00" level=info msg="Checking if container [cert-deployer] is running on host [192.168.31.105], try #1"
+time="2022-06-12T14:33:59+08:00" level=info msg="Checking if container [cert-deployer] is running on host [192.168.31.103], try #1"
+time="2022-06-12T14:33:59+08:00" level=info msg="Image [rancher/rke-tools:v0.1.72] exists on host [192.168.31.105]"
+time="2022-06-12T14:33:59+08:00" level=info msg="Image [rancher/rke-tools:v0.1.72] exists on host [192.168.31.103]"
+time="2022-06-12T14:33:59+08:00" level=info msg="Starting container [cert-deployer] on host [192.168.31.105], try #1"
+time="2022-06-12T14:33:59+08:00" level=info msg="Starting container [cert-deployer] on host [192.168.31.103], try #1"
+time="2022-06-12T14:34:00+08:00" level=info msg="Checking if container [cert-deployer] is running on host [192.168.31.105], try #1"
+time="2022-06-12T14:34:00+08:00" level=info msg="Checking if container [cert-deployer] is running on host [192.168.31.103], try #1"
+time="2022-06-12T14:34:05+08:00" level=info msg="Checking if container [cert-deployer] is running on host [192.168.31.105], try #1"
+time="2022-06-12T14:34:05+08:00" level=info msg="Removing container [cert-deployer] on host [192.168.31.105], try #1"
+time="2022-06-12T14:34:05+08:00" level=info msg="Checking if container [cert-deployer] is running on host [192.168.31.103], try #1"
+time="2022-06-12T14:34:05+08:00" level=info msg="Removing container [cert-deployer] on host [192.168.31.103], try #1"
+time="2022-06-12T14:34:05+08:00" level=info msg="[reconcile] Rebuilding and updating local kube config"
+time="2022-06-12T14:34:05+08:00" level=info msg="Successfully Deployed local admin kubeconfig at [./kube_config_cluster.yml]"
+time="2022-06-12T14:34:05+08:00" level=info msg="[reconcile] host [192.168.31.103] is a control plane node with reachable Kubernetes API endpoint in the cluster"
+time="2022-06-12T14:34:05+08:00" level=info msg="[certificates] Successfully deployed kubernetes certificates to Cluster nodes"
+time="2022-06-12T14:34:05+08:00" level=info msg="[file-deploy] Deploying file [/etc/kubernetes/audit-policy.yaml] to node [192.168.31.103]"
+time="2022-06-12T14:34:05+08:00" level=info msg="Image [rancher/rke-tools:v0.1.72] exists on host [192.168.31.103]"
+time="2022-06-12T14:34:05+08:00" level=info msg="Starting container [file-deployer] on host [192.168.31.103], try #1"
+time="2022-06-12T14:34:05+08:00" level=info msg="Successfully started [file-deployer] container on host [192.168.31.103]"
+time="2022-06-12T14:34:05+08:00" level=info msg="Waiting for [file-deployer] container to exit on host [192.168.31.103]"
+time="2022-06-12T14:34:05+08:00" level=info msg="Waiting for [file-deployer] container to exit on host [192.168.31.103]"
+time="2022-06-12T14:34:05+08:00" level=info msg="Container [file-deployer] is still running on host [192.168.31.103]: stderr: [], stdout: []"
+time="2022-06-12T14:34:06+08:00" level=info msg="Waiting for [file-deployer] container to exit on host [192.168.31.103]"
+time="2022-06-12T14:34:06+08:00" level=info msg="Removing container [file-deployer] on host [192.168.31.103], try #1"
+time="2022-06-12T14:34:06+08:00" level=info msg="[remove/file-deployer] Successfully removed container on host [192.168.31.103]"
+time="2022-06-12T14:34:06+08:00" level=info msg="[/etc/kubernetes/audit-policy.yaml] Successfully deployed audit policy file to Cluster control nodes"
+time="2022-06-12T14:34:06+08:00" level=info msg="[reconcile] Reconciling cluster state"
+time="2022-06-12T14:34:06+08:00" level=info msg="[reconcile] Check etcd hosts to be deleted"
+time="2022-06-12T14:34:06+08:00" level=info msg="[remove/etcd] Removing member [etcd-master1] from etcd cluster"
+time="2022-06-12T14:34:21+08:00" level=warning msg="[reconcile] Failed to delete etcd member [etcd-master1] from etcd cluster"
+time="2022-06-12T14:34:21+08:00" level=info msg="[remove/etcd] Removing member [etcd-master2] from etcd cluster"
+time="2022-06-12T14:34:36+08:00" level=warning msg="[reconcile] Failed to delete etcd member [etcd-master2] from etcd cluster"
+time="2022-06-12T14:34:36+08:00" level=info msg="[reconcile] Check etcd hosts to be added"
+time="2022-06-12T14:34:36+08:00" level=info msg="[hosts] host [192.168.31.101] has another role, skipping delete from kubernetes cluster"
+time="2022-06-12T14:34:36+08:00" level=info msg="[dialer] Setup tunnel for host [192.168.31.101]"
+time="2022-06-12T14:34:42+08:00" level=info msg="[dialer] Setup tunnel for host [192.168.31.101]"
+time="2022-06-12T14:34:45+08:00" level=info msg="[dialer] Setup tunnel for host [192.168.31.101]"
+time="2022-06-12T14:34:48+08:00" level=warning msg="[reconcile] Couldn't clean up worker node [192.168.31.101]: Not able to reach the host: Can't retrieve Docker Info: error during connect: Get \"http://%2Fvar%2Frun%2Fdocker.sock/v1.24/info\": Failed to dial ssh using address [192.168.31.101:22]: dial tcp 192.168.31.101:22: connect: no route to host"
+time="2022-06-12T14:34:48+08:00" level=info msg="[hosts] host [192.168.31.102] has another role, skipping delete from kubernetes cluster"
+time="2022-06-12T14:34:48+08:00" level=info msg="[dialer] Setup tunnel for host [192.168.31.102]"
+time="2022-06-12T14:34:52+08:00" level=info msg="[dialer] Setup tunnel for host [192.168.31.102]"
+time="2022-06-12T14:34:55+08:00" level=info msg="[dialer] Setup tunnel for host [192.168.31.102]"
+time="2022-06-12T14:34:58+08:00" level=warning msg="[reconcile] Couldn't clean up worker node [192.168.31.102]: Not able to reach the host: Can't retrieve Docker Info: error during connect: Get \"http://%2Fvar%2Frun%2Fdocker.sock/v1.24/info\": Failed to dial ssh using address [192.168.31.102:22]: dial tcp 192.168.31.102:22: connect: no route to host"
+time="2022-06-12T14:34:58+08:00" level=info msg="[hosts] Cordoning host [192.168.31.101]"
+time="2022-06-12T14:37:23+08:00" level=fatal msg="Failed to delete controlplane node [192.168.31.101] from cluster: etcdserver: request timed out"
+```
+
+另外，在挂掉两个 etcd 节点的 K8s 集群中，还可以读吗？我们执行 `kubectl get nodes` 时输出如下，（kubectl get nodes 默认是线性度？）
+```s
+[decent@master3 rke_test]$ kubectl get nodes
+Error from server: etcdserver: request timed out
+```
+
+存活的 etcd 的部分日志如下
+```s
+2022-06-12 06:57:18.685178 W | etcdserver: read-only range request "key:\"/registry/services/endpoints/\" range_end:\"/registry/services/endpoints0\" limit:10000 " with result "error:etcdserver: request timed out" took too long (28.99883123s) to execute
+2022-06-12 06:57:18.685198 W | etcdserver: read-only range request "key:\"/registry/secrets/\" range_end:\"/registry/secrets0\" limit:10000 " with result "error:etcdserver: request timed out" took too long (28.998864966s) to execute
+2022-06-12 06:57:18.685224 W | etcdserver: read-only range request "key:\"/registry/services/specs/\" range_end:\"/registry/services/specs0\" limit:10000 " with result "error:etcdserver: request timed out" took too long (28.998895081s) to execute
+2022-06-12 06:57:18.685245 W | etcdserver: read-only range request "key:\"/registry/podtemplates/\" range_end:\"/registry/podtemplates0\" limit:10000 " with result "error:etcdserver: request timed out" took too long (28.998917041s) to execute
+2022-06-12 06:57:18.685264 W | etcdserver: read-only range request "key:\"/registry/controllers/\" range_end:\"/registry/controllers0\" limit:10000 " with result "error:etcdserver: request timed out" took too long (28.998939238s) to execute
+2022-06-12 06:57:18.685425 W | etcdserver: read-only range request "key:\"/registry/serviceaccounts/\" range_end:\"/registry/serviceaccounts0\" limit:10000 " with result "error:etcdserver: request timed out" took too long (28.998643328s) to execute
+2022-06-12 06:57:18.685499 W | etcdserver: read-only range request "key:\"/registry/volumeattachments/\" range_end:\"/registry/volumeattachments0\" limit:10000 " with result "error:etcdserver: request timed out" took too long (28.998717543s) to execute
+2022-06-12 06:57:18.685665 W | etcdserver: read-only range request "key:\"/registry/clusterroles/\" range_end:\"/registry/clusterroles0\" count_only:true " with result "error:etcdserver: request timed out" took too long (29.433353442s) to execute
+2022-06-12 06:57:18.686084 W | etcdserver: read-only range request "key:\"/registry/leases/\" range_end:\"/registry/leases0\" limit:10000 " with result "error:etcdserver: request timed out" took too long (28.998664316s) to execute
+raft2022/06/12 06:57:19 INFO: 178e111d1072acde is starting a new election at term 317
+raft2022/06/12 06:57:19 INFO: 178e111d1072acde became candidate at term 318
+raft2022/06/12 06:57:19 INFO: 178e111d1072acde received MsgVoteResp from 178e111d1072acde at term 318
+raft2022/06/12 06:57:19 INFO: 178e111d1072acde [logterm: 3, index: 2612] sent MsgVote request to 79d5043c5c6f48d3 at term 318
+raft2022/06/12 06:57:19 INFO: 178e111d1072acde [logterm: 3, index: 2612] sent MsgVote request to affd5634331a4b9f at term 318
+2022-06-12 06:57:22.369317 W | rafthttp: health check for peer affd5634331a4b9f could not connect: dial tcp 192.168.31.102:2380: connect: no route to host
+2022-06-12 06:57:22.371569 W | rafthttp: health check for peer 79d5043c5c6f48d3 could not connect: dial tcp 192.168.31.101:2380: connect: no route to host
+2022-06-12 06:57:22.573314 W | rafthttp: health check for peer 79d5043c5c6f48d3 could not connect: dial tcp 192.168.31.101:2380: connect: no route to host
+2022-06-12 06:57:22.573347 W | rafthttp: health check for peer affd5634331a4b9f could not connect: dial tcp 192.168.31.102:2380: connect: no route to host
+2022-06-12 06:57:25.928285 W | etcdserver: read-only range request "key:\"/registry/leases/kube-system/kube-controller-manager\" " with result "error:context canceled" took too long (9.997558193s) to execute
+WARNING: 2022/06/12 06:57:25 grpc: Server.processUnaryRPC failed to write status: connection error: desc = "transport is closing"
+raft2022/06/12 06:57:26 INFO: 178e111d1072acde is starting a new election at term 318
+raft2022/06/12 06:57:26 INFO: 178e111d1072acde became candidate at term 319
+raft2022/06/12 06:57:26 INFO: 178e111d1072acde received MsgVoteResp from 178e111d1072acde at term 319
+raft2022/06/12 06:57:26 INFO: 178e111d1072acde [logterm: 3, index: 2612] sent MsgVote request to 79d5043c5c6f48d3 at term 319
+raft2022/06/12 06:57:26 INFO: 178e111d1072acde [logterm: 3, index: 2612] sent MsgVote request to affd5634331a4b9f at term 319
+2022-06-12 06:57:27.371441 W | rafthttp: health check for peer affd5634331a4b9f could not connect: dial tcp 192.168.31.102:2380: connect: no route to host
+2022-06-12 06:57:27.371734 W | rafthttp: health check for peer 79d5043c5c6f48d3 could not connect: dial tcp 192.168.31.101:2380: connect: no route to host
+2022-06-12 06:57:27.574519 W | rafthttp: health check for peer 79d5043c5c6f48d3 could not connect: dial tcp 192.168.31.101:2380: connect: no route to host
+2022-06-12 06:57:27.574540 W | rafthttp: health check for peer affd5634331a4b9f could not connect: dial tcp 192.168.31.102:2380: connect: no route to host
+2022-06-12 06:57:28.016739 W | etcdserver: read-only range request "key:\"/registry/leases/kube-system/kube-scheduler\" " with result "error:context canceled" took too long (9.999076457s) to execute
+WARNING: 2022/06/12 06:57:28 grpc: Server.processUnaryRPC failed to write status: connection error: desc = "transport is closing"
+2022-06-12 06:57:32.372016 W | rafthttp: health check for peer 79d5043c5c6f48d3 could not connect: dial tcp 192.168.31.101:2380: connect: no route to host
+2022-06-12 06:57:32.372049 W | rafthttp: health check for peer affd5634331a4b9f could not connect: dial tcp 192.168.31.102:2380: connect: no route to host
+2022-06-12 06:57:32.574907 W | rafthttp: health check for peer affd5634331a4b9f could not connect: dial tcp 192.168.31.102:2380: connect: no route to host
+2022-06-12 06:57:32.574931 W | rafthttp: health check for peer 79d5043c5c6f48d3 could not connect: dial tcp 192.168.31.101:2380: connect: no route to host
+2022-06-12 06:57:33.687093 W | etcdserver: timed out waiting for read index response (local node might have slow network)
+```
