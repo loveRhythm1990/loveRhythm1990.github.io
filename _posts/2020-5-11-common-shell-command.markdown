@@ -175,6 +175,28 @@ ssh-keygen
 ssh-copy-id -i .ssh/id_rsa.pub  用户名字@192.168.x.xxx
 ```
 
+###### 使用 tc 模拟网络丢包和时延
+
+时延，配置 eth0 的时延为 10ms
+```s
+# 设置时延为 10ms
+sudo tc qdisc add dev eth0 root netem delay 10ms
+
+# 查看已有策略
+tc qdisc show
+
+# 删除策略
+sudo tc qdisc del dev eth0 root netem delay 10ms
+```
+
+丢包，配置丢包率为 1%
+```s
+tc qdisc add dev eth0 root netem loss 1%
+```
+参考[linux 下使用 tc 模拟网络延迟和丢包](https://blog.csdn.net/weiweicao0429/article/details/17578011)
+
+[https://tldp.org/HOWTO/Traffic-Control-HOWTO/](https://tldp.org/HOWTO/Traffic-Control-HOWTO/) 这个文档有 pdf 版本。
+
 研究下 strace
 
 ###### 参考
