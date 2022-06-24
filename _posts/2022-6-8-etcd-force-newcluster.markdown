@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "Etcd 在 rke 环境下通过 force-new-cluster 实现灾备-操作记录"
+title:      "通过--force-new-cluster实现Etcd容灾"
 date:       2022-6-8 10:10:00
 author:     "decent"
 header-img-credit: false
@@ -140,6 +140,7 @@ hello-world-rg2lw   1/1     Running       0          142m   10.42.1.49   master2
     operator: Exists
     tolerationSeconds: 300
 ```
+> 2022.06.24，经验证这个问题在 1.16 不存在，在高版本 K8s 环境中，需要留意一下这个问题怎么解决，或者需要重启下所有的管理组件容器，比如kube-apiserver、kube-controler-manager等，当时的环境已经不复存在了。
 
 这个时候，我们再创建一个应用，可以看到被调度到了 master3 上。
 ```s
@@ -149,35 +150,8 @@ pods-simple-pod     1/1     Running       0          12s    10.42.0.23   master3
 ```
 
 ### 移除A机房节点
-移除 A 机房节点，需要在 rke 命令中执行。我们先尝试移除部分解决，比如先移除 master1 节点。在 `cluster.yml` 文件中删除 master1 节点的配置，然后执行 `rke up --config cluster.yml`。`rke up` 执行过程中，出现了很多错误，最终也出现了 FATA 错误。
-```s
-WARN[0039] [reconcile] Couldn't clean up controlplane node [192.168.31.101]: Not able to reach the host: Can't retrieve Docker Info: error during connect: Get "http://%2Fvar%2Frun%2Fdocker.sock/v1.24/info": Failed to dial ssh using address [192.168.31.101:22]: dial tcp 192.168.31.101:22: connect: no route to host 
 
-INFO[0049] Removing container [rke-log-linker] on host [192.168.31.103], try #1 
-INFO[0049] [remove/rke-log-linker] Successfully removed container on host [192.168.31.103] 
-INFO[0049] [etcd] Successfully started etcd plane.. Checking etcd cluster health 
-INFO[0051] [etcd] etcd host [192.168.31.103] reported healthy=true 
-FATA[0051] cannot proceed with upgrade of controlplane since 1 host(s) cannot be reached prior to upgrade 
-```
-
-但是执行完之后，看到 master1 确实被删除了
-```s
-[decent@master3 rke_test]$ kubectl get nodes
-NAME      STATUS     ROLES                      AGE     VERSION
-master2   NotReady   controlplane,etcd,worker   4h50m   v1.20.5
-master3   Ready      controlplane,etcd,worker   4h50m   v1.20.5
-node1     NotReady   worker                     4h50m   v1.20.5
-node2     Ready      worker                     4h50m   v1.20.5
-```
-
-但是，`docker inspect kube-apiserver` 看到 apiserver 参数 `--etcd-servers`中，仍然包含 `192.168.31.101:2379`，也就是我们移除的 master1 节点上的 etcd 地址。
-```s
- "--etcd-servers=https://192.168.31.103:2379,https://192.168.31.101:2379,https://192.168.31.102:2379",
-```
-
-> 这个时候，想到了一个办法，能不能使用 `assaflavie/runlike` 镜像，修改下 kube-apiserver 的参数，然后重新启动下？【后面试一下】
-
-我们这里先把 A 机房所有的节点都移除下，修改下 `cluster.yml`，删除 master2 和 node1 配置，再执行下 rke up。这次显示执行成功。
+我们这里先把 A 机房所有的节点都移除下，修改下 `cluster.yml`，删除 master1、master2 和 node1 配置，再执行下 rke up。这次显示执行成功。
 ```s
 INFO[0133] [addons] Saving ConfigMap for addon rke-ingress-controller to Kubernetes 
 INFO[0133] [addons] Successfully saved ConfigMap for addon rke-ingress-controller to Kubernetes 
@@ -206,7 +180,7 @@ pods-simple-pod     1/1     Running   2          163m    10.42.0.23   master3   
 "--etcd-servers=https://192.168.31.103:2379",
 ```
 
-再使用 docker inspect 检查 `etcd` 的参数，发现 `--force-new-cluster` 参数也没有了，【**由此可见，rke up --config cluster.yml 对 etcd 的参数有修正？**，可以进一步验证下】
+再使用 docker inspect 检查 `etcd` 的参数，发现 `--force-new-cluster` 参数也没有了，【**由此可见，rke up --config cluster.yml 对 etcd 的参数有修正**，可以进一步验证下】
 
 用以访问 `kube-apiserver` 的 `kubernetes` 服务也是正常的。
 ```s
@@ -220,14 +194,11 @@ hello-world   10.42.4.57:8080,10.42.4.58:8080   5h25m
 kubernetes    192.168.31.103:6443               5h29m
 ```
 
-这里关注一下 `kubernetes` 这个 `endpoints`，
-
 ### 尝试重启 kube-apiserver，修改 --etcd-servers 参数
 我们使用 `docker run --rm -v /var/run/docker.sock:/var/run/docker.sock assaflavie/runlike kube-apiserver` 命令得到 kube-apiserver 的运行参数如下：
-
 ```s
 docker run --name=kube-apiserver --hostname=master3 --env=RKE_AUDITLOG_CONFIG_CHECKSUM=856f426399fb14a50b78e721d15c168c --env=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin --volume=/etc/kubernetes:/etc/kubernetes:z --volume=/var/log/kube-audit:/var/log/kube-audit:z --volumes-from=service-sidekick --network=host --restart=always --label='org.label-schema.vcs-ref=2fad0cab4ec1801f91ac2842ad453849690380c6' --label='org.opencontainers.image.url=https://github.com/rancher/hyperkube' --label='org.label-schema.schema-version=1.0' --label='io.rancher.rke.container.name=kube-apiserver' --label='org.label-schema.build-date=2021-01-28T17:44:52Z' --label='org.opencontainers.image.source=https://github.com/rancher/hyperkube.git' --label='org.opencontainers.image.created=2021-03-29T18:28:09Z' --label='org.opencontainers.image.revision=7589f9f8ba4a48a38f243bfc8a7d951db0fb3f25' --label='org.label-schema.vcs-url=https://github.com/rancher/hyperkube-base.git' --runtime=runc --detach=true rancher/hyperkube:v1.20.5-rancher1
 ```
 
-【发现生成的参数是不合理的！！！】不过也为我们提供了一个思路，通过替换容器来修改容器的参数，因为我们总是可以找到正确的参数
+【发现生成的参数是不合理的】不过也为我们提供了一个思路，通过替换容器来修改容器的参数，因为我们总是可以找到正确的参数
 
