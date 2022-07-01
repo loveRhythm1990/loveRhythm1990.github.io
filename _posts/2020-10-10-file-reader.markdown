@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "Golang文件读写分片"
+title:      "关于文件分片上传下载的一点总结（Go语言）"
 date:       2020-12-20 11:56:00
 author:     "weak old dog"
 header-img-credit: false
@@ -24,17 +24,20 @@ fake@Mac iotext % ls -l file
 ```
 输出为：1898344699
 
-#### Reader和Writer接口
+#### Reader 和 Writer 接口
 golang中，最基本的读写接口是Reader以及Writer。其定义如下：
+
+> Reader 接口，读取内容到缓冲区 p 中，返回读取的字节数，以及遇到的错误; Reader接口的 `实现者` 是持有数据的（理解为，`可以 read`），调用 Read 方法时，会把其持有的数据写到目标缓冲区，即写到参数中。
+
 ```go
-// Reader接口，读取内容到缓冲区p中，返回读取的字节数，以及遇到的错误
-// 实现Reader的接口是持有数据的，并把持有的数据写到作为参数的目标缓冲区
 type Reader interface {
 	Read(p []byte) (n int, err error)
 }
+```
 
-// Writer接口，将作为缓冲区的参数的数据写到底层的数据流中，返回写入的数据量以及可能的错误。
-// 如果写入的数据量少于len(p)，err一定不是nil的（所以p一定要是全部要写的数据），writer接口不能修改作为参数的slice
+> Writer 接口，将参数缓冲区的数据写到底层的数据流中，返回写入的数据量以及可能的错误。如果写入的数据量少于 len(p)，会返回错误，（所以缓冲区内的数据要全部写完，否则会报错），writer 接口不能修改作为参数的 slice。
+
+```go
 type Writer interface {
 	Write(p []byte) (n int, err error)
 }
@@ -42,23 +45,23 @@ type Writer interface {
 
 举例说明，申请一个50K的缓冲区，并读取上面的文件。
 ```go
-	file, err := os.Open("/Users/fake/iotext/file")
-	requireNoErr(err)
-
-	buf := make([]byte, 5*10240)
-	n, err := file.Read(buf)
-	fmt.Println(err)
-	fmt.Println(n)
+file, _ := os.Open("/Users/fake/iotext/file")
+buf := make([]byte, 50 * 1024)
+n, err := file.Read(buf) // 将文件的内容读到 buf 中
+fmt.Println(err, n)
+// 输出：
+// <nil> 42552
 ```
-输出如下，共读了42552个字节的数据，没有返回错误
-```s
-<nil>
-42552
-```
-`os.Open`函数以只读的形式打开文件，返回的参数为`os.File`的指针，
+共读了42552个字节的数据，buf 没有读满，没有返回错误，`os.Open` 函数以只读的形式打开文件，返回的参数为 `os.File` 的指针。
 
 #### 分片读取
-如果要读取的文件非常大，不能一次加载到内存里，可能要分多次读取。假设我们要将上面的文件分多次读，每次只读1K，实现方式如下。
+如果要读取的文件非常大，不能一次加载到内存里，可能要分多次读取。假设我们要将上面的文件分多次读，每次只读 1K，实现方式如下。
+
+这里还有个很重要的两个接口，这两个接口跟 Reader、Writer 接口最大的不同就是可以从指定位置 `offset` 开始读写数据，这个也是分片读写的关键。
+
+* **io.ReaderAt**: 定义为 `ReadAt(buf, offset)(int, error)`，这个接口读数据到 buf 中，如果读到的数据量少于 `len(p)`，会返回错误，比如数量量不够 `len(p)` 时，会返回 `io.EOF` 错误。即使返回了错误，缓冲区的数据仍然是可以消费的，这个可以根据实际读到的字节数来消费。
+* **io.WriteAt**: 从指定位置写数据，如果数据没写完，会报错。
+
 ```go
 const (
 	fileName = "/Users/fake/iotext/file"
@@ -71,13 +74,11 @@ func read1K(reader io.ReaderAt, offset int64) ([]byte, int64, bool) {
 	buf := make([]byte, size)
 	n, err := reader.ReadAt(buf, offset)
 	over := false
-	// 与Reader接口不同的是，ReadAt在读取不够buf size的数据时，会返回错误
-	if err == io.EOF {
+	if err == io.EOF { // 遇到 io.EOF 错误了，可以视为一个提示信息，表示数据读完了
 		fmt.Println("read completed!")
 		over = true
     }
-    // 如果读不够1K，要截断，不然会写一些脏数据
-	if n < size {
+	if n < size {     // 如果读不够1K，要截断，不然会写一些脏数据
 		buf = buf[0:n]
 	}
 	return buf, offset + int64(n), over
@@ -85,21 +86,18 @@ func read1K(reader io.ReaderAt, offset int64) ([]byte, int64, bool) {
 
 //从偏移处开始写文件，offset的单位是字节
 func write1K(writer io.WriterAt, buf []byte, offset int64) {
-	_, err := writer.WriteAt(buf, offset)
-	requireNoErr(err)
+	_, _ = writer.WriteAt(buf, offset)
 }
 
 // 计算哈希
 func hash(file string) uint32 {
-	content, err := ioutil.ReadFile(file)
-	requireNoErr(err)
+	content, _ := ioutil.ReadFile(file)
 	h := fnv.New32a()
 	h.Write(content)
 	return h.Sum32()
 }
 
 func main() {
-
 	file, _ := os.Open(fileName)
 	target, _ := os.OpenFile(targetfile, os.O_WRONLY, 0666)
 
@@ -121,11 +119,9 @@ func main() {
 	hash2 := hash(targetfile)
 	if hash1 != hash2 {
 		panic(fmt.Sprintf("hash, expect: %d, got: %d", hash1, hash2))
-	} else {
-		fmt.Println("success")
 	}
+	fmt.Println("success")
 }
-
 ```
 
 #### 参考
