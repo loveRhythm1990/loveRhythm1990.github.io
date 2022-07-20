@@ -14,31 +14,29 @@ tags:
 《实践》这本书中提到“建议 Etcd 应尽量做到同地域部署”，这个信息很重要，因为最近也在做同城双活，一般来说，同城（同城双活）的时延在 1ms 左右，应该是还能符合一个 etcd 的时延要求的。这个我们也使用 tc 来模拟时延，在配置网卡时延在 20ms 时，etcd 性能即功能影响不是很大。 
 
 在 etcd 节点网络流量很大时，我们可以提高 etcd 流量的优先级，这个也可以通过 tc 来完成，具体怎么做，可以参考[《How to use 'tc' (traffic control) to increase / decrease an application's network priority?》](https://www.reddit.com/r/linuxquestions/comments/5vsvnr/how_to_use_tc_traffic_control_to_increase/)，思路是通过 iptables 来对流量进行标记，然后把不同的流量放到 tc 的不同队列里。
-```s
-tc qdisc add dev eth0 root handle 1:0 htb
 
-iptables -t mangle -A PREROUTING -j connmark --restore-mark 
-iptables -t mangle -A PREROUTING -m owner --uid-owner <rclone-user> -j MARK --set-mark 2 # You can use any number you want here 
-iptables -t mangle -A PREROUTING ! -m owner --uid-owner <rclone-user> -j MARK --set-mark 3 # Match packets from all other users 
-iptables -t mangle -A PREROUTING -j connmark --save-mark
-
-tc class add dev eth0 root classid 1:1 htb rate 4500Kbit ceil 4500Kbit
-tc class add dev eth0 parent 1:1 classid 1:2 htb rate 4500Kbit ceil 4500Kbit
-
-tc qdisc add dev eth0 parent 1:2 classid 1:10 htb prio 2 rate 3375Kbit ceil 4500Kbit
-tc qdisc add dev eth0 parent 1:2 classid 1:20 htb prio 1 rate 4500Kbit ceil 4500Kbit
-
-tc qdisc add dev eth0 handle 10: parent 1:10 sfq
-tc qdisc add dev eth0 handle 20: parent 1:20 sfq
-
-tc filter add dev eth0 prio 1 proto ip handle 2 fw flowid 1:10 # Catch packets marked with 2 and place them in 1:10
-tc filter add dev eth0 prio 2 proto ip handle 3 fw flowid 1:20 # Catch packets marked with 3 and place them in 1:20
-```
 tc 工具很复杂，难得有资料能把事情讲清楚。不过从上面来看，通过 tc 来控制流量优先级还是有一定成本的。《实践》中还提到了一种 case，leader 的连接太多，导致 follower 发往 leader 的请求被丢弃
 ```s
 dropped MsgProp to 247ae21ff9436b2d since streamMsg's sending buffer is full
 dropped MsgAppResp to 247ae21ff9436b2d since streamMsg's sending buffer is full
 ```
+
+在官方文档中[https://etcd.io/docs/v3.4/tuning/#network](https://etcd.io/docs/v3.4/tuning/#network)，提供了使用 tc 提高 etcd 流量优先级的方法：
+
+```s
+# 提供优先级
+tc qdisc add dev eth0 root handle 1: prio bands 3
+tc filter add dev eth0 parent 1: protocol ip prio 1 u32 match ip sport 2380 0xffff flowid 1:1
+tc filter add dev eth0 parent 1: protocol ip prio 1 u32 match ip dport 2380 0xffff flowid 1:1
+tc filter add dev eth0 parent 1: protocol ip prio 2 u32 match ip sport 2379 0xffff flowid 1:1
+tc filter add dev eth0 parent 1: protocol ip prio 2 u32 match ip dport 2379 0xffff flowid 1:1
+
+# 取消 tc 限速配置
+tc qdisc del dev eth0 root
+```
+其中，关于 tc 命令中 handle 的说明可以参考 [https://tldp.org/HOWTO/Traffic-Control-HOWTO/components.html#c-handle](https://tldp.org/HOWTO/Traffic-Control-HOWTO/components.html#c-handle)，看上去就是一个 ID，关于 `prio` 模块的说明可以参考：[https://linux.die.net/man/8/tc-prio](https://linux.die.net/man/8/tc-prio)
+这种方式比 iptables 标记流量的方式好像简单一点。
+
 
 ### 减少磁盘 I/O 延迟
 一般物理磁盘的时延为 10ms，SSD 的时延低于 1ms，所以 etcd 一般用 ssd。而且是单盘只给 ssd 用。另外因为 k8s 的 event 量多且频繁变更，我们可以将 event 单独存储，这个需要修改 kube-apiserver 的参数:`--etcd-servers-overrides`，可以参考[《Etcd 安装、部署、测试》](https://loverhythm1990.github.io/2021/08/28/etcd-hello/)

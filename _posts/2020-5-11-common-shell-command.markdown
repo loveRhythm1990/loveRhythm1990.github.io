@@ -193,9 +193,14 @@ sudo tc qdisc del dev eth0 root netem delay 10ms
 ```s
 tc qdisc add dev eth0 root netem loss 1%
 ```
+在上面这个命令中，`root` 其实是指 egress，即出口流量，`netem`是一个 tc 模块，用来模拟网络，参考[https://manpages.ubuntu.com/manpages/kinetic/en/man8/tc-netem.8.html](https://manpages.ubuntu.com/manpages/kinetic/en/man8/tc-netem.8.html)
+
 参考[linux 下使用 tc 模拟网络延迟和丢包](https://blog.csdn.net/weiweicao0429/article/details/17578011)
 
 [https://tldp.org/HOWTO/Traffic-Control-HOWTO/](https://tldp.org/HOWTO/Traffic-Control-HOWTO/) 这个文档有 pdf 版本。
+
+
+
 
 研究下 strace
 
