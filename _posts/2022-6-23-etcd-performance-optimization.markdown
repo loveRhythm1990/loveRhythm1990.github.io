@@ -45,6 +45,32 @@ tc qdisc del dev eth0 root
 ```s
 ionice -c2 -n0 -p 'pgrep etcd'
 ```
+ionice 的使用，可以参考[利用ionice命令设置程序的IO调度与优先级](https://www.zxzyl.com/archives/750/)。ionice将磁盘IO调度分为三类：
+
+* ilde：空闲磁盘调度，该调度策略是在当前系统没有其他进程需要进行磁盘IO时，才能进行磁盘。
+* Best effort：是缺省的磁盘IO调度策略；(1)该调度策略可以指定优先级参数(范围是0~7，数值越小，优先级越高)；
+* Real time：实时调度策略，如果设置了该磁盘IO调度策略，则立即访问磁盘，不管系统中其他进程是否有IO。因此使用实时调度策略，需要注意的是，该访问策略可能会使得其他进程处于等待状态。
+
+另外，ionice 可以配置到定时任务中，毕竟 etcd 进程有可能会重启。
+
+```s
+ionice - sets or gets process io scheduling class and priority.
+
+Usage:
+  ionice [OPTION] -p PID [PID...]
+  ionice [OPTION] COMMAND
+
+Options:
+  -c, --class    scheduling class name or number
+                           0: none, 1: realtime, 2: best-effort, 3: idle
+  -n, --classdata  scheduling class data
+                           0-7 for realtime and best-effort classes
+  -p, --pid=PID         view or modify already running process
+  -t, --ignore          ignore failures
+  -V, --version         output version information and exit
+  -h, --help            display this help and exit
+```
+
 
 ### 自动压缩历史版本
 这个调整 etcd 的参数 `--auto--compaction` 即可，一般默认是开启的，这个有两种压缩模式，一种是周期性的，一种是根据历史记录数，这个看下文档即可，不再赘述。
