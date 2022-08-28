@@ -1,0 +1,303 @@
+---
+layout:     post
+title:      "flannel host-gw 网络概述"
+date:       2022-8-27 10:10:00
+author:     "decent"
+header-img-credit: false
+tags:
+    - 网络
+---
+
+在《[使用 kubeadm 部署 Kubernetes](https://loverhythm1990.github.io/2022/08/26/kubeadm-k8s/)》中，我们使用 kubeadm 部署了一个 K8s 集群，并配置 flannel 的网络后端为 hostgw。这里稍微介绍下 hostgw 网络的工作模式。
+
+hostgw 是一个纯三层网络模型，不需要封包解包，只通过路由转发进行工作，也因为如此，所以 hostgw 的性能是比较高的。不过其有一个显著的不足之处，就是要求 K8s 所有的节点都在一个局域网内，节点之间不能有路由器。
+> hostgw，顾名思义，就是把每个主机都当成一个 gateway，也就是一个**下一条**，因为每个主机节点都对应一个 cidr，比如主机 A 的 cidr 为 `10.244.1.0/24`，那么所有其他主机中都会配置一条路由（这条路由就是 flannel 监听 node 资源，并进行配置的），其下一条为主机 A。同时，主机 A 上关于 `10.244.1.0/24` 还有一条直连路由，那就是其发送给网卡 `cri0`，并通通过 `cri0` 进行二层转发。这就是为什么 hostgw 要求所有节点在二层网络的原因，如果中间有路由设备，中间的路由设备因为无法配置路由（flannel 没有工作在中间设备上），无法转发报文。
+
+下面图片清晰的描述了 hostgw 的工作方式。图片来自张磊的 K8s 极客时间课程。
+![java-javascript](/img/in-post/all-in-one/2022-08-28-10-54-06.png)
+
+另外，Calico 项目提供的网络解决方案，与 Flannel 的 host-gw 模式，几乎是完全一样的。也就是说，Calico 也会在每台宿主机上，添加一个格式如下所示的路由规则，关于 Calico 的工作原理，我们有时间再分析下。
+```s
+<目的容器IP地址段> via <网关的IP地址> dev eth0
+```
+
+### 网络分析
+在我们的测试集群中，有两个节点，其对应的 CIDR 分别如下，在对应节点上创建出来的 pod，其 IP 会在对应网段内。为什么是这个 CIDR，这个跟我们使用 kubeadm 初始化指定的参数以及 flannel 指定的参数有关。参考《[使用 kubeadm 部署 Kubernetes](https://loverhythm1990.github.io/2022/08/26/kubeadm-k8s/)》。
+```s
+[decent@HostGW-Master ~]$ kubectl get nodes -o yaml | grep -A 3 spec
+  spec:
+    podCIDR: 10.244.0.0/24
+    podCIDRs:
+    - 10.244.0.0/24
+--
+  spec:
+    podCIDR: 10.244.1.0/24
+    podCIDRs:
+    - 10.244.1.0/24
+```
+
+我们首先创建一个 deployment，查看 pod 的 ip 情况，使用的 yaml 文件如下：
+```yml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+  labels:
+    app: nginx
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.14.2
+        ports:
+        - containerPort: 80
+```
+三个 pod 的状态如下，两个在 worker 节点，一个在 master 节点。Pod 的 IP 符合对应 CIDR。
+```s
+[decent@HostGW-Master ~]$ kubectl get pods -o wide
+NAME                                READY   STATUS    RESTARTS   AGE   IP           NODE            NOMINATED NODE   READINESS GATES
+nginx-deployment-574b87c764-4k7xw   1/1     Running   0          87s   10.244.1.2   hostgw-node     <none>           <none>
+nginx-deployment-574b87c764-j6zwk   1/1     Running   0          87s   10.244.1.3   hostgw-node     <none>           <none>
+nginx-deployment-574b87c764-th5pz   1/1     Running   0          87s   10.244.0.4   hostgw-master   <none>           <none>
+```
+在 master 节点上，ping pod 的 ip 也都是能 ping 通的。
+```s
+[decent@HostGW-Master ~]$ ping 10.244.1.3
+PING 10.244.1.3 (10.244.1.3) 56(84) bytes of data.
+64 bytes from 10.244.1.3: icmp_seq=1 ttl=63 time=0.668 ms
+64 bytes from 10.244.1.3: icmp_seq=2 ttl=63 time=0.417 ms
+^C
+--- 10.244.1.3 ping statistics ---
+2 packets transmitted, 2 received, 0% packet loss, time 1001ms
+rtt min/avg/max/mdev = 0.417/0.542/0.668/0.127 ms
+[decent@HostGW-Master ~]$ ping 10.244.0.4
+PING 10.244.0.4 (10.244.0.4) 56(84) bytes of data.
+64 bytes from 10.244.0.4: icmp_seq=1 ttl=64 time=0.188 ms
+^C
+--- 10.244.0.4 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.188/0.188/0.188/0.000 ms
+```
+
+
+我们再来看节点的路由，跟上面图片中是一致的。
+```s
+# master 节点的路由
+[decent@HostGW-Master ~]$ ip route
+default via 192.168.31.1 dev ens33 proto static metric 100 
+10.244.0.0/24 dev cni0 proto kernel scope link src 10.244.0.1 
+10.244.1.0/24 via 192.168.31.202 dev ens33 
+172.17.0.0/16 dev docker0 proto kernel scope link src 172.17.0.1 
+192.168.31.0/24 dev ens33 proto kernel scope link src 192.168.31.201 metric 100 
+
+# worker 节点的路由
+[decent@HostGW-Node ~]$ ip route
+default via 192.168.31.1 dev ens33 proto static metric 100 
+10.244.0.0/24 via 192.168.31.201 dev ens33 
+10.244.1.0/24 dev cni0 proto kernel scope link src 10.244.1.1 
+172.17.0.0/16 dev docker0 proto kernel scope link src 172.17.0.1 
+192.168.31.0/24 dev ens33 proto kernel scope link src 192.168.31.202 metric 100 
+```
+
+### iptables
+flannel 网络模型，或者其他的网络模型，解决的都是跨主机通信的问题，iptables 是 K8s 中对于 K8s service 的代理实现，另外还有 ipvs 等实现方式。理论上 flannel 用 vxlan 或者 host-gw 对于 iptables 来说没有区别。
+
+K8s 的 iptables 是由 kube-proxy 生成的，具体实现可以参考[kube-proxy](https://github.com/kubernetes/kubernetes/blob/master/pkg/proxy/iptables/proxier.go)
+
+kube-proxy只修改了 filter 和 nat 表，它对iptables的链进行了扩充，自定义了KUBE-SERVICES，KUBE-NODEPORTS，KUBE-POSTROUTING，KUBE-MARK-MASQ和KUBE-MARK-DROP五个链，并主要通过为 KUBE-SERVICES链（附着在PREROUTING和OUTPUT）增加rule来配制traffic routing 规则。这部分内容参考[理解kubernetes环境的iptables](https://www.cnblogs.com/charlieroro/p/9588019.html)。其中 filter 表主要用于过滤，nat 表主要用于对 service ip 或者 nodeport 进行 dnat。如下：
+* 对于 service ip，根据 service ip 匹配规则，dnat 为 podip + port
+* 对于 nodeip + nodeport，则根据 nodeport 进行 dnat，并且 `KUBE-NODEPORTS` 链要在 `KUBE-SERVICES` 后面进行匹配，优先级低一些。
+
+
+我们配置一个 clusterIP 的 service，看下 host-gw 下的 iptable 配置。我们要配置的 service 如下，通过 selector 选中上面的 nginx pod。
+```yml
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-service
+spec:
+  selector:
+    app: nginx
+  ports:
+    - protocol: TCP
+      port: 80
+```
+验证下 service 是否正常，显示是正常的。
+```s
+[decent@HostGW-Master ~]$ kubectl get service my-service
+NAME         TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)   AGE
+my-service   ClusterIP   10.103.92.81   <none>        80/TCP    2m20s
+[decent@HostGW-Master ~]$ curl 10.103.92.81:80
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
+<style>
+    body {
+        width: 35em;
+        margin: 0 auto;
+        font-family: Tahoma, Verdana, Arial, sans-serif;
+    }
+</style>
+</head>
+<body>
+<h1>Welcome to nginx!</h1>
+<p>If you see this page, the nginx web server is successfully installed and
+working. Further configuration is required.</p>
+
+<p>For online documentation and support please refer to
+<a href="http://nginx.org/">nginx.org</a>.<br/>
+Commercial support is available at
+<a href="http://nginx.com/">nginx.com</a>.</p>
+
+<p><em>Thank you for using nginx.</em></p>
+</body>
+</html>
+```
+
+分别用 nc 和 telnet 验证下 service cluster ip，发现都是通的。对于 nc 的使用，可以参考[使用 nc 命令检查远程端口是否打开](https://linux.cn/article-8186-1.html)，其中 `-z` 选项表示设置 nc 只是扫描侦听守护进程，实际上不向它们发送任何数据，`-v` 选项表示启用详细模式。
+```s
+[decent@HostGW-Master ~]$ nc -zv 10.103.92.81 80
+Ncat: Version 7.50 ( https://nmap.org/ncat )
+Ncat: Connected to 10.103.92.81:80.
+Ncat: 0 bytes sent, 0 bytes received in 0.01 seconds.
+[decent@HostGW-Master ~]$ telnet  10.103.92.81 80
+Trying 10.103.92.81...
+Connected to 10.103.92.81.
+Escape character is '^]'.
+^CConnection closed by foreign host.
+```
+
+添加 service 之前的 filter 如下，这里可以关注下 `KUBE-FIREWALL` 链，在这个链中，打了 `0x8000/0x8000` 标记的报文会被 DROP，如果一个 service 没有 endpoints 就会被打上这个标记。
+```s
+[decent@HostGW-Master ~]$ sudo iptables  -L -v       
+[sudo] password for decent: 
+Chain INPUT (policy ACCEPT 1505 packets, 251K bytes)
+ pkts bytes target     prot opt in     out     source               destination         
+3233K  572M KUBE-FIREWALL  all  --  any    any     anywhere             anywhere            
+14684  993K KUBE-SERVICES  all  --  any    any     anywhere             anywhere             ctstate NEW /* kubernetes service portals */
+14684  993K KUBE-EXTERNAL-SERVICES  all  --  any    any     anywhere             anywhere             ctstate NEW /* kubernetes externally-visible service portals */
+
+Chain FORWARD (policy ACCEPT 0 packets, 0 bytes)
+ pkts bytes target     prot opt in     out     source               destination         
+    6   692 KUBE-FORWARD  all  --  any    any     anywhere             anywhere             /* kubernetes forwarding rules */
+    4   180 KUBE-SERVICES  all  --  any    any     anywhere             anywhere             ctstate NEW /* kubernetes service portals */
+    2    90 ACCEPT     all  --  any    any     10.244.0.0/16        anywhere             /* flanneld forward */
+    0     0 ACCEPT     all  --  any    any     anywhere             10.244.0.0/16        /* flanneld forward */
+
+Chain OUTPUT (policy ACCEPT 1482 packets, 277K bytes)
+ pkts bytes target     prot opt in     out     source               destination         
+3232K  592M KUBE-FIREWALL  all  --  any    any     anywhere             anywhere            
+34482 2075K KUBE-SERVICES  all  --  any    any     anywhere             anywhere             ctstate NEW /* kubernetes service portals */
+
+Chain KUBE-EXTERNAL-SERVICES (1 references)
+ pkts bytes target     prot opt in     out     source               destination         
+
+Chain KUBE-FIREWALL (2 references)
+ pkts bytes target     prot opt in     out     source               destination         
+    0     0 DROP       all  --  any    any     anywhere             anywhere             /* kubernetes firewall for dropping marked packets */ mark match 0x8000/0x8000
+
+Chain KUBE-FORWARD (1 references)
+ pkts bytes target     prot opt in     out     source               destination         
+    0     0 DROP       all  --  any    any     anywhere             anywhere             ctstate INVALID
+    0     0 ACCEPT     all  --  any    any     anywhere             anywhere             /* kubernetes forwarding rules */ mark match 0x4000/0x4000
+    0     0 ACCEPT     all  --  any    any     10.244.0.0/16        anywhere             /* kubernetes forwarding conntrack pod source rule */ ctstate RELATED,ESTABLISHED
+    0     0 ACCEPT     all  --  any    any     anywhere             10.244.0.0/16        /* kubernetes forwarding conntrack pod destination rule */ ctstate RELATED,ESTABLISHED
+
+Chain KUBE-SERVICES (3 references)
+ pkts bytes target     prot opt in     out     source               destination  
+```
+添加 service 之后的 filter 表，跟上面比没有什么变化。因此添加 K8s service 之后，主要变化是 nat 表。 
+
+添加 service 之前的 nat 表，其实这个表中，已经有两个 service，分别是 kubernetes 这个 service，以及 kube-dns 这个 service，再加入一个 service 规则类似。我们精简下上面的 net 表，删除无用的配置，只留下kube-dns 的 service，其配置如下：
+```s
+[decent@HostGW-Master ~]$ kubectl get service -n kube-system
+NAME       TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)                  AGE
+kube-dns   ClusterIP   10.96.0.10   <none>        53/UDP,53/TCP,9153/TCP   15h
+[decent@HostGW-Master ~]$ kubectl get pods -n kube-system -o wide | grep dns
+coredns-5644d7b6d9-8qxfv                1/1     Running   0          15h   10.244.0.3       hostgw-master   <none>           <none>
+coredns-5644d7b6d9-xx6mc                1/1     Running   0          15h   10.244.0.2       hostgw-master   <none>           <none>
+```
+另外还需要注意，kube-dns 的 spec 中定义了三个 port，我们只关注 `metrics` 这个端口，即 9153 端口。还有一个细节需要注意，在 net 表中，有根据 `tcp dpt:domain` 进行匹配，刚看到时一脸糊涂，查了一下，domain 是指 53 端口，参考文件 `/etc/services`，里面有端口及其命名。
+```yml
+spec:
+  clusterIP: 10.96.0.10
+  ports:
+  - name: dns
+    port: 53
+    protocol: UDP
+    targetPort: 53
+  - name: dns-tcp
+    port: 53
+    protocol: TCP
+    targetPort: 53
+  - name: metrics
+    port: 9153
+    protocol: TCP
+    targetPort: 9153
+  selector:
+    k8s-app: kube-dns
+```
+
+删除之后，如下，其实也挺简单的，就是根据匹配 ip即端口，并进行 dnat。
+```s
+[decent@HostGW-Master ~]$ sudo iptables -t nat -L -v 
+Chain PREROUTING (policy ACCEPT 0 packets, 0 bytes)
+ pkts bytes target     prot opt in     out     source               destination         
+  166 34984 KUBE-SERVICES  all  --  any    any     anywhere             anywhere             /* kubernetes service portals */
+
+Chain OUTPUT (policy ACCEPT 9 packets, 539 bytes)
+ pkts bytes target     prot opt in     out     source               destination         
+31117 1876K KUBE-SERVICES  all  --  any    any     anywhere             anywhere             /* kubernetes service portals */
+
+Chain POSTROUTING (policy ACCEPT 9 packets, 539 bytes)
+ pkts bytes target     prot opt in     out     source               destination         
+31121 1877K KUBE-POSTROUTING  all  --  any    any     anywhere             anywhere             /* kubernetes postrouting rules */
+13594  816K RETURN     all  --  any    any     10.244.0.0/16        10.244.0.0/16        /* flanneld masq */
+    2    90 MASQUERADE  all  --  any    any     10.244.0.0/16       !base-address.mcast.net/4  /* flanneld masq */
+    0     0 RETURN     all  --  any    any    !10.244.0.0/16        10.244.0.0/24        /* flanneld masq */
+    1    84 MASQUERADE  all  --  any    any    !10.244.0.0/16        10.244.0.0/16        /* flanneld masq */
+
+Chain KUBE-MARK-DROP (0 references)
+ pkts bytes target     prot opt in     out     source               destination         
+    0     0 MARK       all  --  any    any     anywhere             anywhere             MARK or 0x8000
+
+Chain KUBE-MARK-MASQ (11 references)
+ pkts bytes target     prot opt in     out     source               destination         
+    0     0 MARK       all  --  any    any     anywhere             anywhere             MARK or 0x4000
+
+Chain KUBE-POSTROUTING (1 references)
+ pkts bytes target     prot opt in     out     source               destination         
+    9   539 RETURN     all  --  any    any     anywhere             anywhere             mark match ! 0x4000/0x4000
+    0     0 MARK       all  --  any    any     anywhere             anywhere             MARK xor 0x4000
+    0     0 MASQUERADE  all  --  any    any     anywhere             anywhere             /* kubernetes service traffic requiring SNAT */
+
+Chain KUBE-SEP-N4G2XR5TDX7PQE7P (1 references)
+ pkts bytes target     prot opt in     out     source               destination         
+    0     0 KUBE-MARK-MASQ  all  --  any    any     10.244.0.2           anywhere            
+    0     0 DNAT       tcp  --  any    any     anywhere             anywhere             tcp to:10.244.0.2:9153
+
+Chain KUBE-SEP-ZP3FB6NMPNCO4VBJ (1 references)
+ pkts bytes target     prot opt in     out     source               destination         
+    0     0 KUBE-MARK-MASQ  all  --  any    any     10.244.0.3           anywhere            
+    0     0 DNAT       tcp  --  any    any     anywhere             anywhere             tcp to:10.244.0.3:9153
+
+Chain KUBE-SERVICES (2 references)
+ pkts bytes target     prot opt in     out     source               destination         
+    0     0 KUBE-MARK-MASQ  tcp  --  any    any    !10.244.0.0/16        10.96.0.10           /* kube-system/kube-dns:metrics cluster IP */ tcp dpt:9153
+    0     0 KUBE-SVC-JD5MR3NA4I4DYORP  tcp  --  any    any     anywhere             10.96.0.10           /* kube-system/kube-dns:metrics cluster IP */ tcp dpt:9153
+
+Chain KUBE-SVC-JD5MR3NA4I4DYORP (1 references)
+ pkts bytes target     prot opt in     out     source               destination         
+    0     0 KUBE-SEP-N4G2XR5TDX7PQE7P  all  --  any    any     anywhere             anywhere             statistic mode random probability 0.50000000000
+    0     0 KUBE-SEP-ZP3FB6NMPNCO4VBJ  all  --  any    any     anywhere             anywhere            
+
+```

@@ -236,6 +236,8 @@ headless Service 没有 iptables 生成。
 
 ### 参考
 
+[理解kubernetes环境的iptables](https://www.cnblogs.com/charlieroro/p/9588019.html)
+
 [kubernetes 官方文档--Using Source IP](https://kubernetes.io/docs/tutorials/services/source-ip/)
 
 [Kubernetes Services and Iptables](https://msazure.club/kubernetes-services-and-iptables/)

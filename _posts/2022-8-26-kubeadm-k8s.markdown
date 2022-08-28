@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "使用 kubeadm 部署 Kubernetes，配置 flannel host-gw"
+title:      "使用 kubeadm 部署 Kubernetes"
 date:       2022-8-26 10:10:00
 author:     "decent"
 header-img-credit: false
@@ -8,7 +8,7 @@ tags:
     - k8s
 ---
 
-这里使用 kubeadm 部署下 kubernetes，并配置 flannel 网络模型为 `host-gw`，观察下 `host-gw` 的配置方式。kubeadm 的官方文档为[Creating a cluster with kubeadm](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/)，这个文档还没好好研究，这里重点不是 kubeadm 的使用，使用 kubeadm 部署 kubenetes 细节很多，这里主要是研究下 `host-gw` 的工作方式。
+这里使用 kubeadm 部署下 kubernetes，并配置 flannel 网络模型为 `host-gw`。kubeadm 的官方文档为[Creating a cluster with kubeadm](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/)，这个文档还没好好研究，这里重点不是 kubeadm 的使用，使用 kubeadm 部署 kubenetes 细节很多。
 
 测试系统为 centos，两台机器，master: 192.168.31.201; worker: 192.168.31.202.
 
@@ -76,12 +76,23 @@ for i in `kubeadm config images list`; do
   docker rmi registry.aliyuncs.com/google_containers/$imageName
 done;
 ```
+
+同时修改 docker 的镜像源，拉镜像时，从阿里云拉，cat /etc/docker/daemon.json，参考[https://cr.console.aliyun.com/cn-hangzhou/instances/mirrors](https://cr.console.aliyun.com/cn-hangzhou/instances/mirrors)
+```s
+{
+  "registry-mirrors": [
+    "https://x2bhgwmy.mirror.aliyuncs.com",
+    "https://hub-mirror.c.163.com"
+  ]
+}
+```
+
 #### 安装集群
 通过下面命令安装 kubernetes，`pod-network-cidr` 的配置要跟 flannel 的配置一致。
 ```s
 kubeadm init --pod-network-cidr=10.244.0.0/16
 ```
-没有意外的话，安装成功，不过这个时候，node 还是 `NotReady` 状态，因为还没有配置 CNI 网络。
+没有意外的话，安装成功，kubeadm 安装完成之后，配置的kubeconfig 文件位置为 `/etc/kubernetes/admin.conf`，需要拷贝到 ~/.kube/config。这个时候，node 还是 `NotReady` 状态，因为还没有配置 CNI 网络。
 
 > 这里也介绍下重置 kubeadm 的方式，命令为 `kubeadm reset`，可能需要安装多次。
 
@@ -98,17 +109,12 @@ flannel 没有特殊配置，使用 host-gw 时，将 backend-type 改为 host-g
 ```
 配置完直接 `kubectl apply -f` 即可。这样集群就安装完成了。
 
-
-
-
 ### 参考
 [阿里云镜像安装kubeadm和kubernetes](https://blog.51cto.com/u_15162069/2887315)
 
 [Kubeadm join failed : Failed to request cluster-info: no route to host](https://www.anycodings.com/1questions/2311918/kubeadm-join-failed-failed-to-request-cluster-info)
 
 [kubeadm 安装指定版本的 k8s 集群](https://segmentfault.com/a/1190000039144214)
-
-[]()
 
 
 kube-flannel 的 yaml 文件 参考[https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml](https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml) 相比于原来的文件，做了两处修改：
