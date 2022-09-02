@@ -1,0 +1,176 @@
+---
+layout:     post
+title:      "Pod 被驱逐了？看看这篇文章"
+date:       2022-8-31 10:10:00
+author:     "decent"
+header-img-credit: false
+tags:
+    - k8s
+---
+
+K8s 对于 Pod 驱逐机制的官方文档为[Node-pressure Eviction](https://kubernetes.io/docs/concepts/scheduling-eviction/node-pressure-eviction/)，建议首先阅读官方文档。本文对一些细节进行探究，并做相关验证。
+
+### 驱逐触发条件
+官方文档里列了 6 条件，当下面资源剩余量低于一定量时，会触发驱逐。我们逐个条件分析一下。
+* memory.available: node.status.capacity[memory] - node.stats.memory.workingSet
+* nodefs.available: node.stats.fs.available
+* nodefs.inodesFree: node.stats.fs.inodesFree
+* imagefs.available: node.stats.runtime.imagefs.available
+* imagefs.inodesFree: node.stats.runtime.imagefs.inodesFree
+* pid.available: node.stats.rlimit.maxpid - node.stats.rlimit.curproc
+
+#### memory.available
+上面列出的计算方式是：`node.status.capacity[memory] - node.stats.memory.workingSet`。减号左边的表达式很容易理解，我们通过 kubectl get node -o yaml 就能看到node 的 capacity。注意在下面的 node 资源配置中，`allocatable` 与 `capacity` 是一致的，说明没有开启节点资源功能，也就是 kubelet 没有配置 reserve 参数。
+```yml
+status:
+  allocatable:
+    cpu: "16"
+    ephemeral-storage: 26197508Ki
+    hugepages-2Mi: "0"
+    memory: 65791408Ki
+    pods: "110"
+  capacity:
+    cpu: "16"
+    ephemeral-storage: 26197508Ki
+    hugepages-2Mi: "0"
+    memory: 65791408Ki
+    pods: "110"
+```
+后面那个 `node.stats.memory.workingSet` 是怎么计算的呢？文档没有给出来，但是给出了一个 shell 脚本，说这个脚本跟 kubelet 的计算方式是一样的，那我们看看这个脚本。并稍微分析一下。
+```s
+#!/bin/bash
+#!/usr/bin/env bash
+
+# This script reproduces what the kubelet does
+# to calculate memory.available relative to root cgroup.
+
+# current memory usage
+# 内存资源的 capacity 是从 /proc/meminfo 里拿的，这里默认的单位是 Kb
+memory_capacity_in_kb=$(cat /proc/meminfo | grep MemTotal | awk '{print $2}')
+memory_capacity_in_bytes=$((memory_capacity_in_kb * 1024))
+
+# 使用了多少内存，是从cgroup 里拿的，这里的默认单位是字节
+memory_usage_in_bytes=$(cat /sys/fs/cgroup/memory/memory.usage_in_bytes)
+# 再从 cgroup 中所有 inactive file 占用的内存量，在计算过程中，inactive_file 没有被当做 workingset，因为系统假定，在承受内存压力时，这部分内存会被回收。
+# 关于 inactive_file 的介绍可以参考：https://docs.docker.com/config/containers/runmetrics/。可以简单理解为是对磁盘文件的缓存，并且活跃度较低（bytes of file-backed memory on inactive LRU list）
+memory_total_inactive_file=$(cat /sys/fs/cgroup/memory/memory.stat | grep total_inactive_file | awk '{print $2}')
+
+memory_working_set=${memory_usage_in_bytes}
+if [ "$memory_working_set" -lt "$memory_total_inactive_file" ];
+then
+    memory_working_set=0
+else
+    # 减去 inactive 的内存
+    memory_working_set=$((memory_usage_in_bytes - memory_total_inactive_file))
+fi
+
+memory_available_in_bytes=$((memory_capacity_in_bytes - memory_working_set))
+memory_available_in_kb=$((memory_available_in_bytes / 1024))
+memory_available_in_mb=$((memory_available_in_kb / 1024))
+
+echo "memory.capacity_in_bytes $memory_capacity_in_bytes"
+echo "memory.usage_in_bytes $memory_usage_in_bytes"
+echo "memory.total_inactive_file $memory_total_inactive_file"
+echo "memory.working_set $memory_working_set"
+echo "memory.available_in_bytes $memory_available_in_bytes"
+echo "memory.available_in_kb $memory_available_in_kb"
+echo "memory.available_in_mb $memory_available_in_mb"
+```
+通过上面的脚本，总结下来还是非常简单的，就是 Capacity 减去 workingset 以及 inactive_files。
+
+#### nodefs.available/inodesFree
+文档中对于 nodefs 的解释为：节点的 main filesystem，用来做 volume 的本地磁盘、emptyDir、日志存储等。比如 nodefs 包含了 `/var/lib/kubelet` 目录。官方文档没说是哪个目录，只是说包含了 /var/lib/kubelet 目录，根据我们之前的代码研究，这个目录应该是 `/var/lib/kubelet` 目录所在的磁盘，可能是根目录，如果 `/var/lib/kubelet` 单独挂了盘，那就是这个单独挂的盘。
+
+我们再来看 inode，根据[Linux实例磁盘空间满和inode满的问题排查方法](https://help.aliyun.com/document_detail/42531.html)，对于 inode 的说明如下，其实就是记录了文件的元数据：
+> Linux 的 inode 节点中，记录了文件的类型、大小、权限、所有者、文件连接的数目、创建时间与更新时间等重要数据，还有一个比较重要的内容就是指向数据库的指针。一般情况下不需要特殊配置，如果存放文件很多，则需要配置。有时磁盘空间有剩余但是不能存放文件，可能是由于 inode 耗尽所致。
+
+也就是说，inode 耗尽也会导致 `No space left on device` 错误。通过 `df -i` 命令可以查看节点的 inode 使用情况
+```s
+[qiuweimin@yp-mkebuilder-buildserver-dev58 ~]$ df -i
+Filesystem       Inodes   IUsed    IFree IUse% Mounted on
+devtmpfs        8221167     429  8220738    1% /dev
+tmpfs           8223926       1  8223925    1% /dev/shm
+tmpfs           8223926    2020  8221906    1% /run
+tmpfs           8223926      18  8223908    1% /sys/fs/cgroup
+/dev/vda2      26210304  309945 25900359    2% /
+/dev/vdc1      65536000 1066927 64469073    2% /opt
+```
+另外发现这篇文章[Linux实例磁盘空间满和inode满的问题排查方法](https://help.aliyun.com/document_detail/42531.html)写的很好，介绍了两种方式来处理 inode 占用太多的情况
+* 清除inode占用高的文件或者目录，这里实际上就是找找那个目录下的文件比较多，然后看看要不要清理一下这些文件，所以清理 `inode` 就是清理文件。使用的脚本为：`for i in /*; do echo $i; find $i | wc -l; done`
+* 修改文件系统 inode 数量。这个需要重新格式化磁盘，一般情况下是不可行了，除非在规划初期，知道这个磁盘要放大量的小文件，那在格式化文件系统的时候，要指定 inode 数量，使用的命令为：
+```s
+mkfs.ext3 /dev/xvdb -N 1638400
+```
+这里指定 inode 数量为 1638400，要视实际情况而定。
+
+#### imagefs.available/inodesFree
+一个可选的文件系统，用来存放镜像以及容器可写层，那就是 docker 的根目录（对于运行时是 docker 的来说）。imagefs 的衡量标准跟 nodefs 方式一致，不再赘述。
+
+#### pid.available
+目前还没有遇到因为 pid 不够用而导致 pod 驱逐的情况，这部分内容先从概念上陈述一下。
+文档中介绍的 pid 的计算方式为 `pid.available: node.stats.rlimit.maxpid - node.stats.rlimit.curproc`。
+
+对于前半部分 `maxpid` 可以从 `/proc/sys/kernel/pid_max` 文件中拿到，[proc](https://man7.org/linux/man-pages/man5/procfs.5.html) 文档中对于这个文件的说明为：
+> This file specifies the value at which PIDs wrap around (i.e., the value in this file is one greater than the maximum PID).  PIDs greater than this value are not allocated; thus, the value in this file also acts as a system-wide limit on the total number of processes and threads.  The default value for this file, 32768, results in the same range of PIDs as on earlier kernels.  On
+32-bit platforms, 32768 is the maximum value for pid_max. On 64-bit systems, pid_max can be set to any value up to 2^22 (PID_MAX_LIMIT, approximately 4 million).
+
+简单翻译下就是：这个文件里的数据指明了系统中 pid 编号的最大值，也就是限制了系统的最多开启的进程数。
+
+对于后半部分 `rlimit.curproc` 没找到配置文件去查看，进程数可以通过 `ps -ef | wc -l` 来看下，如果系统进程很多超过阈值，一般是因为某个组件进程泄露了，会有大量名字一样的进程。可以通过下面命令分析一下，其中 $8 是进程名，sort `-n` 是按数值比较排序，`-r` 是降序排序：
+```s
+ps -ef | awk '{print $8}' | sort | uniq -c | sort -nr | less
+```
+
+关于 pid 限制，还有一个命令 `ulimit -u`，参考[User limits - limit the use of system-wide resources.](https://ss64.com/bash/ulimit.html)，这个命令是限制单个用户使用的最大值， `limit -u   The maximum number of processes available to a single user`。在 K8s 环境中我们还常见一个问题，执行 docker exec 时报下面错误:
+```s
+decoding init error from pipe caused \"read parent: connection reset by peer\"
+```
+这个是容器内部的 pid 达到了最大值（即容器内部发生了进程泄露的情况），容器内部的 pid 限制可以通过容器的 cgroup 来看，在进程的 proc 系统有，有这个进程的 cgroup 路径，容器情况下，容器默认的最大的进程数是 `4096`。
+
+### 驱逐配置
+
+#### Soft eviction thresholds
+指定一个 soft 资源阈值以及一个 grace period，如果只指定 soft 阈值不指定 grace period 会报错。超过 soft 阈值时，并不会驱逐 pod，而是等待 grace period 之后再进程驱逐。除了 grace period 参数，soft 驱逐还有一个参数`eviction-max-pod-grace-period`,这个参数，作用跟 `pod.Spec.TerminationGracePeriodSeconds` 是一致的，从代码看会覆盖后面的值？
+
+#### Hard eviction thresholds
+hard 驱逐没有 grace period，到了阈值直接驱逐。
+
+#### Eviction monitoring interval
+这个是资源评估周期，默认是 10s，也就是每 10s 检查一下资源有没有超过阈值？
+
+#### 禁用驱逐
+目前我们禁用驱逐的方式是对 kubelet 做如下配置（即把 `eviction-hard` 参数配置为空字符串）：
+```s
+eviction-hard: ""
+```
+
+### 资源回收
+当节点遇到 `DiskPressure` 时，系统会回收 dead containers 以及没有使用的镜像，具体取决于是 nodefs 达到阈值，还是 imagefs 达到阈值。
+
+### 选择要驱逐的 pod
+如果系统回收部分资源之后，使用率仍然没降到阈值以下，那么就要驱逐 pod 了。在驱逐 pod 时，kubelet 主要考虑三个因素：1）pod 的资源使用是否超过 request.2) pod 的优先级（priority）.3)资源使用偏离 request 的程度。总体来说，排序如下：
+1. `BestEffort` 或者 `Burstable` 类型的 pod，并且他们的资源使用超过了 request。（对于这部分 pod，排序的规则为：1）优先级 2）资源使用超出 request的程度，话说 BestEffort pod 并没有指定 request）
+2. `Guaranteed` 以及 `Burstable` 类型的 pod，如果他们的资源使用少于 request，他们是最后删除的，同时也要考虑他们的优先级。
+
+需要注意的时，`Guaranteed` 类型的 pod 也会被驱逐，但是 `Guaranteed` 类型的 pod被驱逐的原因不会是因为其他 pod 使用了过多的资源，而主要是因为 linux 系统服务使用了太多资源，比如以 systemd 服务启动的 kubelet、journald 服务等，即系统资源预留的太少了。
+
+Kubelet 在选择 pod 进行驱逐的时候，并不是完全考虑 pod 的Qos，即 `Guaranteed`、`Burstable`、`BestEffort` 这些，因为对于 `inodes` `pid` `EphemeralStorage` 这些资源，并没有在 Qos 中体现。
+
+对于 `DiskPressure`，如果是 `nodefs` 触发驱逐，驱逐顺序为存储资源的使用，具体为：`local volumes + logs of all containers`；如果是 `images` 触发驱逐，是根据容器使用可写层（writable layer）的多少来决定的。
+
+### 节点内存不足
+如果节点内存不足了，并且 kubelet 没有来得及回收内存资源，那么这个时候，内存资源的回收将由 [oom_killer](https://lwn.net/Articles/391222/) 来决定了，众所周知其是根据 `oom_score_adj` 来杀进程的，score 越大越容易被杀，对于 K8s 来说 `Guaranteed` 类型的 pod 是 `-997`，`BestEffort` 类型的 Pod 其 score 为 `1000`。
+
+需要注意的是在节点内存资源不足时，即使一个 pod 的内存资源没有超过 limit 时，也可能被杀。所以我们在看到 pod 被 `OOMKilled` 时，不一定是这个 pod 使用了太多资源，有可能是 node 内存不够了。
+
+另外需要注意，如果一个 pod 被 OOMKilled 时，这个 pod 会被原地重启。也就是说不会发生重新调度，这个是跟 evicted 的区别。在 evicted 情况下，这个节点有可能被打了 taint， pod 就调度不过来了。
+
+### 最佳实践
+#### 参数配置
+需要注意节点不会因为调度 pod 而达到了驱逐阈值，这里简单说下就是：预留阈值之外的资源，保证这部分资源谁都不会用到，这里的`谁`有两者：1）pod.2)系统组件。那要怎么操作呢？
+假设配置的 threshold 为 95%, 系统预留资源打算预留 1G 给 kubelet 以及 kernel。那在配置 `--system-reserved` 参数时，需要配置的值为 `1G + 5%` 的资源，那多出来的 `5%` 就是阈值之外的资源。
+#### Daemonset
+因为驱逐主要考虑 priority，所以对于 daemonset 可以配置高一点的 priorityclass
+
+### 参考
+[Linux实例磁盘空间满和inode满的问题排查方法](https://help.aliyun.com/document_detail/42531.html)
