@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "容器网络基础"
+title:      "容器网络基础：CNI、vxlan等"
 date:       2021-4-1 19:54:00
 author:     "decent"
 header-img-credit: false
@@ -8,8 +8,6 @@ tags:
     - k8s
     - 网络
 ---
-
-感觉网络涉及的内容挺多的。这里主要参考张磊的《深入剖析Kubernetes》。
 
 #### 基本概念
 名词解释都放在这里
@@ -45,8 +43,6 @@ Flannel UDP提供的是三层的Overlay网络：它首先对发出端的IP包进
 * flannel0设备拷贝数据到用户态的flannel进程，即上图总的 flannel0 -> flanneld:8285，flannel0是一个tun设备，从docker0到flannel0是不经过用户态的。
 * 用户态的flannel进程封包之后，向对端host发送udp报文，即上图中的，flanneld:8285 -> eth0
 
-
-
 #### Flannel VXLAN解决方案
 VXLAN的封包操作放在了内核态去做，把所以容器放在一个二层网络上（所有节点的VTEP设备构成了一个二层网络，就像是在一个局域网，这个二层网络是基于现有三层网络的，最终通信还是要靠现有网络实现传输），二层网络靠mac报文通信，所以它要封装的是mac报文，这个是由`flannel.1`设备去做的，这个`flannel.1`就是一个VTEP设备。VTEP封装的MAC报文，其MAC地址是对端VTEP设备的地址，一般来说，由IP地址（我们通过路由表能拿到对端VTEP设备的IP地址）获得MAC地址，是通过`ARP`地址解析协议来实现的，但是Flannel已经将每个VTEP的MAC地址，记录在节点上了，通过`ip neigh show dev flannel.1`命令可以查看MAC地址。
 
@@ -68,7 +64,7 @@ Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
 * 目的容器的IP地址：这个是容器发出的原始报文的IP地址。
 * 目的VTEP设备的MAC地址：flanneld进程帮我们获取到了，通过`ip neigh`可以看到
 * VXLAN header: Linux加的一个特殊的VXLAN头，用来表示这个数据包实际上是一个VXLAN要使用的数据帧。而这个 VXLAN 头里有一个重要的标志叫作 VNI，它是 VTEP 设备识别某个数据帧是不是应该归自己处理的重要标识。而在 Flannel 中，VNI 的默认值是 1，这也是为何，宿主机上的 VTEP 设备都叫作 flannel.1 的原因，这里的"1"，其实就是 VNI 的值
-* Linux 内核会把这个数据帧封装进一个 UDP 包里发出去，根据[vxlan 协议原理简介](https://cizixs.com/2017/09/25/vxlan-protocol-introduction/)，这个UDP的端口号是4789，VTEP设备使用的
+* Linux 内核会把这个数据帧封装进一个 UDP 包里发出去，在linux 下，这个端口是 8472，参考[Backend-vxlan](https://github.com/flannel-io/flannel/blob/master/Documentation/backends.md#vxlan)，VTEP设备使用的
 * 目的主机的IP地址：flannel.1这个VTEP设备还要扮演"网桥"的角色，维护了一个FDB（Forwarding DataBase），用来存储MAC地址和IP的对应关系，这个不太懂。使用方式如下：
 ```s
 # 在Node 1上，使用"目的VTEP设备"的MAC地址进行查询
@@ -86,51 +82,45 @@ CNI的项目地址为：[CNI - the Container Network Interface](https://github.c
 4. A procedure for plugins to delegate functionality to other plugins.  网络插件将功能委派给其他插件的步骤。
 5. Data types for plugins to return their results to the runtime. 插件返回数据给容器运行时的类型。
 
-简述下各个标准
+cni 的官方文档地址为[https://www.cni.dev/plugins/v0.8/meta/](https://www.cni.dev/plugins/v0.8/meta/)，上面列举了各种规范，以及各个插件的作用。
+
+简述下各个标准。
 ##### 网络配置格式
 下面给了一个例子，kubelet如果要使用cni配置，有三个参数需要注意下，首先是`--network-plugin=cni`，指定使用cni创建，其次是`--cni-conf-dir`，指定网路配置的路径，默认是`/etc/cni/net.d`，这里的配置就是指符合CNI规范的配置，kubelet要读取这个配置文件来发现cni插件；还有就是`--cni-bin-dir`，这个是指定cni二进制文件的目录，默认是`/opt/cni/bin`。
 
 在下面的配置文件中，`type`字段就是cni二进制文件的名字，需要放在`--cni-bin-dir`目录下，其中`bridge`插件是用来建立虚拟网桥设备的，`ipam`插件是用来分配和回收IP的（其中有dhcp和host-local两种类型），`bandwidth`插件是对容器进行流量控制的，后者的实现可以通过[cni标准的代码](https://github.com/containernetworking/plugins/tree/e27c48b391539f5536918b9c379c59ef2793cb0d/plugins/meta/bandwidth)中查看。
+
+对于使用 flannel 插件来说的 cni 配置格式如下，该配置文件是由 kube-system namespace 下的 `kube-flannel-cfg` 配置文件生成。
 ```json
 {
-  "cniVersion": "1.0.0",
-  "name": "dbnet",
+  "name": "cbr0",
+  "cniVersion":"0.3.1",
   "plugins": [
     {
-      "type": "bridge",
-      // plugin specific parameters
-      "bridge": "cni0",
-      "keyA": ["some more", "plugin specific", "configuration"],
-      
-      "ipam": {
-        "type": "host-local",
-        // ipam specific
-        "subnet": "10.1.0.0/16",
-        "gateway": "10.1.0.1",
-        "routes": [
-            {"dst": "0.0.0.0/0"}
-        ]
-      },
-      "dns": {
-        "nameservers": [ "10.1.0.1" ]
+      "type": "flannel",
+      "delegate": {
+        "hairpinMode": true,
+        "isDefaultGateway": true
       }
     },
     {
-      "type": "tuning",
+      "type": "portmap",
       "capabilities": {
-        "mac": true,
-      },
-      "sysctl": {
-        "net.core.somaxconn": "500"
+        "portMappings": true
       }
-    },
-    {
-        "type": "portmap",
-        "capabilities": {"portMappings": true}
     }
   ]
 }
 ```
+这个 `flannel` 插件的项目源代码地址为：[https://github.com/flannel-io/cni-plugin](https://github.com/flannel-io/cni-plugin)，需要注意这个项目跟 flannel 项目是独立的，这个只是个二进制文件，用来跟 cni 打交道，主要用来配置容器网络，我们称这个二进制或者项目为 `flannel-cni`，`flannel-cni`在配置网络时，基本上是 delegate 给其他默认插件来实现的，比如，网桥创建默认 delegate 给 `bridge`，ipam 地址分配默认 delegate 给 `host-local`。在进行地址分配时，需要读一个文件 `/run/flannel/subnet.env`，这个文件长下面样子：
+```s
+FLANNEL_NETWORK=10.42.0.0/16
+FLANNEL_SUBNET=10.42.0.1/24
+FLANNEL_MTU=1450
+FLANNEL_IPMASQ=true
+```
+很明显，这个文件说明了当前节点的 CIDR 情况，跟 node.spec.podCIDR 定义的基本一致，这个文件是由 flannel 项目来维护并修改的。flannel-cni 读这个文件来分配 pod ip。目前看来这个文件将 `flannel-cni` 以及 `flannel` 项目联系在了一起，后者的一个任务就是管理每个节点的子网，关于每个节点的子网，其实是由 kube-controller-manager 组件来管理的，并填到了 `node.spec.podCIDR` 字段中，`flannel` 项目监听 node 资源并配置上述文件。
+
 ##### Execution Protocol （调用协议）
 这里是指容器运行时调用CNI插件的协议，一方面是传递参数，另一方面是调用规约。传递参数通过执行一些环境变量（针对特定cmd的环境变量，不是操作系统全局的），并将网络配置的json形式作为标准输入。环境变量有：
 * CNI_COMMAND: 指定需要执行的动作：ADD, DEL, CHECK, or VERSION.
@@ -142,11 +132,27 @@ CNI的项目地址为：[CNI - the Container Network Interface](https://github.c
 
 以docker为例，dockershim会通过SetupPod方法传入上述环境变量，并进行CNI插件的调用。
 
+从 `flannel-cni` 的实现来看（其实是 cni 的实现，flannel-cni 调用了 cni 的库），其上述六个参数是通过环境变量[https://github.com/containernetworking/cni/blob/main/pkg/skel/skel.go#L57](https://github.com/containernetworking/cni/blob/main/pkg/skel/skel.go#L57)来读取的。
+
 ##### Execution of Network Configurations
 容器运行时如何识别网络配置，以及根据配置执行插件。
 
 ##### Plugin Delegation
 创建委托机制，调用另一个插件来做事情，比如flannel插件靠bridge设备来建立虚拟网桥。
+
+这里 `flannel-cni` 的实现可以参考[https://github.com/flannel-io/cni-plugin/blob/main/flannel_linux.go#L75](https://github.com/flannel-io/cni-plugin/blob/main/flannel_linux.go#L75)
+```go
+	if !hasKey(n.Delegate, "type") {
+		n.Delegate["type"] = "bridge"
+	}
+
+	if !hasKey(n.Delegate, "ipMasq") {
+		// if flannel is not doing ipmasq, we should
+		ipmasq := !*fenv.ipmasq
+		n.Delegate["ipMasq"] = ipmasq
+	}
+```
+其委托调用的代码为[https://github.com/flannel-io/cni-plugin/blob/6e8bb11373c7743a00571a52d4f27ce7c07256a1/flannel.go#L198](https://github.com/flannel-io/cni-plugin/blob/6e8bb11373c7743a00571a52d4f27ce7c07256a1/flannel.go#L198)
 
 ##### Result Types
 插件返回结果的形式 
@@ -158,6 +164,9 @@ CNI的项目地址为：[CNI - the Container Network Interface](https://github.c
 
 
 #### 参考：
+
+[Kubernetes CNI具体流程和Flannel原理探究](https://blog.csdn.net/weixin_40864891/article/details/106172717)
+
 [Linux虚拟网络设备之tun/tap](https://segmentfault.com/a/1190000009249039)
 
 [云计算底层技术-虚拟网络设备(tun/tap,veth)](https://opengers.github.io/openstack/openstack-base-virtual-network-devices-tuntap-veth/)
