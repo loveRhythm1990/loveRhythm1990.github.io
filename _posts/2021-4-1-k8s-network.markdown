@@ -35,7 +35,7 @@ UDP解析方法是把容器的流量从`docker0`路由到`flannel0`设备，由�
 
 所以Flannel UDP是靠Flannel进程把容器IP报文封装到UDP报文的解决方案。重点关注UDP。
 
-![java-javascript](/img/in-post/docker-net/udp.jpeg)
+![java-javascript](/img/in-post/docker-net/udp.jpeg){:height="60%" width="60%"}
 [图片来自张磊大佬的极客时间k8s课程]
 
 Flannel UDP提供的是三层的Overlay网络：它首先对发出端的IP包进行UDP封装，然后在接收端进行解封装拿到原始IP报文，进而把这个报文转发给目标容器。Flannel UDP性能不好主要是要经过三次用户态与内核态的数据拷贝：
@@ -46,7 +46,7 @@ Flannel UDP提供的是三层的Overlay网络：它首先对发出端的IP包进
 #### Flannel VXLAN解决方案
 VXLAN的封包操作放在了内核态去做，把所以容器放在一个二层网络上（所有节点的VTEP设备构成了一个二层网络，就像是在一个局域网，这个二层网络是基于现有三层网络的，最终通信还是要靠现有网络实现传输），二层网络靠mac报文通信，所以它要封装的是mac报文，这个是由`flannel.1`设备去做的，这个`flannel.1`就是一个VTEP设备。VTEP封装的MAC报文，其MAC地址是对端VTEP设备的地址，一般来说，由IP地址（我们通过路由表能拿到对端VTEP设备的IP地址）获得MAC地址，是通过`ARP`地址解析协议来实现的，但是Flannel已经将每个VTEP的MAC地址，记录在节点上了，通过`ip neigh show dev flannel.1`命令可以查看MAC地址。
 
-![java-javascript](/img/in-post/docker-net/vxlan.jpeg)
+![java-javascript](/img/in-post/docker-net/vxlan.jpeg){:height="60%" width="60%"}
 [图片来自张磊大佬的极客时间k8s课程]
 
 关于VXLAN网络模式，我有个疑问，所有节点都对每个子网配置一个路由（如下），如果集群中节点数量非常多，那路由表项是不是就特别多？**查找起来花时间吗？**
