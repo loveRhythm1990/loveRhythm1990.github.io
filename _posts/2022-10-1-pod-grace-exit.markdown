@@ -53,41 +53,41 @@ kubelet 处理稍微复杂一点，kubelet 在发现 deletionTimeStamp 不为空
 
 下面是 `syncPod` 中的代码，开始处理删除操作。
 ```go
-	// Kill pod if it should not be running
-	if !runnable.Admit || pod.DeletionTimestamp != nil || apiPodStatus.Phase == v1.PodFailed {
-		var syncErr error
-		if err := kl.killPod(pod, nil, podStatus, nil); err != nil {
-			kl.recorder.Eventf(pod, v1.EventTypeWarning, events.FailedToKillPod, "error killing pod: %v", err)
-			syncErr = fmt.Errorf("error killing pod: %v", err)
-			utilruntime.HandleError(syncErr)
-		} else {
-			if !runnable.Admit {
-				// There was no error killing the pod, but the pod cannot be run.
-				// Return an error to signal that the sync loop should back off.
-				syncErr = fmt.Errorf("pod cannot be run: %s", runnable.Message)
-			}
+// Kill pod if it should not be running
+if !runnable.Admit || pod.DeletionTimestamp != nil || apiPodStatus.Phase == v1.PodFailed {
+	var syncErr error
+	if err := kl.killPod(pod, nil, podStatus, nil); err != nil {
+		kl.recorder.Eventf(pod, v1.EventTypeWarning, events.FailedToKillPod, "error killing pod: %v", err)
+		syncErr = fmt.Errorf("error killing pod: %v", err)
+		utilruntime.HandleError(syncErr)
+	} else {
+		if !runnable.Admit {
+			// There was no error killing the pod, but the pod cannot be run.
+			// Return an error to signal that the sync loop should back off.
+			syncErr = fmt.Errorf("pod cannot be run: %s", runnable.Message)
 		}
-		return syncErr
 	}
+	return syncErr
+}
 ```
 下面是 `kubeGenericRuntimeManager) killContainer` 的逻辑，可以看到，一开始执行 prestop hook 的时候，容器还是运行的，此时业务程序还在该干嘛干嘛，也没有收到 SIGTERM 信号。等到 `executePreStopHook` 返回之后，才调用 `StopContainer` 发送 SIGTERM 信号给应用，不过 gracePeriod 参数变短了，要扣除 prestop hook 执行的时间。这里最低的 gracePeriod 是 2 秒，不可能是负数或者 0.
 ```go
-	// Run the pre-stop lifecycle hooks if applicable and if there is enough time to run it
-	if containerSpec.Lifecycle != nil && containerSpec.Lifecycle.PreStop != nil && gracePeriod > 0 {
-		gracePeriod = gracePeriod - m.executePreStopHook(pod, containerID, containerSpec, gracePeriod)
-	}
-	// always give containers a minimal shutdown window to avoid unnecessary SIGKILLs
-	if gracePeriod < minimumGracePeriodInSeconds {
-		gracePeriod = minimumGracePeriodInSeconds
-	}
-	if gracePeriodOverride != nil {
-		gracePeriod = *gracePeriodOverride
-		klog.V(3).Infof("Killing container %q, but using %d second grace period override", containerID, gracePeriod)
-	}
+// Run the pre-stop lifecycle hooks if applicable and if there is enough time to run it
+if containerSpec.Lifecycle != nil && containerSpec.Lifecycle.PreStop != nil && gracePeriod > 0 {
+	gracePeriod = gracePeriod - m.executePreStopHook(pod, containerID, containerSpec, gracePeriod)
+}
+// always give containers a minimal shutdown window to avoid unnecessary SIGKILLs
+if gracePeriod < minimumGracePeriodInSeconds {
+	gracePeriod = minimumGracePeriodInSeconds
+}
+if gracePeriodOverride != nil {
+	gracePeriod = *gracePeriodOverride
+	klog.V(3).Infof("Killing container %q, but using %d second grace period override", containerID, gracePeriod)
+}
 
-	klog.V(2).Infof("Killing container %q with %d second grace period", containerID.String(), gracePeriod)
+klog.V(2).Infof("Killing container %q with %d second grace period", containerID.String(), gracePeriod)
 
-	err := m.runtimeService.StopContainer(containerID.ID, gracePeriod)
+err := m.runtimeService.StopContainer(containerID.ID, gracePeriod)
 ```
 
 我们再来看下 hook 是怎么执行的，通过下面代码看到，hook 是在一个单独的 goroutine 里执行的，executePreStopHook 这个方法通过 gracePeriod 设置了一个超时，方法一旦超时就返回，不管这个 goroutine 执行到哪里了，（如果没有执行完，还是在后台执行，不过因为 kubelet 会杀掉容器，所以 hook 是有可能没执行完就被干掉了）
