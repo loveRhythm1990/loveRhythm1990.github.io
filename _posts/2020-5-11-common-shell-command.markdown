@@ -163,6 +163,8 @@ sed -i '/000/s/^/#/' /tmp/foo
 需要查看每个节点的版本内核，命令如下：
 ```s
 ansible all -i ./hosts -m command -a "uname -a"
+# 有时候 command 模块感觉不是很好用，可以用 shell 模块
+ansible all -i ./hosts -m shell -a "docker images | grep e2e"
 ```
 
 ###### ssh 配置免密登录
@@ -199,6 +201,9 @@ tc qdisc add dev eth0 root netem loss 1%
 
 [https://tldp.org/HOWTO/Traffic-Control-HOWTO/](https://tldp.org/HOWTO/Traffic-Control-HOWTO/) 这个文档有 pdf 版本。
 
+
+###### vi 按行编辑
+vi 注释多行的快捷键为：1）按 Esc 进入“命令模式”；2）使用 Ctrl + v 进入可视区块模式；3）移动 Up / Down 选择要注释的行；4）按 Shift + i 并键入要插入的文件，即 #；5）按 Esc 退出，并等待 1 秒，插入的文本将出现在每一行
 
 
 

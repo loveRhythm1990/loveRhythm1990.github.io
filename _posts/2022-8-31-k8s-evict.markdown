@@ -174,3 +174,7 @@ Kubelet 在选择 pod 进行驱逐的时候，并不是完全考虑 pod 的Qos�
 
 ### 参考
 [Linux实例磁盘空间满和inode满的问题排查方法](https://help.aliyun.com/document_detail/42531.html)
+
+[How to handle blocking PodDisruptionBudgets on K8s with distributed storage](https://www.spectrocloud.com/blog/how-to-handle-blocking-poddisruptionbudgets-on-kubernetes-with-distributed-storage/)
+
+[Ephemeral Volumes](https://kubernetes.io/docs/concepts/storage/ephemeral-volumes/)
