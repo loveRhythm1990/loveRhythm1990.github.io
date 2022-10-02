@@ -8,7 +8,7 @@ tags:
     - k8s
 ---
 
-前几天在跟同事沟通的时候，提高了一种 pod 优雅退出的实现方式是在 preStop hook 中 sleep 几秒，主要是 service 摘除 pod 的 endpoint 有时延，pod 退出之后可能还有流量打进来，sleep 的目的是给 Controller manager 中的 endpoint controller 足够的时间来删除特定 pod 的 endpoint。这里涉及到好几个组件，本文总结下这几个组件的交互流程，另外还调研了一下 pod 优雅退出的一些方式。
+前几天在跟同事沟通的时候，提高了一种 pod 优雅退出的实现方式是在 preStop hook 中 sleep 几秒，主要是 service 摘除 pod 的 endpoint 有时延，pod 退出之后可能还有流量打进来，sleep 的目的是给 Controller manager 中的 endpoint controller 足够的时间来删除特定 pod 的 endpoint。这里涉及到好几个组件，本文总结下这几个组件的交互流程。
 > 本文考虑的是 K8s 层面的优雅退出，主要是从服务注册中心反注册这件事，应用程序的优雅退出，比如 http server、db server 暂不考虑
 
 使用 hook 的例子：
@@ -120,7 +120,7 @@ func (m *kubeGenericRuntimeManager) executePreStopHook(pod *v1.Pod, containerID 
 
 **kube-proxy**
 
-kube-proxy 监听 endpoint，通过 endpoint 来刷新 iptables 规则（service 的代理方式为 iptables），在 K8s 中如果使用 service 来做服务发现，coredns 将 service 解析为 clusterIP，在节点的 iptables 规则中，再重定向 clusterIP 到具体的 pod ip，所以，kube-proxy 刷新 iptables 规则也是很重要的。如果 pod 删除了，那对应的 iptables 规则就要删除，请求才不会发过去。
+kube-proxy 监听 endpoint，通过 endpoint 来刷新 iptables 规则（假设 service 的代理方式为 iptables），在 K8s 中如果使用 service 来做服务发现，coredns 将 service 解析为 clusterIP，在节点的 iptables 规则中，再重定向 clusterIP 到具体的 pod ip，所以，kube-proxy 刷新 iptables 规则也是很重要的。如果 pod 删除了，那对应的 iptables 规则就要删除，请求才不会发过去。
 
 所以 kube-proxy 还是要等 endpoint controller 把 endpoints 更新之后，才去刷新 iptables 规则。
 
