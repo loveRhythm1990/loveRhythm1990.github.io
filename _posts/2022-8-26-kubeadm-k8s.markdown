@@ -53,6 +53,21 @@ repo_gpgcheck=0
 ```s
 sudo yum install kubelet-1.16.9-0 kubeadm-1.16.9-0 kubectl-1.16.9-0
 ```
+安装完 kubelet 之后可以 enable kubelet 服务，使用 `sudo systemctl enable --now kubelet` 立即启用 kubelet 服务。如果启用失败可以用下面文件配置下 ` /usr/lib/systemd/system/kubelet.service`。
+```s
+[Unit]
+Description=kubelet: The Kubernetes Node Agent
+Documentation=https://kubernetes.io/docs/
+
+[Service]
+ExecStart=/usr/bin/kubelet
+Restart=always
+StartLimitInterval=0
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+```
 
 #### 替换镜像源
 从 `k8s.gcr.io` 拉镜像比较慢，替换成阿里云的。首先看下需要的镜像
