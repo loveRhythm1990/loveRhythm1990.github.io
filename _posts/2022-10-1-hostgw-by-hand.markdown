@@ -146,3 +146,23 @@ PING 10.244.1.2 (10.244.1.2) from 192.168.31.202 ens33: 56(84) bytes of data.
 
 --- 10.244.1.2 ping statistics ---
 1 packets transmitted, 0 received, 100% packet loss, time 0ms
+
+
+区别在于以下 flanneld 的 forward, ctstate 是什么意思
+
+Chain FORWARD (policy DROP 0 packets, 0 bytes)
+ pkts bytes target     prot opt in     out     source               destination         
+    4   490 KUBE-FORWARD  all  --  any    any     anywhere             anywhere             /* kubernetes forwarding rules */
+    2   170 KUBE-SERVICES  all  --  any    any     anywhere             anywhere             ctstate NEW /* kubernetes service portals */
+    2   170 DOCKER-USER  all  --  any    any     anywhere             anywhere            
+    2   170 DOCKER-ISOLATION-STAGE-1  all  --  any    any     anywhere             anywhere            
+    0     0 ACCEPT     all  --  any    docker0  anywhere             anywhere             ctstate RELATED,ESTABLISHED
+    0     0 DOCKER     all  --  any    docker0  anywhere             anywhere            
+    0     0 ACCEPT     all  --  docker0 !docker0  anywhere             anywhere            
+    0     0 ACCEPT     all  --  docker0 docker0  anywhere             anywhere            
+    2   170 ACCEPT     all  --  any    any     10.244.0.0/16        anywhere             /* flanneld forward */
+    0     0 ACCEPT     all  --  any    any     anywhere             10.244.0.0/16        /* flanneld forward */
+
+    https://superuser.com/questions/1071656/whats-the-difference-between-iptables-state-and-ctstate
+
+    https://www.linuxtopia.org/Linux_Firewall_iptables/x2682.html

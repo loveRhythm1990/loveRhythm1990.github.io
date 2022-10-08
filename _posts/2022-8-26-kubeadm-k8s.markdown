@@ -21,6 +21,14 @@ sudo systemctl disable firewalld
 ```
 这里遇到一个 case，如果安装时不关闭防火墙，使用 `kubeadm join` 时，会遇到 `connect: no route to host` 问题，所有的节点都需要关闭防火墙。
 
+#### 开启 bridge-netfilter
+kubernetes 通过 `bridge-netfilter` 配置使 iptables 规则应用在 Linux 网桥上，该配置对于 Linux 内核进行宿主机和容器之间数据包的地址转换是必须的。参考[bridge-nf-call-iptables](https://izsk.me/2021/08/18/Kubernetes-bridge-nf-call-iptables/)，以及[Network Plugin Requirements](https://kubernetes.io/docs/concepts/extend-kubernetes/compute-storage-net/network-plugins/#network-plugin-requirements)
+```s
+echo "net.bridge.bridge-nf-call-iptables=1" >> /etc/sysctl.conf
+echo "net.bridge.bridge-nf-call-ip6tables=1" >> /etc/sysctl.conf
+
+sysctl -p /etc/sysctl.conf
+```
 #### 关闭 swap
 如果不关闭 `swap`，kubeadm 的前置条件不通过。
 ```s
