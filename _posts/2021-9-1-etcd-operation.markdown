@@ -23,11 +23,7 @@ ETCDCTL_KEY=/tmp/key.pem
 ```
 如果不配置证书，则需要添加相关参数，如下，其中 `-w table` 是 `--write-out="table"` 的缩写
 ```s
-sudo ./etcdctl --endpoints=https://<etcd-server>:2379 \
---cert=/etc/kubernetes/ssl/kube-etcd-<host>.pem \
---key=/etc/kubernetes/ssl/kube-etcd-<host>-key.pem \
---cacert=/etc/kubernetes/ssl/ca.pem  \
-member list -w table
+sudo ./etcdctl --endpoints=https://<etcd-server>:2379 --cert=/etc/kubernetes/ssl/kube-etcd-<host>.pem --key=/etc/kubernetes/ssl/kube-etcd-<host>-key.pem --cacert=/etc/kubernetes/ssl/ca.pem member list -w table
 ```
 
 ### 常规运维
@@ -46,13 +42,11 @@ etcdctl 工具可以再 etcd release 中下载，比如：[https://github.com/et
 
 **c. 获取 etcd 中所有的 key**
 ```s
-sudo ./etcdctl --endpoints=https://<etcd-server>:2379 \
-get / --prefix --keys-only
+sudo ./etcdctl --endpoints=https://<etcd-server>:2379 get / --prefix --keys-only
 ```
 **d. 查看所有集群节点的状态**，这个时候需要将集群中所有的节点列表都添加进去了，（可以找到 kube-apiserver 的启动参数 --etcd-servers 进行一键复制，这个参数也指定了所有的 etcd 节点列表）
 ```s
-sudo ./etcdctl --endpoints=https://<etcd-server>:2379 \
-endpoint status -w table
+sudo ./etcdctl --endpoints=https://<etcd-server>:2379 endpoint status -w table
 ```
 输出如下，包含了节点的 ID，数据库大小，是不是 leader，raft term 以及 raft index 等。
 ```s
@@ -66,16 +60,13 @@ endpoint status -w table
 ```
 **e. 查看 etcd 是否健康**
 ```s
-ETCDCTL_API=3 etcdctl --endpoints=https://192.168.1.36:2379,https://192.168.1.37:2379,https://192.168.1.38:2379 \
-endpoint health
+ETCDCTL_API=3 etcdctl --endpoints=https://192.168.1.36:2379,https://192.168.1.37:2379,https://192.168.1.38:2379 endpoint health
 ```
 
 **f. Compact Etcd**
 Compact 对 etcd 数据没有影响，下面两条命令一起执行。
 ```s
-rev=$(sudo etcdctl --endpoints=https://host1:2379 \
-endpoint status --write-out="json" | egrep -o '"revision":[0-9]*' | egrep -o '[0-9].*')`
-
+rev=$(sudo etcdctl --endpoints=https://host1:2379 endpoint status --write-out="json" | egrep -o '"revision":[0-9]*' | egrep -o '[0-9].*')`
 sudo etcdctl --endpoints=https://host1:2379 compact $rev
 ```
 **h. 清理碎片**
@@ -129,18 +120,9 @@ etcdctl --endpoints $ENDPOINT snapshot save snapshot.db
 3. 拷贝 Etcd 备份到其他所有 Etcd 节点
 4. 恢复
 ```s
-$ ETCDCTL_API=3 etcdctl snapshot restore snapshot.db --name m1 \
-  --initial-cluster m1=http://host1:2380,m2=http://host2:2380,m3=http://host3:2380 \
-  --initial-cluster-token etcd-cluster-1 \
-  --initial-advertise-peer-urls http://host1:2380
-$ ETCDCTL_API=3 etcdctl snapshot restore snapshot.db --name m2 \
-  --initial-cluster m1=http://host1:2380,m2=http://host2:2380,m3=http://host3:2380 \
-  --initial-cluster-token etcd-cluster-1 \
-  --initial-advertise-peer-urls http://host2:2380
-$ ETCDCTL_API=3 etcdctl snapshot restore snapshot.db --name m3 \
-  --initial-cluster m1=http://host1:2380,m2=http://host2:2380,m3=http://host3:2380 \
-  --initial-cluster-token etcd-cluster-1 \
-  --initial-advertise-peer-urls http://host3:2380
+$ ETCDCTL_API=3 etcdctl snapshot restore snapshot.db --name m1 --initial-cluster m1=http://host1:2380,m2=http://host2:2380,m3=http://host3:2380 --initial-cluster-token etcd-cluster-1 --initial-advertise-peer-urls http://host1:2380
+$ ETCDCTL_API=3 etcdctl snapshot restore snapshot.db --name m2 --initial-cluster m1=http://host1:2380,m2=http://host2:2380,m3=http://host3:2380 --initial-cluster-token etcd-cluster-1 --initial-advertise-peer-urls http://host2:2380
+$ ETCDCTL_API=3 etcdctl snapshot restore snapshot.db --name m3 --initial-cluster m1=http://host1:2380,m2=http://host2:2380,m3=http://host3:2380 --initial-cluster-token etcd-cluster-1 --initial-advertise-peer-urls http://host3:2380
 ```
 5. 启动 Etcd
 ```s
