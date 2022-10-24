@@ -144,9 +144,7 @@ world519
 b. 现在我们假设这个 etcd 故障了，我们直接 ctrl+C 这个进程。然后通过下面命令恢复出三个 etcd 集群，因为数据库文件没有hash，所以要添加 `--skip-hash-check=true`，跳过一致性 hash 检查
 ```s
 ETCDCTL_API=3 etcdctl snapshot restore /Users/decent/etcd/restore/m1.etcd/member/snap/db --name m1 --initial-cluster m1=http://127.0.0.1:2380,m2=http://127.0.0.1:23802,m3=http://127.0.0.1:23803 --initial-cluster-token etcd-cluster-example --initial-advertise-peer-urls http://127.0.0.1:2380 --skip-hash-check=true
-
 ETCDCTL_API=3 etcdctl snapshot restore /Users/decent/etcd/restore/m1.etcd/member/snap/db --name m2 --initial-cluster m1=http://127.0.0.1:2380,m2=http://127.0.0.1:23802,m3=http://127.0.0.1:23803 --initial-cluster-token etcd-cluster-example --initial-advertise-peer-urls http://127.0.0.1:23802 --skip-hash-check=true
-
 ETCDCTL_API=3 etcdctl snapshot restore /Users/decent/etcd/restore/m1.etcd/member/snap/db --name m3 --initial-cluster m1=http://127.0.0.1:2380,m2=http://127.0.0.1:23802,m3=http://127.0.0.1:23803 --initial-cluster-token etcd-cluster-example --initial-advertise-peer-urls http://127.0.0.1:23803 --skip-hash-check=true
 ```
 
