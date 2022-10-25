@@ -5,8 +5,8 @@ date:       2022-10-24 10:10:00
 author:     "decent"
 header-img-credit: false
 tags:
-	- docker
-	- 运维
+    - 运维
+    - docker
 ---
 
 有时候在系统中，有一些服务是直接通过容器启动的，比如 rancher 系统中的 K8s master 组件。如果要修改这些容器的参数，需要通过集群运维工具 rke 重新升级一下集群，这个代价比较大，这里有个 trick 的方式是直接修改容器的 config 文件。以 kubelet 容器为例步骤如下
