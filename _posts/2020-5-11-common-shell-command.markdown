@@ -206,6 +206,15 @@ tc qdisc add dev eth0 root netem loss 1%
 vi 注释多行的快捷键为：1）按 Esc 进入“命令模式”；2）使用 Ctrl + v 进入可视区块模式；3）移动 Up / Down 选择要注释的行；4）按 Shift + i 并键入要插入的文件，即 #；5）按 Esc 退出，并等待 1 秒，插入的文本将出现在每一行
 
 
+###### 查看文件被哪个进程占用
+```s
+$ fuser -v text.txt 
+                     USER        PID ACCESS COMMAND
+/home/john/text.txt:
+                     john      22829 f....  less
+```
+参考[Find the Process That is Using a File in Linux](https://www.baeldung.com/linux/find-process-file-is-busy)
+
 
 研究下 strace
 
