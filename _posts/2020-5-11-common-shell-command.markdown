@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "常用shell命令"
+title:      "常用 shell 运维命令"
 date:       2020-05-11 18:38:00
 author:     "weak old dog"
 header-img-credit: false
@@ -29,19 +29,16 @@ j@JM sample % cat testfile | awk 'NR!=1 {sum+=$2} END{print sum/NR}'
 j@JM sample % cat testfile | awk 'NR!=1 {sum+=$2} END{print sum/(NR-1)}'
 892.333
 ```
-###### grep前后
-grep -C 5 foo file 显示file文件里匹配foo字串那行以及上下5行
+###### grep 显示前后命令
+```s
+grep -C 5 foo file #显示file文件里匹配foo字串那行以及上下5行
+grep -B 5 foo file #显示foo及前5行
+grep -A 5 foo file #显示foo及后5行
 
-grep -B 5 foo file 显示foo及前5行
-
-grep -A 5 foo file 显示foo及后5行
-
-另外，grep使用双引号表示不对特殊字符进行转义。
-
-grep`或`操作，使用正则表达式，下面是过滤出含有a或者b的行
-
-`grep -E "a|b"`
-
+#另外，grep使用双引号表示不对特殊字符进行转义。
+#"或" 操作，使用正则表达式，下面是过滤出含有a或者b的行
+grep -E "a|b"
+```
 ###### 循环读取文件的内容
 下面是循环读取文件的内容，但是是以空格为分隔符的。
 ```s
@@ -76,14 +73,29 @@ iostat -d -m -x 1 10000
 pidstat -d 1
 ```
 
-###### nc
-在1234端口起一个tcp服务
+###### nc 网络测试命令
 ```s
+# 安装 nc
+yum install nc
+# 在1234端口起一个tcp服务
 nc -l 1234
-```
-往某个主机的端口发送数据
-```s
+# 往某个主机的端口发送数据
 echo -e '{"method":"HelloService.Hello","params":["hello"],"id":1}' | nc localhost 1234
+
+# 使用 nc 测试网络通不通
+nc -v 172.16.xx.xx 31973
+# 输出如下
+#Ncat: Version 7.50 ( https://nmap.org/ncat )
+#Ncat: Connected to 172.16.xx.xx:31973.
+#^C
+
+# 使用 telnet 测试网络通不通
+telnet 172.16.xx.xx 31973
+# 输出如下
+#Trying 172.16.16.19...
+#Connected to 172.16.16.19.
+#Escape character is '^]'.
+#^CConnection closed by foreign host.
 ```
 
 ###### 变量的默认值
@@ -91,34 +103,28 @@ echo -e '{"method":"HelloService.Hello","params":["hello"],"id":1}' | nc localho
 ```s
 a=${a:-default-value}
 echo ${a}
+# 输出：default-value
 ```
-输出：default-value
 
 ###### 安装包管理
-
-**搜索已经安装的docker**
-
 ```s
+#搜索已经安装的docker
 sudo yum list installed | grep docekr
-
 # 输出
-docker.x86_64 2:1.12.6-16.el7.centos @extras 
-docker-client.x86_64 2:1.12.6-16.el7.centos @extras 
-docker-common.x86_64 2:1.12.6-16.el7.centos @extra
-```
+#docker.x86_64 2:1.12.6-16.el7.centos @extras 
+#docker-client.x86_64 2:1.12.6-16.el7.centos @extras 
+#docker-common.x86_64 2:1.12.6-16.el7.centos @extra
 
-**删除已经安装的docker**
-
-```s
+# 删除已经安装的docker
 sudo yum -y remove docker.x86_64
 ```
 
-###### sed 替换某一行
+###### sed 命令
 ```s
+# 基本格式
 sed [options] 'command' file(s)
 ```
-
-假设有如下文件：
+**sed替换一行**，假设有如下文件：
 ```s
 a
 sometext sometext sometext TEXT_TO_BE_REPLACED sometext sometext sometext
@@ -134,9 +140,7 @@ sed -i '/TEXT_TO_BE_REPLACED/c\This line is removed by the admin.' /tmp/foo
 ```s
 [address]c\用于替换的新文本
 ```
-
-###### sed 注释某一行
-比如有下面文件 /tmp/foo
+**sed 注释某一行** 比如有下面文件 /tmp/foo
 ```s
 This is a 000 line.
 This is 000 yet ano000ther line.
@@ -167,13 +171,17 @@ ansible all -i ./hosts -m command -a "uname -a"
 ansible all -i ./hosts -m shell -a "docker images | grep e2e"
 ```
 
-###### ssh 配置免密登录
-一路回车，生成秘钥
+###### nslookup 测试域名解析
 ```s
-ssh-keygen
+# 使用 nslookup 时指定 dns server，假设 dns server 为：10.43.0.10
+nslookup xxl-job-admin.xxl-job.svc 10.43.0.10
 ```
-配置免密登录（-i参数是不是可以不加？）
+
+###### ssh 配置免密登录
 ```s
+#一路回车，生成秘钥
+ssh-keygen
+# 配置免密登录（-i参数是不是可以不加？）
 ssh-copy-id -i .ssh/id_rsa.pub  用户名字@192.168.x.xxx
 ```
 
