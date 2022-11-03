@@ -11,7 +11,7 @@ tags:
 这部分从 EtcdServer 处理 put 请求开始，介绍相关逻辑。这部分内容比较多，涉及到较多模块，这篇文章的主要目的是先有个大题的概念，将各个模块串联起来，同时明确模块之前的接口、通讯方式等，模块内部的细节等有了大概概念之后，再进行分析。
 
 ### EtcdServer 发送请求到 Raft
-在[etcd put 请求处理过程：client 发送请求到 EtcdServer](https://loverhythm1990.github.io/2021/11/03/etcd-put/)的分析中，提到了 put 请求最终调用了 EtcdServer 的 Put 方法，这里就从 EtcdServer 的 Put 方法开始看。
+在《[etcd put 请求处理过程：client 发送请求到 EtcdServer](https://loverhythm1990.github.io/2021/11/03/etcd-put/)》的分析中，提到了 put 请求最终调用了 EtcdServer 的 Put 方法，这里就从 EtcdServer 的 Put 方法开始看。
 ```go
 // EtcdServer 的 Put 方法
 func (s *EtcdServer) Put(ctx context.Context, r *pb.PutRequest) (*pb.PutResponse, error) {
@@ -24,7 +24,7 @@ func (s *EtcdServer) Put(ctx context.Context, r *pb.PutRequest) (*pb.PutResponse
 }
 ```
 
-调用 `processInternalRaftRequestOnce` 方法。（调用这个方法之前还有以及跳转，内部不多不介绍）。
+调用 `processInternalRaftRequestOnce` 方法。（调用这个方法之前还有以及跳转，内容不多不介绍）。
 
 这里有个地方注意一下，下面如果 CommittedIndex 超出 AppliedIndex 太多的话，返回 `TooManyRequest` 错误，但是根据我的理解，现在还没有将请求交付给 raft 模块，因此全凭当前节点（收到 put 请求的节点）的两个 index 来进行限速，如果一个节点的磁盘有问题 apply 比较慢，可能就会给客户端返回这个错误。  
 
@@ -124,7 +124,7 @@ func (n *node) stepWait(ctx context.Context, m pb.Message) error {
 	return n.stepWithWaitOption(ctx, m, true)
 }
 ```
-研究下 `stepWithWaitOption` 的实现。在代码的开始，如果不是 `pb.MsgProp` 类型的消息，写入 `n.recvc` 这个 channel 就退出了。这里好像也就是把请求发送到了 `n.propc` 这个 channel，不过也不是直接写请求，写的是 `msgWithResult` 类型，也就是封装了一下，加了一个错误的 channel，其目的还是为了阻塞请求，等待这个 result 有结果之后（err 要么为nil，要不不为nil），再返回【这也是一种设计模式，在异步的多线程中，实现同步等待的功能。】。
+研究下 `stepWithWaitOption` 的实现。在代码的开始，如果不是 `pb.MsgProp` 类型的消息，写入 `n.recvc` 这个 channel 就退出了。这里好像也就是把请求发送到了 `n.propc` 这个 channel，不过也不是直接写请求，写的是 `msgWithResult` 类型，也就是封装了一下，加了一个错误的 channel，其目的还是为了阻塞请求，等待这个 result 有结果之后（err 要么为nil，要么不为nil），再返回【这也是一种设计模式，在异步的多线程中，实现同步等待的功能。】。
 ```go 
 type msgWithResult struct {
 	m      pb.Message
@@ -136,7 +136,7 @@ type msgWithResult struct {
 func (n *node) stepWithWaitOption(ctx context.Context, m pb.Message, wait bool) error {
 	if m.Type != pb.MsgProp {
 		select {
-		// 只有不是 prop 类型的 message 的时候，才写入 recvc channel
+		// 只有 message 类型不是 prop 的时候，才写入 recvc channel
 		// 并且，写入 recvc channel 的时候，就退出了
 		case n.recvc <- m:
 			return nil
@@ -179,7 +179,7 @@ func (n *node) stepWithWaitOption(ctx context.Context, m pb.Message, wait bool) 
 }
 ```
 #### Raft 消费 propc channel
-上面提到了 `stepWithWaitOption` 方法就是将 Msg 写入了 raft 模块的 `n.propc` 这个 channel。000对 propc channel 的消费是在 raft 集群一启动就执行的，有个单独的 goroutine 来执行 node 的 `run` 方法，`go n.run()`，这个方法比较大，我们目前先关注处理 `propc` channel 的逻辑。
+上面提到了 `stepWithWaitOption` 方法就是将 Msg 写入了 raft 模块的 `n.propc` 这个 channel。对 propc channel 的消费是在 raft 集群一启动就执行的，有个单独的 goroutine 来执行 node 的 `run` 方法，`go n.run()`，这个方法比较大，我们目前先关注处理 `propc` channel 的逻辑。
 ```go
 func (n *node) run() {
 	var propc chan msgWithResult
@@ -195,44 +195,23 @@ func (n *node) run() {
 		if advancec != nil {
 			readyc = nil
 		} else if n.rn.HasReady() {
-			// Populate a Ready. Note that this Ready is not guaranteed to
-			// actually be handled. We will arm readyc, but there's no guarantee
-			// that we will actually send on it. It's possible that we will
-			// service another channel instead, loop around, and then populate
-			// the Ready again. We could instead force the previous Ready to be
-			// handled first, but it's generally good to emit larger Readys plus
-			// it simplifies testing (by emitting less frequently and more
-			// predictably).
 			rd = n.rn.readyWithoutAccept()
 			readyc = n.readyc
 		}
 
-		if lead != r.lead {
-			if r.hasLeader() {
-				if lead == None {
-					r.logger.Infof("raft.node: %x elected leader %x at term %d", r.id, r.lead, r.Term)
-				} else {
-					r.logger.Infof("raft.node: %x changed leader from %x to %x at term %d", r.id, lead, r.lead, r.Term)
-				}
-				propc = n.propc
-			} else {
-				r.logger.Infof("raft.node: %x lost leader %x at term %d", r.id, lead, r.Term)
-				propc = nil
-			}
-			lead = r.lead
-		}
+        // ...
 
 		select {
 		// TODO: maybe buffer the config propose if there exists one (the way
 		// described in raft dissertation)
 		// Currently it is dropped in Step silently.
-		case pm := <-propc: 		// TODO raft 模块从 channel 中取出 prop 消息进行处理
+		case pm := <-propc: 		// raft 模块从 channel 中取出 prop 消息进行处理
 			m := pm.m
 			m.From = r.id
-			err := r.Step(m) 	// TODO 进入到 Step 方法
-			if pm.result != nil {
+			err := r.Step(m) 	// 进入到 Step 方法，处理 message
+			if pm.result != nil { // 处理返回，将结果返回 result channel
 				pm.result <- err
-				close(pm.result)
+				close(pm.result)  // 写入结果后 close result channel，这样之前阻塞的 select 就能解除阻塞了
 			}
 		case m := <-n.recvc:
 			// filter out response message from unknown From.
@@ -261,14 +240,14 @@ func (n *node) run() {
 ```
 对 `n.propc` 的处理只要一个 case，就是直接进入了 `Step` 方法（注意这个 Step 是大写的，因为还有一个小写的 `step` 方法，就是后面的方法）。raft 模块大写的 `Step` 方法上来对 Message 的 Term 进行了判断，根据 `m.Term > r.Term` 的关系来进行不同的逻辑处理。
 ```go
-		case pm := <-propc: 		// TODO raft 模块从 channel 中取出 prop 消息进行处理
-			m := pm.m
-			m.From = r.id
-			err := r.Step(m) 	// TODO 进入到 Step 方法
-			if pm.result != nil {
-				pm.result <- err
-				close(pm.result)
-			}
+case pm := <-propc: 		// raft 模块从 channel 中取出 prop 消息进行处理
+	m := pm.m
+	m.From = r.id
+	err := r.Step(m) 	// 调用 Step 方法
+	if pm.result != nil {
+		pm.result <- err
+		close(pm.result)
+	}
 ```
 对于 Prop 消息来说，可以先略过这个方法，直接看小写的 `step` 方法，小写的 step 方法，根据节点角色的不同，有 `stepFollower`、`stepLeader`、`stepCandidate` 三种实现，我们先关心 `stepFollower`、`stepLeader` 实现。
 

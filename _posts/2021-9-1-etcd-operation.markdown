@@ -12,11 +12,9 @@ tags:
 * --cert-file=`<path>`: Certificate used for SSL/TLS connections to etcd. When this option is set, advertise-client-urls can use the HTTPS schema
 * --key-file=`<path>`: Key for the certificate. Must be unencrypted.`
 
-etcdctl 常见数据读写操作参考[Interacting with etcd](https://etcd.io/docs/v3.5/dev-guide/interacting_v3/)
-
-配置证书环境变量，配置之后，就不用在命令中添加 `--cert` 等参数了。
+etcdctl 常见数据读写操作参考 [Interacting with etcd](https://etcd.io/docs/v3.5/dev-guide/interacting_v3/)
+，另外可以配置证书环境变量，配置之后就不用在命令中添加 `--cert` 等参数了。
 ```s
-ETCDCTL_DIAL_TIMEOUT=3s
 ETCDCTL_CACERT=/tmp/ca.pem
 ETCDCTL_CERT=/tmp/cert.pem
 ETCDCTL_KEY=/tmp/key.pem
@@ -28,28 +26,26 @@ sudo ./etcdctl --endpoints=https://<etcd-server>:2379 --cert=/etc/kubernetes/ssl
 
 ### 常规运维
 
-**a. 查看 etcd 集群 metrics**（加上 sudo 的原因是可能没有权限读取证书文件）。
+**a. 查看 etcd 集群 metrics**（若没有权限读取证书文件，则需要加上 sudo）。
 ```s
 sudo curl https://<etcd-server>:2379/metrics -k
 ```
 
-**b. 查看集群节点列表**，这个需要带上 `--cacert` 参数，主要注意的是，etcd 有可能跟 k8s 集群共用一个 ca（这个取决于部署方式），另外 `write-out` 可以选择 json、sample、table 等。
+**b. 查看集群节点列表**，这个需要带上 `--cacert` 参数，主要注意的是，etcd 有可能跟 k8s 集群共用一个 ca（这个取决于部署方式），另外 `-w` 可以选择 json、sample、table 等。
 ```s
 sudo ./etcdctl --endpoints=https://<etcd-server>:2379 member list -w table
 ```
 
-etcdctl 工具可以再 etcd release 中下载，比如：[https://github.com/etcd-io/etcd/releases/tag/v3.4.3](https://github.com/etcd-io/etcd/releases/tag/v3.4.3)
+etcdctl 工具可以在 etcd release 中下载，比如：[https://github.com/etcd-io/etcd/releases/tag/v3.4.3](https://github.com/etcd-io/etcd/releases/tag/v3.4.3)
 
 **c. 获取 etcd 中所有的 key**
 ```s
 sudo ./etcdctl --endpoints=https://<etcd-server>:2379 get / --prefix --keys-only
 ```
-**d. 查看所有集群节点的状态**，这个时候需要将集群中所有的节点列表都添加进去了，（可以找到 kube-apiserver 的启动参数 --etcd-servers 进行一键复制，这个参数也指定了所有的 etcd 节点列表）
+**d. 查看所有集群节点的状态**，这个时候需要将集群中所有的节点列表都添加进去了，（可以找到 kube-apiserver 的启动参数 --etcd-servers 进行复制，这个参数也指定了所有的 etcd 节点列表）
 ```s
 sudo ./etcdctl --endpoints=https://<etcd-server>:2379 endpoint status -w table
-```
-输出如下，包含了节点的 ID，数据库大小，是不是 leader，raft term 以及 raft index 等。
-```s
+#输出如下，包含了节点的 ID，数据库大小，是不是 leader，raft term 以及 raft index 等。
 +----------------------------+------------------+---------+---------+-----------+------------+-----------+------------+--------------------+--------+
 |          ENDPOINT          |        ID        | VERSION | DB SIZE | IS LEADER | IS LEARNER | RAFT TERM | RAFT INDEX | RAFT APPLIED INDEX | ERRORS |
 +----------------------------+------------------+---------+---------+-----------+------------+-----------+------------+--------------------+--------+
@@ -62,7 +58,6 @@ sudo ./etcdctl --endpoints=https://<etcd-server>:2379 endpoint status -w table
 ```s
 ETCDCTL_API=3 etcdctl --endpoints=https://192.168.1.36:2379,https://192.168.1.37:2379,https://192.168.1.38:2379 endpoint health
 ```
-
 **f. Compact Etcd**
 Compact 对 etcd 数据没有影响，下面两条命令一起执行。
 ```s
