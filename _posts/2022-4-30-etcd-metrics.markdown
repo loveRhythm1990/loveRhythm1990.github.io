@@ -17,6 +17,7 @@ Etcd 核心服务的监控指标，主要有：
 * proposals_committed_total: 已经 commit 的 proposal 总数，集群中每个节点可能这个指标不一致，一般来说，leader 的这个指标最大；如果有 member 刚刚重启，那么这个指标可能较小。但是如果一个 member 跟 leader 持续性差值比较大，那么这个 member 可能有问题了（slow or unhealthy）。
 * proposals_applied_total: 已经 apply 的 proposal 总数。apply proposal 是异步的过程，proposals_committed_total 与 proposals_applied_total 的差值理论上也比较小，如果这两者的差值持续增大，那么说明 etcd 的负载太高了。一般是由于客户端请求的数据量太大了（applying expensive queries like heavy range queries or large txn operations）
 * proposals_pending: 在队列中，等待 commit 的 proposal，如果这个指标一直增大，说明 client 负载太高了，或者当前 member 不能 commit proposals。【从代码上看，`proposals_pending` 这个指标显示的时间段是从 `proposal` 请求发出去到 `apply` 完成，对于 follower 来说，`proposal` 就是将请求发送到 leader，对于 leader 来说，`proposal` 就是将请求广播到所有的 follower。而具体 `commit` 请求以及 `apply` 请求则是异步的，raft 实现异步等待的结构是 `w wait.Wait`，实现是 map，map 的 key 是请求的ID，value 是 `applyResult` 结构】。
+
 ```go
 type Wait interface {
 	// Register waits returns a chan that waits on the given ID.
