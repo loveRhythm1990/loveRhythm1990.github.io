@@ -57,6 +57,7 @@ https://github.com/kitian616/jekyll-TeXt-theme
 
 			{% comment %} group by year {% endcomment %}
 			{%- assign _currentdate = _article.date | date: '%Y' -%}
+			{%- assign _displaydate = _article.date | date: "%Y-%-m-%-d: " -%}
 			{%- if _currentdate != _date -%}
 				{%- unless forloop.first -%}</section>{%- endunless -%}
 				<section>
@@ -67,9 +68,9 @@ https://github.com/kitian616/jekyll-TeXt-theme
 			{%- endif -%}
 
 				<div class="post-preview item" data-tags="{{ _tags }}">
-				    <a href="{{ _article.url | prepend: site.baseurl }}">
-				        <h2 class="post-title">
-                            {{ _article.title }}
+					<a href="{{ _article.url | prepend: site.baseurl }}"> 
+						<h2 class="post-title">
+                            {{ _displaydate }}  {{ _article.title }}
 				        </h2>
 				        {% if _article.subtitle %}
 				        <h3 class="post-subtitle">
