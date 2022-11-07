@@ -8,7 +8,7 @@ tags:
     - k8s
 ---
 
-前几天在跟同事沟通的时候，提高了一种 pod 优雅退出的实现方式是在 preStop hook 中 sleep 几秒，主要是 service 摘除 pod 的 endpoint 有时延，pod 退出之后可能还有流量打进来，sleep 的目的是给 Controller manager 中的 endpoint controller 足够的时间来删除特定 pod 的 endpoint。这里涉及到好几个组件，本文总结下这几个组件的交互流程。
+前几天在跟同事沟通的时候，提到了一种 pod 优雅退出的实现方式是在 preStop hook 中 sleep 几秒，主要是 service 摘除 pod 的 endpoint 有时延，pod 退出之后可能还有流量打进来，sleep 的目的是给 Controller manager 中的 endpoint controller 足够的时间来删除特定 pod 的 endpoint。这里涉及到好几个组件，本文总结下这几个组件的交互流程。
 > 本文考虑的是 K8s 层面的优雅退出，主要是从服务注册中心反注册这件事，应用程序的优雅退出，比如 http server、db server 暂不考虑
 
 使用 hook 的例子：
@@ -35,7 +35,7 @@ spec:
 当我们使用 kubectl delete 删除pod，或者使用 client-go 删除时，只是配置了一下这个 pod 的 deleteTimestamp，并配置了一个 grace period，我们假设为 30s。
 > 这里再补充点其他内容，发送 delete 请求的时候，对应资源的 controller informer 收到的是一个 update 时间，这个 update 事件就是给对应的资源配置了一个 deletionTimestamp 以及 deletionGracePeriodSeconds，（此时的 pod 状态是 terminating，还未删除），还未收到 delete 事件，后者在从数据库删除时才会有时间发出来。
 
-![java-javascript](/img/in-post/all-in-one/2022-10-01-21-05-44.png){:height="70%" width="70%"}
+![java-javascript](/img/in-post/all-in-one/2022-10-01-21-05-44.png){:height="80%" width="80%"}
 
 下面简述下三个组件的工作流程
 
