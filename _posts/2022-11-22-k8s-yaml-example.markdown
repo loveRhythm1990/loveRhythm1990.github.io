@@ -1,12 +1,11 @@
 ---
 layout:     post
-title:      "K8s 资源 yaml 例子"
+title:      "一些K8s中yaml资源的例子"
 date:       2022-11-22 10:10:00
 author:     "decent"
 header-img-credit: false
 tags:
-	- k8s
-	- 运维
+    - k8s
 ---
 
 一些 K8s 资源 yaml 例子，用的时候直接粘贴复制，原地址：[https://k8s-examples.container-solutions.com/examples/Pod/Pod.html](https://k8s-examples.container-solutions.com/examples/Pod/Pod.html)
