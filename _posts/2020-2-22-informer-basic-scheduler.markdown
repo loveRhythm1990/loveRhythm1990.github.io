@@ -51,7 +51,7 @@ indexer的概念非常绕，其代码路径在`vendor/k8s.io/client-go/tools/cac
 * 带有索引，并且是一个类似于二级索引的形式
 
 结构大概如下：
-![java-javascript](/img/in-post/informer/Picture3.png)
+![java-javascript](/img/in-post/informer/Picture3.png){:height="70%" width="70%"}
 
 
 重要的定义如下：
@@ -303,18 +303,18 @@ func (s *sharedIndexInformer) HandleDeltas(obj interface{}) error {
 }
 ```
 上面介绍的内容，可以用下图来表示：
-![java-javascript](/img/in-post/informer/Picture1.png)
+![java-javascript](/img/in-post/informer/Picture1.png){:height="70%" width="70%"}
 
 #### 关于SharedInformer
 多个controller共用一个informer，每个controller注册自己的ResourceEventHandler，这样做的好处是：
 1. 减少缓存使用
 2. 减少与apiserver的连接数（watch ）
 
-![java-javascript](/img/in-post/informer/Picture2.png)
+![java-javascript](/img/in-post/informer/Picture2.png){:height="70%" width="70%"}
 
 关于SharedInformerFactory，一个SharedInformer的工厂模式，生成特定资源的informer，以k8s scheduler的configFactory为例
 
-![java-javascript](/img/in-post/informer/Picture4.png)
+![java-javascript](/img/in-post/informer/Picture4.png){:height="70%" width="70%"}
 
 
 #### watch是怎么实现的
