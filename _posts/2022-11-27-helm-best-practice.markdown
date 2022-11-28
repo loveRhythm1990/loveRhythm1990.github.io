@@ -23,19 +23,7 @@ helm 在 K8s 中用的非常多了，最近也在关注这块，总结一些最�
 ### 在 helm chart 中使用 Release.namespace
 通过将组件部署的 Release namespace，可以在安装组件时决定其资源安装的 namespace（而不是在编写 chart 的时候），这种情况在同一个组件会被部署多次时候非常有用，如果同一个组件会被部署多次，最佳实践是将其部署到多个 namespace，通过 namespace 提供的隔离机制来实现组件隔离。
 
-将组件部署到 Release namespace 需要在 chart 中引用 Release.Namespace，这样在通过  `helm install -n {namespace}` 部署组件时，组件实际部署到的 ns 就是 helm 命令中指定的 ns。在 chart 配置 `{{ .Release.Namespace }}`之后，不需要做额外其他配置。例子如下：
-```s
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: {{ include "mcloud-ke2e.fullname" . }}
-  namespace: {{ .Release.Namespace }}
-  labels:
-  {{- include "mcloud-ke2e.labels" . | nindent 4 }}
-spec:
-  backoffLimit: 0
-  parallelism: 1
-```
+将组件部署到 Release namespace 需要在 chart 中引用 Release.Namespace，这样在通过  `helm install -n {namespace}` 部署组件时，组件实际部署到的 ns 就是 helm 命令中指定的 ns。在 chart 配置 `{{ .Release.Namespace }}`之后，不需要做额外其他配置。例子如`namespace: {{ .Release.Namespace }}`
 
 ### 使用 appVersion 作为应用版本
 在一些情况下，我们需要知道应用的镜像版本，而不仅仅是 chart 的版本（chart 的版本并不能反应应用的版本）。在 chart.yaml 文件中，除了可以配置 version，还可以配置 appVersion， 表示chart中应用的版本号。其中 appVersion 可以是非语义化的版本号，如下面的"dev-1.16"。
