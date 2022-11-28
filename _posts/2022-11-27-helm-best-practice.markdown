@@ -24,7 +24,7 @@ helm 在 K8s 中用的非常多了，最近也在关注这块，总结一些最�
 通过将组件部署的 Release namespace，可以在安装组件时决定其资源安装的 namespace（而不是在编写 chart 的时候），这种情况在同一个组件会被部署多次时候非常有用，如果同一个组件会被部署多次，最佳实践是将其部署到多个 namespace，通过 namespace 提供的隔离机制来实现组件隔离。
 
 将组件部署到 Release namespace 需要在 chart 中引用 Release.Namespace，这样在通过  `helm install -n {namespace}` 部署组件时，组件实际部署到的 ns 就是 helm 命令中指定的 ns。在 chart 配置 `{{ .Release.Namespace }}`之后，不需要做额外其他配置。例子如下：
-```yml
+```s
 apiVersion: batch/v1
 kind: Job
 metadata:
