@@ -64,9 +64,9 @@ Map是通过hash table实现的，关于hash table已经有很多文章在介绍
 [http://en.wikipedia.org/wiki/Hash_table](http://en.wikipedia.org/wiki/Hash_table)
 
 用来实现golang的hash table是一个桶（**bucket**）的数组，桶的个数总是2的幂，当执行map操作的时候，比如`colors["Black"] = "#000000"`，针对我们提供的key，会生成一个hash key，在我们的例子中"Black"用来生成hash key，生成的hash key的`low order bits(LOB)`部分会用来选择数组中的桶。
-![java-javascript](/img/in-post/map-internal/s1.png)
+![java-javascript](/img/in-post/map-internal/s1.png){:height="60%" width="60%"}
 桶并锁定后，key/value对就可以被存储、删除或者查找，取决于操作的类型。如果我们查看bucket的内部实现，会发现两个数据结构。首先，有一个存储`high order bits(HOB)`的字节数组数组，这里的`HOB`跟上面的`LOB`来自同一个hash key，这个数组用来区分存在同一个bucket中的不同的kay/value对（这个译者有疑问，待查证）。其次，有个字节数组来存储key/value对，在同一个bucket中，这个byte数组先存储所有的key，再存放所有的value。
-![java-javascript](/img/in-post/map-internal/s2.png)
+![java-javascript](/img/in-post/map-internal/s2.png){:height="60%" width="60%"}
 当我们遍历map的时候，迭代器遍历bucket数组，并返回在最终的byte数组中的key/value对，这就是为什么map不是有序的。hash key决定了map的遍历顺序，因为它决定了key/value对最终落在了哪个bucket中（**译者注：这个地方没说清楚，参考[浅谈Go语言实现原理 for-range](https://draveness.me/golang/keyword/golang-for-range.html)，在使用for-range遍历map时，`mapiterinit`会生成一个随机数，用来影响for-range开始的index，从而每次遍历顺序都是不同的，代码路径在`src/runtime/map.go`**）。
 ## 内存以及Bucket溢出
 在byte数组中，key/value依次排列是有原因的（指先排所有的key，再排所有的value），如果我们按照`key/value/key/value`的方式来排，为了保持边界对齐（maintain proper alignment boundaries），我们需要在每个key/value对之间添加很多填充字节（padding allocations），举例如下：
@@ -78,9 +78,9 @@ map[int64]int8
 http://www.goinggo.net/2013/07/understanding-type-in-go.html](http://www.goinggo.net/2013/07/understanding-type-in-go.html)
 
 一个bucket被设计成最多存储8个key/value对，如果有第9个，需要创建一个overflow bucket，这个overflow bucket需要从原来的bucket访问（**看下面的图**）。
-![java-javascript](/img/in-post/map-internal/s3.png)
+![java-javascript](/img/in-post/map-internal/s3.png){:height="60%" width="60%"}
 下面这个图转自博客[浅谈go语言实现原理-map](https://draveness.me/golang/datastructure/golang-hashmap.html)，也说明了这个事情。
-![java-javascript](/img/in-post/map-internal/s6.png)
+![java-javascript](/img/in-post/map-internal/s6.png){:height="70%" width="70%"}
 
 译者补充：map的数据结构在golang的`src/runtime/map.go`中，下面是golang1.12.7的源代码中map的结构：
 ```golang
@@ -104,7 +104,7 @@ type hmap struct {
 其中`B`是用指数表示的，表示桶的个数，实际个数为`2^B`，`oldbuckets`表示在扩容时的旧bucket数组，不扩容时为nil。
 
 译者补充：一个bucket是一大块内存，开始的8*8个字节为HOB字节数组，后面就是keykey...valuevalue...，访问key和value是通过偏移来实现的。下面图来自博客[浅谈go语言实现原理-map](https://draveness.me/golang/datastructure/golang-hashmap.html)
-![java-javascript](/img/in-post/map-internal/s5.png)
+![java-javascript](/img/in-post/map-internal/s5.png){:height="70%" width="70%"}
 
 ## map是怎么扩展的
 当我们持续在map中添加以及删除元素的时候，map的性能会变得恶化，用来决定map是否扩展的负载因子（load factor）取决于四个因素：

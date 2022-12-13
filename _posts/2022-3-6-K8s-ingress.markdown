@@ -13,7 +13,7 @@ tags:
 ### K8s 中的 ingress 资源
 K8s 中介绍 ingress 的文档是 [https://kubernetes.io/docs/concepts/services-networking/ingress/](https://kubernetes.io/docs/concepts/services-networking/ingress/)，根据文档，ingress 的主要功能就是将集群外的流量转发到集群内部的 service，具体怎么转发是根据 ingress 中定义的转发规则来实现的。
 
-![](/img/in-post/all-in-one/2022-03-06-11-08-06.png)
+![java-javascript](/img/in-post/all-in-one/2022-03-06-11-08-06.png){:height="70%" width="70%"}
 
 ingress 最核心的功能是将集群外的流量转发到集群内部，除此之外，还有如下功能（特点）：
 * give Services externally-reachable URLs：给 K8s 集群内部的 service 一个外部可以访问的 URL.
