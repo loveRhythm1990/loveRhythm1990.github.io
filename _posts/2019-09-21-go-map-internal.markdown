@@ -78,7 +78,7 @@ map[int64]int8
 http://www.goinggo.net/2013/07/understanding-type-in-go.html](http://www.goinggo.net/2013/07/understanding-type-in-go.html)
 
 一个bucket被设计成最多存储8个key/value对，如果有第9个，需要创建一个overflow bucket，这个overflow bucket需要从原来的bucket访问（**看下面的图**）。
-![java-javascript](/img/in-post/map-internal/s3.png){:height="60%" width="60%"}
+![java-javascript](/img/in-post/map-internal/s3.png){:height="50%" width="50%"}
 下面这个图转自博客[浅谈go语言实现原理-map](https://draveness.me/golang/datastructure/golang-hashmap.html)，也说明了这个事情。
 ![java-javascript](/img/in-post/map-internal/s6.png){:height="70%" width="70%"}
 
@@ -122,7 +122,7 @@ type hmap struct {
 扩展hash table的时候，首先会分配一个指向当前bucket的指针，称为`old bucket`。然后一个新的bucket会被分配，新分配的bucket的容量是当前bucket的两倍。这会导致大量内存分配，但是分配后并未初始化，所以还是挺快的。
 
 当新的bucket可用的时候，旧的bucket中的key/value对会被移动或称为`evacuated`到新的bucket数组中。之前在同一个bucket中的key/value对，被移动到新的bucket之后，可能会处于不同的bucket中，`evacuation`算法倾向于将key/value对均匀地分布在数组中。
-![java-javascript](/img/in-post/map-internal/s4.png)
+![java-javascript](/img/in-post/map-internal/s4.png){:height="60%" width="60%"}
 这些都是一些非常精巧的操作（delicate dance），因为在`evacuation`操作完成之前，迭代操作仍然需要访问old array，同时这也会影响key/value的返回顺序，为了保证在扩展时，仍能迭代访问golang做了很多工作。
 ## 总结
 正如我开头所说的，这只是map的结构以及增长的宏观视角，代码是用c实现的，并执行了很多内存以及指针操作来保证高效、安全。
