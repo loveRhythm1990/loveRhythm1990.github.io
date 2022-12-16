@@ -1,38 +1,79 @@
 ---
 layout:     post
-title:      "kubelet runtimeservice初始化"
+title:      "kubelet容器运行时/CRI/CNI初始化"
 date:       2020-06-21 14:10:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
     - k8s
     - kubelet
+    - 网络
 ---
 
-kubelet的[syncPod方法](https://loverhythm1990.github.io/2019/12/14/kubelet-brief/)是同步Pod的主要方法，在这个方法的最后调用了`kl.containerRuntime.SyncPod`方法，交由运行时来同步Pod，Kubelet的`containerRuntime`是`kubeGenericRuntimeManager`，其代码目录为：
+kubelet的 [syncPod方法](https://loverhythm1990.github.io/2019/12/14/kubelet-brief/) 是同步Pod的主要方法，在这个方法的最后调用了`kl.containerRuntime.SyncPod`方法，其实现是`kubeGenericRuntimeManager.SyncPod`，其代码目录为：`pkg/kubelet/kuberuntime/kuberuntime_manager.go`
 
-`pkg/kubelet/kuberuntime/kuberuntime_manager.go`
+本文按照代码顺序，依次介绍 CRI（服务端/客户端）、kubeGenericRuntimeManager、CNI 初始化。其中 CNI 初始化相对复杂，这里不详细介绍，只是将整个过程串联起来。
 
-在`containerRuntime.SyncPod`方法中，最终调用了`containerRuntime.startContainer`方法来启动容器，后者的任务就是：
-* pull the image
-* create the container
-* start the container
-* run the post start lifecycle hooks (if applicable)
+### CRI 初始化
+对于 kubelet 来说，是 CRI 接口调用的客户端，于是这里的初始化包括两部分：
+* CRI grpc server 的初始化，即 dockershim 的初始化，dockershim 是一个 CRI server 的实现，作为 kubelet 以及 docker 中间的一个桥梁
+* CRI grpc 客户端的初始化，这个是容器运行时无关的，kubelet 只管通过一个 unix 接口初始化一个 CRI grpc 就好了
 
-其中`create the container`调用的是`containerRuntime.runtimeService.CreateContainer`方法。这里的`runtimeService`定义是`CRI`接口。即这个`runtimeService`的实现需要实现CRI中过于运行时的接口。重点看一下`kubeGenericRuntimeManager`的这个`runtimeService`是怎么初始化的。
-
-初始化`kubeGenericRuntimeManager`调用的是`NewKubeGenericRuntimeManager`函数，这个函数需要一个runtimeService的参数，这个参数就是CRI的接口，然后在`NewKubeGenericRuntimeManager`内部，使用`InstrumentedRuntimeService`对参数传进来的runtimeService进行了封装。
+初始化的代码在下面：
 ```go
-		runtimeService:      newInstrumentedRuntimeService(runtimeService),
-```
+// 这里的 containerRuntime 是 docker，不要纠结为什么是 docker，以及参数怎么初始化及传递的，
+// 因为我们就是用的docker，没有用 containerd 或者其他，分析问题要抓住主要矛盾
+switch containerRuntime {
+case kubetypes.DockerContainerRuntime:
+	// Create and start the CRI shim running as a grpc server.
+	streamingConfig := getStreamingConfig(kubeCfg, kubeDeps, crOptions)
+	
+	// 这里有个 NewDockerService 方法非常重要， 这个方法返回的 DockerService 接口实现了 CRIService，即所有的 CRI 接口
+	ds, err := dockershim.NewDockerService(kubeDeps.DockerClientConfig, crOptions.PodSandboxImage, streamingConfig,
+		&pluginSettings, runtimeCgroups, kubeCfg.CgroupDriver, crOptions.DockershimRootDirectory,
+		!crOptions.RedirectContainerStreaming, kubeCfg.CpuSetCpus, kubeCfg.CpuSetMems, kubeCfg.Swap)
+	if err != nil {
+		return nil, err
+	}
 
-从`NewKubeGenericRuntimeManager`函数的调用开始向上推，看参数runtimeService的初始化过程。代码在`kubelet.go`
+	// 这里：
+	// remoteRuntimeEndpoint: unix:///var/run/dockershim.sock
+	// remoteImageEndpoint: 这个没指定，默认跟 remoteRuntimeEndpoint 一致
+	// The unix socket for kubelet <-> dockershim communication.
+	klog.V(5).Infof("RemoteRuntimeEndpoint: %q, RemoteImageEndpoint: %q",remoteRuntimeEndpoint,remoteImageEndpoint)
+	
+	
+	// 启动 dockershim GRPC server
+	klog.V(2).Infof("Starting the GRPC server for the docker CRI shim.")
+	server := dockerremote.NewDockerServer(remoteRuntimeEndpoint, ds)
+	if err := server.Start(); err != nil {
+		return nil, err
+	}
+    // ... ...
+case kubetypes.RemoteContainerRuntime:
+	// No-op.
+	break
+default:
+	return nil, fmt.Errorf("unsupported CRI runtime: %q", containerRuntime)
+}
+// CRI 客户端初始化：runtimeService 以及 imageService
+runtimeService, imageService, err := getRuntimeAndImageServices(remoteRuntimeEndpoint, remoteImageEndpoint, kubeCfg.RuntimeRequestTimeout)
+if err != nil {
+	return nil, err
+}
+klet.runtimeService = runtimeService
+```
+dockershim 的初始化可以通过下图来表示，dockershim 的桥梁作用可见一斑。
+![java-javascript](/img/in-post/all-in-one/2022-12-16-11-28-09.png){:height="70%" width="70%"}
+
+### kubeGenericRuntimeManager 初始化
+其初始化代码在 `kubelet.go` 中，在这个结构体的初始化中，一个主要的参数就是 `runtimeService`，这个参数就是 **CRI初始化** 中生成的 runtimeService，也就是一个 cri grpc 的客户端，
 ```go
 	runtime, err := kuberuntime.NewKubeGenericRuntimeManager(
 		kubecontainer.FilterEventRecorder(kubeDeps.Recorder),
 		klet.livenessManager,
-		klet.startupManager,
 		seccompProfileRoot,
+		containerRefManager,
 		machineInfo,
 		klet,
 		kubeDeps.OSInterface,
@@ -44,148 +85,148 @@ kubelet的[syncPod方法](https://loverhythm1990.github.io/2019/12/14/kubelet-br
 		int(kubeCfg.RegistryBurst),
 		kubeCfg.CPUCFSQuota,
 		kubeCfg.CPUCFSQuotaPeriod,
-		kubeDeps.RemoteRuntimeService,
-		kubeDeps.RemoteImageService,
+		runtimeService,
+		imageService,
 		kubeDeps.ContainerManager.InternalContainerLifecycle(),
-		kubeDeps.dockerLegacyService,
+		legacyLogProvider,
 		klet.runtimeClassManager,
+		kubeCfg.EnableP2P,
 	)
 ```
-看`kubeDeps.RemoteRuntimeService`的初始化，代码`kubelet.go`，下面是`PreInitRuntimeService`函数的代码片段。我们主要看下`remoteRuntimeEndpoint`初始化。
-```go
-	switch containerRuntime {
-    case kubetypes.DockerContainerRuntime:
-        // 启动docker shim grpc server
-		if err := runDockershim(
-			kubeCfg,
-			kubeDeps,
-			crOptions,
-			runtimeCgroups,
-			remoteRuntimeEndpoint,
-			remoteImageEndpoint,
-			nonMasqueradeCIDR,
-		); err != nil {
-			return err
-		}
-	case kubetypes.RemoteContainerRuntime:
-		// No-op.
-		break
-	default:
-		return fmt.Errorf("unsupported CRI runtime: %q", containerRuntime)
-	}
+kubeGenericRuntimeManager 封装了很多跟容器运行时相关的逻辑，其中最重要的就是 SyncPod，后面会有介绍。
 
-    var err error
-    // 初始化docker shim grpc客户端
-	if kubeDeps.RemoteRuntimeService, err = remote.NewRemoteRuntimeService(remoteRuntimeEndpoint, kubeCfg.RuntimeRequestTimeout.Duration); err != nil {
-		return err
-	}
-	if kubeDeps.RemoteImageService, err = remote.NewRemoteImageService(remoteImageEndpoint, kubeCfg.RuntimeRequestTimeout.Duration); err != nil {
-		return err
-	}
-```
-这个`NewRemoteRuntimeService`就是初始化了一个CRI的运行时接口，使用CRI gRPC初始化了一个Client。
+### RunPodSandbox 接口
+`RunPodSandbox` 是 CRI 众多接口中的一个，在 docker 的实现中，这个接口的作用是起一个 pause 容器，并且配置一个独立的网络 namespace，我们通过这个接口，看一下 dockershim 是怎么起一个承上启下的作用的。在本文前面内容中，我们已经提到了，在 kubelet 同步 pod 的主要逻辑 `(kl *Kubelet) syncPod(o syncPodOptions) error`中，最终调用了 `containerRuntime.SyncPod` 也即 `kubeGenericRuntimeManager` 的 `SyncPod` 方法，那么容器的启动和销毁也是在这个方法中的，我们在这个方法中找下 `RunPodSandbox` 的调用。
+
+**kubeGenericRuntimeManager** 这个方法的注释写的很清楚了，必要的时候，会在第 4 步创建 sandbox。
 ```go
-// NewRemoteRuntimeService creates a new internalapi.RuntimeService.
-func NewRemoteRuntimeService(endpoint string, connectionTimeout time.Duration) (internalapi.RuntimeService, error) {
-	klog.V(3).Infof("Connecting to runtime service %s", endpoint)
-	addr, dialer, err := util.GetAddressAndDialer(endpoint)
-	if err != nil {
+// SyncPod syncs the running pod into the desired pod by executing following steps:
+//
+//  1. Compute sandbox and container changes.
+//  2. Kill pod sandbox if necessary.
+//  3. Kill any containers that should not be running.
+//  4. Create sandbox if necessary.
+//  5. Create ephemeral containers.
+//  6. Create init containers.
+//  7. Create normal containers.
+func (m *kubeGenericRuntimeManager) SyncPod(pod *v1.Pod, podStatus *kubecontainer.PodStatus, pullSecrets []v1.Secret, backOff *flowcontrol.Backoff) (result kubecontainer.PodSyncResult) {
+	// ... ...
+	// Step 4: Create a sandbox for the pod if necessary.
+	podSandboxID := podContainerChanges.SandboxID
+	if podContainerChanges.CreateSandbox {
+		podSandboxID, msg, err = m.createPodSandbox(pod, podContainerChanges.Attempt)
+		// ... ...
+	}
+    // ... ...
+}
+
+// 调用 CRI 客户端，这个客户端会根据 dockershim 的 unix 地址向 dockershim grpc server 发送请求
+// createPodSandbox creates a pod sandbox and returns (podSandBoxID, message, error).
+func (m *kubeGenericRuntimeManager) createPodSandbox(pod *v1.Pod, attempt uint32) (string, string, error) {
+    // ... ...
+	podSandBoxID, err := m.runtimeService.RunPodSandbox(podSandboxConfig, runtimeHandler)
+    // ... ...
+	return podSandBoxID, "", nil
+```
+
+下面再来看 dockershim 中 RunPodSandbox 的实现，在 dockershim 中 `dockerService` 是主要的运行时实现者，我们只看下大概调用关系，不分析代码逻辑，RunPodSandbox 代码中也分了步骤：1.2.3.4，我们保留这部分注释。
+```go
+// RunPodSandbox creates and starts a pod-level sandbox. Runtimes should ensure
+// the sandbox is in ready state.
+// For docker, PodSandbox is implemented by a container holding the network
+// namespace for the pod.
+// Note: docker doesn't use LogDirectory (yet).
+func (ds *dockerService) RunPodSandbox(ctx context.Context, r *runtimeapi.RunPodSandboxRequest) (*runtimeapi.RunPodSandboxResponse, error) {
+
+	// Step 1: Pull the image for the sandbox.
+	if err := ensureSandboxImageExists(ds.client, image); err != nil {
 		return nil, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), connectionTimeout)
-	defer cancel()
 
-	conn, err := grpc.DialContext(ctx, addr, grpc.WithInsecure(), grpc.WithContextDialer(dialer), grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(maxMsgSize)))
+    // sandbox 也是一个容器，调用 docker 的 http client
+	// Step 2: Create the sandbox container.
+	createResp, err := ds.client.CreateContainer(*createConfig)
 	if err != nil {
-		klog.Errorf("Connect remote runtime %s failed: %v", addr, err)
+		createResp, err = recoverFromCreationConflictIfNeeded(ds.client, *createConfig, err)
+	}
+
+	// Step 3: Create Sandbox Checkpoint.
+	if err = ds.checkpointManager.CreateCheckpoint(createResp.ID, constructPodSandboxCheckpoint(config)); err != nil {
 		return nil, err
 	}
 
-	return &RemoteRuntimeService{
-        timeout:       connectionTimeout,
-        // 初始化一个gRPC的client
-		runtimeClient: runtimeapi.NewRuntimeServiceClient(conn),
-		logReduction:  logreduction.NewLogReduction(identicalErrorDelay),
-	}, nil
-}
-```
-
-`PreInitRuntimeService`是在kubelet的run方法里调用的。看下这个Endpoint是什么，
-```go
-	err = kubelet.PreInitRuntimeService(&s.KubeletConfiguration,
-		kubeDeps, &s.ContainerRuntimeOptions,
-		s.ContainerRuntime,
-		s.RuntimeCgroups,
-		s.RemoteRuntimeEndpoint,
-		s.RemoteImageEndpoint,
-		s.NonMasqueradeCIDR)
+	// Step 4: Start the sandbox container.
+	// Assume kubelet's garbage collector would remove the sandbox later, if
+	// startContainer failed.
+	err = ds.client.StartContainer(createResp.ID)
 	if err != nil {
-		return err
-	}
-```
-Endpoint初始化代码如下，看来就是`dockershim`的sock地址了。也就是说`dockershim`是这里的gRPC服务的服务端。
-```go
-// NewKubeletFlags will create a new KubeletFlags with default values
-func NewKubeletFlags() *KubeletFlags {
-	remoteRuntimeEndpoint := ""
-	if runtime.GOOS == "linux" {
-		remoteRuntimeEndpoint = "unix:///var/run/dockershim.sock"
-	} else if runtime.GOOS == "windows" {
-		remoteRuntimeEndpoint = "npipe:////./pipe/dockershim"
+		return nil, fmt.Errorf("failed to start sandbox container for pod %q: %v", config.Metadata.Name, err)
 	}
 
-	return &KubeletFlags{
-		ContainerRuntimeOptions:             *NewContainerRuntimeOptions(),
-		CertDirectory:                       "/var/lib/kubelet/pki",
-		RootDirectory:                       defaultRootDir,
-		MasterServiceNamespace:              metav1.NamespaceDefault,
-		MaxContainerCount:                   -1,
-		MaxPerPodContainerCount:             1,
-		MinimumGCAge:                        metav1.Duration{Duration: 0},
-		NonMasqueradeCIDR:                   "10.0.0.0/8",
-		RegisterSchedulable:                 true,
-		ExperimentalKernelMemcgNotification: false,
-		RemoteRuntimeEndpoint:               remoteRuntimeEndpoint,
-		NodeLabels:                          make(map[string]string),
-		RegisterNode:                        true,
-		SeccompProfileRoot:                  filepath.Join(defaultRootDir, "seccomp"),
-		// prior to the introduction of this flag, there was a hardcoded cap of 50 images
-		EnableCAdvisorJSONEndpoints: false,
-	}
-}
-```
-综上所述，`containerRuntime.runtimeService.CreateContainer`这个方法其实就是调用了gRPC客户端的`CreateContainer`方法，向GRPC服务端`docker shim`发送了一个请求。而这个客户端的最终实现就是`RemoteRuntimeService`，我们看下其`CreateContainer`具体做了一些什么：
-```go
-// CreateContainer creates a new container in the specified PodSandbox.
-func (r *RemoteRuntimeService) CreateContainer(podSandBoxID string, config *runtimeapi.ContainerConfig, sandboxConfig *runtimeapi.PodSandboxConfig) (string, error) {
-	klog.V(10).Infof("[RemoteRuntimeService] CreateContainer (podSandBoxID=%v, timeout=%v)", podSandBoxID, r.timeout)
-	ctx, cancel := getContextWithTimeout(r.timeout)
-	defer cancel()
-
-	resp, err := r.runtimeClient.CreateContainer(ctx, &runtimeapi.CreateContainerRequest{
-		PodSandboxId:  podSandBoxID,
-		Config:        config,
-		SandboxConfig: sandboxConfig,
-	})
+    // 第五步这一步非常重要，这一步是配置容器网络，所以CNI相关的东西，应该从这里入口
+	// Step 5: Setup networking for the sandbox.
+	// All pod networking is setup by a CNI plugin discovered at startup time.
+	// This plugin assigns the pod ip, sets up routes inside the sandbox,
+	// creates interfaces etc. In theory, its jurisdiction ends with pod
+	// sandbox networking, but it might insert iptables rules or open ports
+	// on the host as well, to satisfy parts of the pod spec that aren't
+	// recognized by the CNI standard yet.
+	err = ds.network.SetUpPod(config.GetMetadata().Namespace, config.GetMetadata().Name, cID, config.Annotations, networkOptions)
 	if err != nil {
-		klog.Errorf("CreateContainer in sandbox %q from runtime service failed: %v", podSandBoxID, err)
-		return "", err
+        // ... ... 
+		return resp, utilerrors.NewAggregate(errList)
 	}
-
-	klog.V(10).Infof("[RemoteRuntimeService] CreateContainer (podSandBoxID=%v, ContainerId=%v)", podSandBoxID, resp.ContainerId)
-	if resp.ContainerId == "" {
-		errorMessage := fmt.Sprintf("ContainerId is not set for container %q", config.GetMetadata())
-		klog.Errorf("CreateContainer failed: %s", errorMessage)
-		return "", errors.New(errorMessage)
-	}
-
-	return resp.ContainerId, nil
+	return resp, nil
 }
 ```
-如上代码所示，就是调用了gRPC客户端发送了一个请求。
+在上面代码中，`ds.network.SetUpPod` 是配置容器网络配置的入口，如果想定制化容器网络，大概要从这个地方入手了。
 
-接下来还有一个问题，docker shim server什么时候启动的。是`remoteRuntimeEndpoint`方法的`runDockershim`，这个方法一方面启动了一个docker shim server，另一方面启动了docker shim 客户端。
+### CNI 插件初始化
+CNI 的初始化是在上面 CRI 初始化中的 `dockershim.NewDockerService` 中实现的，也就说在 Kubelet 初始化时，将 CNI 进行了初始化。
 
+下面是 dockershim 初始化的主要代码，另外这个地方只是初始化，还没有启动 grpc server。对于 CNI 的初始化，就是读取配置文件目录 `/etc/cni/net.d` 的配置文件并初始化。
+```go
+// NewDockerService creates a new `DockerService` struct.
+// NOTE: Anything passed to DockerService should be eventually handled in another way when we switch to running the shim as a different process.
+func NewDockerService(config *ClientConfig, podSandboxImage string,
+	streamingConfig *streaming.Config, pluginSettings *NetworkPluginSettings,
+	cgroupsName, kubeCgroupDriver, dockershimRootDir string, startLocalStreamingServer bool,
+	defaultCpusetCpus, defaultCpusetMems, defaultSwap string) (DockerService, error) {
+
+	ds := &dockerService{
+		client:          c,
+		os:              kubecontainer.RealOS{},
+		podSandboxImage: podSandboxImage,
+		streamingRuntime: &streamingRuntime{
+			client:      client,
+			execHandler: &NativeExecHandler{},
+		},
+		containerManager:          cm.NewContainerManager(cgroupsName, client),
+		checkpointManager:         checkpointManager,
+		startLocalStreamingServer: startLocalStreamingServer,
+		networkReady:              make(map[string]bool),
+		containerCleanupInfos:     make(map[string]*containerCleanupInfo),
+	}
+
+	// 探测 cni 插件，并进行初始化
+	cniPlugins := cni.ProbeNetworkPlugins(pluginSettings.PluginConfDir, pluginSettings.PluginCacheDir, pluginSettings.PluginBinDirs)
+	cniPlugins = append(cniPlugins, kubenet.NewPlugin(pluginSettings.PluginBinDirs, pluginSettings.PluginCacheDir))
+	netHost := &dockerNetworkHost{
+		&namespaceGetter{ds},
+		&portMappingGetter{ds},
+		&labelAnnotationGetter{ds},
+	}
+	plug, err := network.InitNetworkPlugin(cniPlugins, pluginSettings.PluginName, netHost, pluginSettings.HairpinMode, pluginSettings.NonMasqueradeCIDR, pluginSettings.MTU)
+	if err != nil {
+		return nil, fmt.Errorf("didn't find compatible CNI plugin with given settings %+v: %v", pluginSettings, err)
+	}
+	ds.network = network.NewPluginManager(plug)
+	klog.Infof("Docker cri networking managed by %v", plug.Name())
+
+	// ... ...
+	return ds, nil
+}
+```
 
 #### 参考
 [如何在Kubernetes中实现容器原地升级](https://cloud.tencent.com/developer/article/1413743)
