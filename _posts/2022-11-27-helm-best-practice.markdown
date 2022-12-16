@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "一些 helm 最佳实践"
+title:      "helm 中的一些最佳实践"
 date:       2022-11-27 10:10:00
 author:     "decent"
 header-img-credit: false
