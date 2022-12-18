@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "容器网络基础：CNI、vxlan等"
+title:      "容器网络基础概述：CNI、vxlan等"
 date:       2021-4-1 19:54:00
 author:     "decent"
 header-img-credit: false
