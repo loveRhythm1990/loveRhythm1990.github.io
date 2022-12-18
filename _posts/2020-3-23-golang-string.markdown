@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "golang string小结"
+title:      "golang string使用总结与分析"
 date:       2020-03-23 10:10:00
 author:     "weak old dog"
 header-img-credit: false
@@ -8,33 +8,35 @@ tags:
     - golang
 ---
 
-#### 基础
+#### 基础使用方法
 在Go语言中，字符串也是一种基本类型。字符串中的内容可以用类似数组下标的方式获取，但与数组不同，字符串的内容不能在初始化后被修改，比如下面的例子：
 ```go
-    str := "Hello world"
-    str[0] = 'X'    //编译错误：cannot assign to str[0]
-    a := &str[0]    //编译错误：cannot take address of str[0]
+str := "Hello world"
+str[0] = 'X'    //编译错误：cannot assign to str[0]
+a := &str[0]    //编译错误：cannot take address of str[0]
 ```
-同样的道理，我们是不能对下标元素取地址的。根据golang spec，在等号左边的变量必须是可取地址的，这样才能给它赋值。虽然但是不能对单个元素赋值，但是很显然，我们是可以对真个字符串重新赋值的，下面代码是没问题的：
+同样的道理，我们是不能对下标元素取地址的。根据golang spec，在等号左边的变量必须是可取地址的，这样才能给它赋值。虽然不能对单个元素赋值，但是很显然我们是可以对整个字符串重新赋值的，下面代码是没问题的：
 ```go
-	str := "Hello world"
-	str = "another"
-	fmt.Println(str)
+str := "Hello world"
+str = "another"
+fmt.Println(str)
 ```
 
 我们可以使用内置函数len()来获取字符串的长度，这个内置函数返回的是字节（byte）数，比如下面，这个问题后面还会讲：
 ```go
-	str := "你好世界"
-	fmt.Println(len(str)) // 输出12，每个中文字符占3个字节
+str := "你好世界"
+fmt.Println(len(str)) // 输出12，每个中文字符占3个字节
 ```
 
 遍历，我们有两种方式遍历字符串，一种是使用下标（遍历得到的元素类型是byte，`type byte = uint8`，即是uint8类型），一种是使用for-each循环（得到的是rune类型，定义是：`type rune = int32`，即是int32类型，为啥还要带符合呢？）
+> 这里补充一下，对于 s := "abc" 的 for-each 遍历，其得到的类型也是 rune 类型。
+
 ```go
-    str := "你好世界"
-    // 使用下标遍历
-	for i:=0; i<len(str); i++ {
-		fmt.Println(i, reflect.TypeOf(str[i]), str[i])
-    }
+str := "你好世界"
+// 使用下标遍历
+for i:=0; i<len(str); i++ {
+	fmt.Println(i, reflect.TypeOf(str[i]), str[i])
+}
 
 // 输出为：
 0 uint8 228
@@ -51,10 +53,10 @@ tags:
 11 uint8 140
 ```
 ```go
-	str := "你好世界"
-	for i, c := range str {
-		fmt.Println(i, reflect.TypeOf(c), c)
-    }
+str := "你好世界"
+for i, c := range str {
+	fmt.Println(i, reflect.TypeOf(c), c)
+}
 // 输出如下，可以观察到下标是不连续的
 0 int32 20320
 3 int32 22909
@@ -62,7 +64,7 @@ tags:
 9 int32 30028
 ```
 
-#### 运行时的表示
+#### 运行时的数据结构
 `reflect.StringHeader`类型显示了string在运行时的表示，其定义如下：
 ```go
 // 使用uintptr表示指针，不能保证其指向的内容不会被垃圾回收器回收
@@ -79,14 +81,14 @@ type stringHeader struct {
 ```
 从定义上看，string可以认为是一个只读的byte数组。golang数组跟C语言数组类似，数组的首地址也是第一个元素的地址，这个可以通过下面代码验证：
 ```go
-	a := [3]int{1, 2, 3}
-	fmt.Printf("%p\n", &a)
-	fmt.Printf("%p\n", &(a[0]))
-	// 输出一致
-	//0xc420014360
-	//0xc420014360
+a := [3]int{1, 2, 3}
+fmt.Printf("%p\n", &a)
+fmt.Printf("%p\n", &(a[0]))
+// 输出一致
+//0xc420014360
+//0xc420014360
 ```
-在golang中，字符串赋值以及使用slice取子字符串时，结果与原数组是共享底层数组的，同样，结果也是不可写的。
+在golang中，字符串赋值以及使用slice取子字符串时，结果与原数组是共享底层数组的，同样，结果也是不可写的（不能对单个元素赋值）。
 
 #### []byte与string转化的开销
 * 字符串类型可以强制转换为[\]byte类型，[]byte类型也可以被转换为string类型。
@@ -99,19 +101,19 @@ string与[]byte相互转换时不一定总是发生deepcopy，比如下面几种
 
 * string转换为[\]byte时，[]byte作为for range循环用，比如：
 ```go
-	for i, b := range []byte(str) {
-		fmt.Println(i, ":", b)
-	}
+for i, b := range []byte(str) {
+	fmt.Println(i, ":", b)
+}
 ```
 
 * []byte转换为string的时候，string作为map的key，比如：
 ```go
-	key := []byte{'k', 'e', 'y'}
-	m := map[string]string{}
-	// Here, the string(key) conversion will not copy
-	// the bytes in key. The optimization will be still
-	// made, even if key is a package-level variable.
-	m[string(key)] = "value"
+key := []byte{'k', 'e', 'y'}
+m := map[string]string{}
+// Here, the string(key) conversion will not copy
+// the bytes in key. The optimization will be still
+// made, even if key is a package-level variable.
+m[string(key)] = "value"
 ```
 
 * []byte转换为string的时候，用来做比较运算。
