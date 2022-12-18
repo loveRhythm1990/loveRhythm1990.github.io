@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "golang slice总结"
+title:      "探究golang slice的一些实现"
 date:       2020-03-25 10:10:00
 author:     "weak old dog"
 header-img-credit: false
@@ -39,73 +39,35 @@ type sliceHeader struct {
 	Cap  int
 }
 ```
-博客[深入解析 Go 中 Slice 底层实现](https://halfrost.com/go_slice/)提到了一个例外情况：`数组在栈上分配时，slice在堆上分配时，数组可能比slice快`。（有一点需要分析一下，数组的值拷贝方法，也就是copy方法，分析其代价开销）。使用的测试程序如下：
+关于这个问题，我们可以举个例子说明，我们知道golang 中没有队列，一般用 slice 来模拟队列，以 string 队列为例，我们可以通过`type Queue []string`来模拟队列，在模拟队列时，如果使用值接收者，则不能得到预期的执行结果，以下面代码为例：
 ```go
-package main
-
-import "testing"
-
-func array() [1024]int {
-	var x [1024]int
-	for i := 0; i < len(x); i++ {
-		x[i] = i
-	}
-	return x
+// 示例1，slice 值传递，可以通过下标修改 slice 的值，但是append是返回了一个新的slice，对原 slice 无影响
+func test1() {
+	ori := []string{"abc"}
+	add(ori)
+	fmt.Printf("len:%d, slice:%v", len(ori), ori)
+	// 输出为：len:1, slice:[set-e]
 }
 
-func slice() []int {
-	x := make([]int, 1024)
-	for i := 0; i < len(x); i++ {
-		x[i] = i
-	}
-	return x
+func add(s []string)  {
+	s[0] = "set-e"
+	s = append(s, "def")
 }
 
-func BenchmarkArray(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		array()
-	}
+// 示例2，slice 使用`值接收者`时，相当于使用值传递
+func test2() {
+	q := queue{}
+	q.push("abc")
+	fmt.Println(len(q))
+    // 输出为 0
 }
-
-func BenchmarkSlice(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		slice()
-	}
+type queue []string
+// 注意：这是错误的实现方式，不能使用值接收者
+func (q queue) push(s string) {
+	q = append(q, s)
 }
 ```
-使用命令`go test -bench . -benchmem -gcflags "-N -l"`运行，结果如下：
-```s
-BenchmarkArray-4          500000              3378 ns/op               0 B/op          0 allocs/op
-BenchmarkSlice-4          300000              5260 ns/op            8192 B/op          1 allocs/op
-```
-在测试 Array 的时候，用的是4核，循环次数是500000，平均每次执行时间是3378ns，每次执行堆上分配内存总量是0，分配次数也是0。
-
-而切片的结果就“差”一点，同样也是用的是4核，循环次数是300000，平均每次执行时间是5260ns，但是每次执行一次，堆上分配内存总量是8192，分配次数也是1 。
-
-将`array`, `slice`两个函数拷贝到代码文件中，使用命令`go build -gcflags="-m -m"`查看内存逃逸情况，发现`make([]int, 1024)`是分配在heap中的。
-```s
-./main.go:13:6: cannot inline array: unhandled op FOR
-./main.go:21:6: cannot inline slice: unhandled op FOR
-./main.go:10:27: unsafe.Sizeof(a) escapes to heap
-./main.go:10:27:        from ~arg0 (assign-pair) at ./main.go:10:13
-./main.go:10:13: io.Writer(os.Stdout) escapes to heap
-./main.go:10:13:        from io.Writer(os.Stdout) (passed to call[argument escapes]) at ./main.go:10:13
-./main.go:10:13: main []interface {} literal does not escape
-./main.go:22:11: make([]int, 1024) escapes to heap
-./main.go:22:11:        from x (assigned) at ./main.go:22:4
-./main.go:22:11:        from ~r0 (return) at ./main.go:26:2
-```
-之前在逃逸分析的博客说明`当分配的空间太大时，可能会在堆中分配`，实际上在上面的代码中，就算我将数组大小改为[10240]int，根据一个int占用8个字节，10240*8 byte仍然没有发生逃逸行为，`难道是因为数组在传递时使用值拷贝，逃逸没有意义？因为每次传递都是做一个副本`，当然我传递数组的指针时，这个时候在函数外是要访问数组的，这个时候肯定发生逃逸，也就是下面的情况：
-```go
-//发生逃逸
-func array() *[1024]int {
-	var x [1024]int
-	for i := 0; i < len(x); i++ {
-		x[i] = i
-	}
-	return &x
-}
-```
+上述例子中，因为使用了`值接收者`，所以即便是调用了 push 得到的长度还是0，所以我们在使用 slice 模拟队列时，一定要用指针接收者。slice 类型可以看做是一个包含了一个指针元素的结构体，可以通过指针修改底层数组的值，但是数组的结构信息是改不了的。
 
 #### 捏造一个slice
 自己动手，丰衣足食，我们已经知道slice的结构，下面我们要自己构造一个
@@ -162,7 +124,7 @@ func makeslice(et *_type, len, cap int) unsafe.Pointer {
 }
 ```
 
-#### copy
+#### 内置 copy 函数
 golang内置函数copy的签名为：`func copy(dst, src []Type) int`，解释为：
 > 内置函数copy将元素从源slice拷贝到目的slice，（作为一种特殊情况，copy还可以将string拷贝到[]byte里），源slice与目标slice可能重叠，copy返回复制的element个数，个数为len(src)以及len(dst)的最小值。
 
@@ -221,7 +183,7 @@ func slicecopy(to, fm slice, width uintptr) int {
     // 输出2
 ```
 
-#### grow slice
+#### slice 的扩容（grow）
 `growslice`处理append过程中slice的增长，参数为：元素类型，旧的slice，期望的新的slice的最小长度。返回值是一个新的slice，其capacity至少为参数指定的值，并且包含旧的slice的数据。
 新的slice的长度与旧的slice的长度是相等的。实现如下：
 ```go
