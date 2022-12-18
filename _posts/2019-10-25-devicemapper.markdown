@@ -1,7 +1,7 @@
 ---
 layout:     post
 title:      "实现自己的device mapper"
-subtitle:   " \"翻译\""
+subtitle:   " \"这是一篇翻译\""
 date:       2019-10-25 22:55:00
 author:     "weak old dog"
 header-img-credit: false
@@ -259,7 +259,7 @@ blk_qc_t submit_bio(struct bio *bio)
 bio是通⽤块层I/O请求的数据结构，表⽰上层提交的I/O请求，⼀个bio包含多个page，这些page必
 须对应磁盘上⼀段连续的空间。由于⽂件在磁盘上并不连续存放，⽂件I/O提交到块设备之前，极有可能被拆成多个bio结构；
 
-![java-javascript](/img/in-post/devicemapper/iostack.jpeg)
+![java-javascript](/img/in-post/devicemapper/iostack.jpeg){:height="50%" width="50%"}
 
 
 这部分写的无头无脑，日后整理。
