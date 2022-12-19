@@ -9,10 +9,10 @@ tags:
     - 网络
 ---
 
-在 [K8s dockershim CNI 实现解析](https://loverhythm1990.github.io/2022/12/17/k8s-cni-imple/) 文章中，我们解释了 CNI 在 K8s 侧的一些实现，包括设计到的 dockershim 的一些数据结构、CNI 仓库 libcni 的一些数据结构，以及 CNI 调用具体插件的参数等。在本文中，我们将以 flannel 为例大概介绍一个 cni 插件的实现，其实实现 flannel 涉及到好几个项目：
-* cni-plugin：项目地址为 [https://github.com/flannel-io/cni-plugin](https://github.com/flannel-io/cni-plugin)，这个就是我们要解析的项目，这个项目生成的是一个二进制文件 `flannel`，并且放到目录 `/opt/cni/bin/`目录，供kubelet 消费。但是光有这个项目是不行的，或者说这个项目做的事情比较简单。
-* flannel：项目地址为 [https://github.com/flannel-io/flannel](https://github.com/flannel-io/flannel)，这个是一个daemonset，运行在每个节点上，这个项目作用有在生成每个节点的 `/run/flannel/subnet.env` 文件，供上面的 cni-plugin，这个文件是根据 node.spec.podCIDR 实现的，关于这个项目本文不做详细介绍，后面希望会有文章介绍这个。
-* 公共 cni plugins：项目地址为[https://github.com/containernetworking/plugins](https://github.com/containernetworking/plugins)，flannel 其实把这个项目 fork 了一份[https://github.com/flannel-io/plugins](https://github.com/flannel-io/plugins)，可能做了一些修改，这里我们只官方 CNI 官方的 cni 实现，主要是两个插件`bridge`、`ipam`
+在 [K8s dockershim CNI 实现解析](https://loverhythm1990.github.io/2022/12/17/k8s-cni-imple/) 文章中，我们解释了 CNI 在 K8s 侧的一些实现，包括涉及到的 dockershim 的一些数据结构、CNI 仓库 libcni 的一些数据结构，以及 CNI 调用具体插件的参数、参数传递方式等。在本文中，我们将以 flannel 为例大概介绍一下 cni 插件的实现，其实flannel实现涉及到好几个项目：
+* [cni-plugin](https://github.com/flannel-io/cni-plugin)：这个就是我们要解析的项目，这个项目生成的是一个二进制文件 `flannel`，并且放到目录 `/opt/cni/bin/`目录，供kubelet 消费。但是光有这个项目是不行的，或者说这个项目做的事情比较简单。
+* [flanneld](https://github.com/flannel-io/flannel)：这个是一个daemonset，运行在每个节点上，这个项目作用有在生成每个节点的 `/run/flannel/subnet.env` 文件，供上面的 cni-plugin，这个文件是根据 node.spec.podCIDR 实现的，关于这个项目本文不做详细介绍，后面希望会有文章介绍这个。
+* 公共 [cni plugins](https://github.com/containernetworking/plugins)：flannel 其实把这个项目 fork 了一份[https://github.com/flannel-io/plugins](https://github.com/flannel-io/plugins)，可能做了一些修改，这里我们只介绍官方的 cni 实现，主要是两个插件`bridge`、`ipam`。
 
 
 ### CNI插件实现框架
@@ -22,7 +22,7 @@ func main() {
 	skel.PluginMain(cmdAdd, cmdCheck, cmdDel, cni.All, fullVer)
 }
 ```
-低版本的 CNI 只需实现 add 和 del 就好了，下面以 flannel 为例介绍 add 和 del 的实现。首先贴上 flannel 网络的配置文件，在下面文件中，关于 flannel 的配置其实就几行，首先是 `type: "flannel"`，这个是说 dockershim 在调用 cni 插件时，首先调用 flannel 这个二进制文件（plugins 是一个数组，其中的插件是顺序调用的），然后有两条 delegate 的配置，配置比较简单，但其实很多值都用了默认值，我们在其实现中将会看到。
+低版本的 CNI 只需实现 add 和 del 就好了，下面以 flannel 为例介绍 add 和 del 的实现。首先贴上 flannel 网络的配置文件，在下面文件中，关于 flannel 的配置只有几行，首先是 `type: "flannel"`，这个是说 dockershim 在调用 cni 插件时，首先调用 flannel 这个二进制文件（plugins 是一个数组，其中的插件是顺序调用的），然后有两条 delegate 的配置，配置比较简单，但其实很多值都用了默认值，我们在其实现中将会看到。
 ```json
 {
   "name": "cbr0",
@@ -45,7 +45,7 @@ func main() {
 }
 ```
 #### cmdAdd 配置网络
-我们在 [K8s dockershim CNI 实现解析](https://loverhythm1990.github.io/2022/12/17/k8s-cni-imple/) 中介绍过，执行cni二进制文件时，有两种方式传入数据，一种是环境变量，另一种是标准输入，其中标准输入是以大包数据，包含 cni 官方的数据，自定义的数据（字段）；也可以划分为运行时数据（如网络ns、pod 名字等）或者网络配置数据。对于自定义的字段，在反序列化为 cni 官方的数据结构时会丢失，但是反序列化为自定义的数据结构就没问题了。
+我们在 [K8s dockershim CNI 实现解析](https://loverhythm1990.github.io/2022/12/17/k8s-cni-imple/) 中介绍过，执行cni二进制文件时，有两种方式传入数据，一种是环境变量，另一种是标准输入，其中标准输入是一大包数据，包含 cni 官方的数据，自定义的数据（字段）；也可以划分为运行时数据（如网络ns、pod 名字等）或者网络配置数据。对于自定义的字段，在反序列化为 cni 官方的数据结构时会丢失，但是反序列化为自定义的数据结构就没问题了，一般都是在官方数据结构`types.NetConf`外面再包一层。
 
 下面的`loadFlannelNetConf`方法就是反序列化标准输入为 flannel 自定义的数据结构`NetConf`，其中嵌入包含 cni 的表示数据结构`types.NetConf`
 ```go
@@ -77,14 +77,14 @@ type NetConf struct {
 ```
 这些 `prevResult` 等字段，我们之前看过，在标准输入里都是有的。注意这里 cni的标准数据结构和 flannel自定义的数据结构有个同名但是类型不同的字段 `IPAM`，这个是不冲突的，访问内部的字段时，带上内部嵌入的变量即可。
 
-`loadFlannelSubnetEnv` 这个方法就是读取 flanneld 项目配置的subenv，这个配置文件的例子如下，Network以及subnet都是用CIDR的方式表示的，在解析文件时，都用了`net.ParseCIDR`来返回用`net.IPNet`表示的网络（网络可以理解为网段，而非单个IP），例如`10.42.0.1/24`网络通过`net.ParseCIDR`表示为`ip:10.42.0.0, mask:ffffff00`：
+`loadFlannelSubnetEnv` 这个方法就是读取 flanneld 项目配置的subnetenv，这个配置文件的例子如下，Network以及subnet都是用CIDR的方式表示的，在解析文件时，都用了`net.ParseCIDR`来返回用`net.IPNet`表示的网络（网络可以理解为网段，而非单个IP），例如`10.42.0.1/24`网络通过`net.ParseCIDR`表示为`ip:10.42.0.0, mask:ffffff00`：
 ```s
 FLANNEL_NETWORK=10.42.0.0/16
 FLANNEL_SUBNET=10.42.0.1/24
 FLANNEL_MTU=1450
 FLANNEL_IPMASQ=true
 ```
-是确定这个节点上的子网的。IPAM 分配地址的时候要用。
+上面配置的作用是确定这个节点上的子网的，这个文件是由 flanneld 通过监听node资源生成，并由 flannel cni 插件消费的。IPAM 分配地址的时候要用。
 ```go
 func cmdAdd(args *skel.CmdArgs) error {
 	n, err := loadFlannelNetConf(args.StdinData)
@@ -110,14 +110,13 @@ func cmdAdd(args *skel.CmdArgs) error {
 			return fmt.Errorf("'delegate' dictionary must not have 'ipam' field, it'll be set by flannel")
 		}
 	}
-
 	if n.RuntimeConfig != nil {
 		n.Delegate["runtimeConfig"] = n.RuntimeConfig
 	}
 	return doCmdAdd(args, n, fenv)
 }
 ```
-上面代码解析了一些输入，然后校验了一下 Delegate 的配置，然后就调用 `doCmdAdd` 这个方法了。我们将部分代码解析放在了注释中。总的来说，`doCmdAdd`方法就是在配置 flannel 插件的 Delegate，委托给了 bridge 插件来执行，并配置了所委托的 bridge 插件的 ipam 配置。
+上面代码解析了一些输入，然后校验了一下 Delegate 的配置，然后就调用 `doCmdAdd` 这个方法了。我们将部分代码解析放在了注释中。总的来说，`doCmdAdd`方法就是在配置 flannel 插件的 Delegate，委托给了 bridge 插件来执行，并进行了 ipam 相关配置。
 ```go
 func doCmdAdd(args *skel.CmdArgs, n *NetConf, fenv *subnetEnv) error {
 	n.Delegate["name"] = n.Name
@@ -226,4 +225,4 @@ if err != nil {
 // 打印到标准输出
 fmt.Print(string(b))
 ```
-实现就暂且分析到这里，也只是梳理了一个大概的流程，以理解实现流程为主
+实现就暂且分析到这里，也只是梳理了一个大概的流程，以理解实现流程为主。后面希望有文章分析 bridge/ipam插件的实现细节，这个可能涉及到很多网络知识了。
