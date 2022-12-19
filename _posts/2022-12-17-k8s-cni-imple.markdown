@@ -8,7 +8,7 @@ tags:
     - 网络
 ---
 
-解析一下 CNI 的实现，包括网络插件如何初始化，以及调用 cni 接口配置网络等，将整个过程串联了起来。
+解析一下 CNI 的实现，包括网络插件如何初始化，以及调用 cni 接口配置网络等，将整个过程串联了起来。本文对应的 K8s 版本为 1.16.
 
 ### 网络插件初始化
 初始化的部分可以参考 [kubelet容器运行时/CRI/CNI初始化](https://loverhythm1990.github.io/2020/06/21/kubelet-runtimeservice/)，dockershim 对于cni 的初始化是在方法 `dockershim.NewDockerService` 方法中的，在该方法中与网络相关的初始化有下面几行，其中有几个参数：
