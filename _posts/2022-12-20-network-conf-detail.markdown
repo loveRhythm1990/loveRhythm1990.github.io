@@ -12,7 +12,7 @@ tags:
 MTU(Maximum Transmission Unit，最大传输单元)，是数据链路层的概念，限制了数据链路层上可以传输的数据包的大小，也因此限制了上层（网络层）的数据包大小，MTU 这个大小包含了IP header 以及 TCP header，MTU一般由硬件规定，如以太网的MTU为1500字节。当IP报文的大小超过MUT时，IP报文会被分片，并在对端被重组。如果配置了不能分片，则超过MTU大小的报文会被丢弃。默认情况下，我们将网卡的MTU设置为1500即可，但是如果是 overlay 网络，则需要考虑 overlay 封装的开销，需要在1500bytes的基础上减去开销，比如vxlan的mtu设置为 1450 bytes。
 
 MSS(maximum segment size，最大报文长度)，mss 是 TCP header option 字段的一个配置项，表示tcp可传输的最大 payload，不包括 tcp header，在 tcp 三次握手过程中，双方会通报自己这边的 MSS 大小，并选定一个最小的使用 [stack-mss](https://networkengineering.stackexchange.com/questions/33574/is-mss-negotiated-or-exchanged-during-the-3-way-handshake)。
-![java-javascript](/img/in-post/all-in-one/Mtu.png){:height="60%" width="60%"}
+![java-javascript](/img/in-post/all-in-one/Mtu.png){:height="50%" width="50%"}
 一般来说: `MTU = MSS + 40 (IP header + TCP header)`
 
 ### 通过 netlink 创建网卡
@@ -267,7 +267,7 @@ ip link set veth1 netns <namespace>
 ip link set dev veth1 master br0
 ```
 
-至此，大概梳理了使用 golang 实现网络配置的一些实现细节。
+至此，大概梳理了使用 golang 实现网络配置的一些实现细节，作为实现自定义插件的参考
 
 ### 参考
 
@@ -290,7 +290,7 @@ br0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
 
 [记一次问题排查：为什么在POD无法通过Service访问自己？](https://silenceper.com/blog/202004/bridge-hairpin-mod/)，hairpin-mode 可以在容器内部访问自己，比如在容器内部访问自己的 service，promiscuous 混杂模式也可以。
 
-[浅谈Linux Namespace机制（一）](https://zhuanlan.zhihu.com/p/73248894)提高了linux namespace 机制中三个非常重要的系统调用：fork/setns/unshare，其中 setns 是将当前进程加入到一个新的 namespace 中去，[搞懂容器技术的基石：namespace](https://moelove.info/2021/12/13/%E6%90%9E%E6%87%82%E5%AE%B9%E5%99%A8%E6%8A%80%E6%9C%AF%E7%9A%84%E5%9F%BA%E7%9F%B3-namespace-%E4%B8%8B/#setns2) 中提到，调用 `setns` 系统调用的时候，会导致进程 `/proc/[pid]/ns` 对应的目录中内容发生变化。在我们的常用的linux 工具 `nsenter` 中，通过 strace 工具查看，会发现其也是调用了 setns 系统调用来切换 namespace。
+[浅谈Linux Namespace机制（一）](https://zhuanlan.zhihu.com/p/73248894)提到了linux namespace 机制中三个非常重要的系统调用：fork/setns/unshare，其中 setns 是将当前进程加入到一个新的 namespace 中去，[搞懂容器技术的基石：namespace](https://moelove.info/2021/12/13/%E6%90%9E%E6%87%82%E5%AE%B9%E5%99%A8%E6%8A%80%E6%9C%AF%E7%9A%84%E5%9F%BA%E7%9F%B3-namespace-%E4%B8%8B/#setns2) 中提到，调用 `setns` 系统调用的时候，会导致进程 `/proc/[pid]/ns` 对应的目录中内容发生变化。在我们的常用的linux 工具 `nsenter` 中，通过 strace 工具查看，会发现其也是调用了 setns 系统调用来切换 namespace。
 ```s
 # strace nsenter -t 27242 -i -m -n -p -u /bin/bash
 execve("/usr/bin/nsenter", ["nsenter", "-t", "27242", "-i", "-m", "-n", "-p", "-u", "/bin/bash"], [/* 21 vars */]) = 0
