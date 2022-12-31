@@ -8,8 +8,6 @@ tags:
     - golang
 ---
 
-本文算是读书笔记，读的书是《Go并发编程》
-
 
 #### 通道操作的特性
 通道是在多个goroutine之间传递数据和同步数据的重要手段，而对通道**操作**本身也是**同步**的。在同一时刻，仅有个goroutine能向一个通道发送元素值，同时也仅有一个goroutine能从它那里接收元素值。在通道中，各个元素值都是**严格**按照发送到此的先后顺序排列的，最早被发送至通道的元素会最先被接收。
@@ -66,6 +64,7 @@ func readChan(intChan chan int, wg *sync.WaitGroup) {
 * 发送数据会将数据拷贝到缓冲区，或者正在阻塞的一个goroutine的内存地址
 * 接收方会读取一个副本
 * 发送一定在接收之前，在通道完全复制一个元素值之前，任何goroutine都不可能从它那里接收到这个元素值的副本。
+
 ###### 不带缓冲区的channel
 先来的一方要等后来的一方完成之后才完成。比如，我要写元素，必须要等接收者完成读取之后，我才算写完成。我要读元素，读操作成功必须在写操作成功之后完成。可以认为是同步的吧。
 
@@ -144,7 +143,7 @@ type hchan struct {
 	recvq    waitq  // list of recv waiters
 	sendq    waitq  // list of send waiters
 
-    // 一把大锁
+	// 一把大锁
 	// lock protects all fields in hchan, as well as several
 	// fields in sudogs blocked on this channel.
 	//
@@ -201,3 +200,5 @@ type sudog struct {
 参考：
 
 [图解Go的channel底层实现](https://i6448038.github.io/2019/04/11/go-channel/)
+
+[Go并发编程]
