@@ -29,7 +29,7 @@ type ListOptions struct {
 	TimeoutSeconds *int64 `json:"timeoutSeconds,omitempty" protobuf:"varint,5,opt,name=timeoutSeconds"`
   // 分页时一次response中最多的item数
 	Limit int64 `json:"limit,omitempty" protobuf:"varint,7,opt,name=limit"`
-	// 从server中获取剩下的item，这个字段要跟server返回的continue一致，后者保存在返回结果的ListMeta结构体中
+  // 从server中获取剩下的item，这个字段要跟server返回的continue一致，后者保存在返回结果的ListMeta结构体中
 	Continue string `json:"continue,omitempty" protobuf:"bytes,8,opt,name=continue"`
 }
 ```

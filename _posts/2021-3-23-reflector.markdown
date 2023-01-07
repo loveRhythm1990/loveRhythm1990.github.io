@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "Reflector工作原理"
+title:      "Informer reflector 实现细节"
 date:       2021-3-23 17:31:00
 author:     "weak old dog"
 header-img-credit: false
@@ -126,7 +126,7 @@ func (f *DeltaFIFO) HasSynced() bool {
 func (s *sharedIndexInformer) Run(stopCh <-chan struct{}) {
 	defer utilruntime.HandleCrash()
 
-    // 创建一个Delta队列
+	// 创建一个Delta队列
 	fifo := NewDeltaFIFOWithOptions(DeltaFIFOOptions{
 		KnownObjects:          s.indexer,
 		EmitDeltaTypeReplaced: true,
@@ -147,7 +147,7 @@ func (s *sharedIndexInformer) Run(stopCh <-chan struct{}) {
 	func() {
 		s.startedLock.Lock()
 		defer s.startedLock.Unlock()
-        // 创建controller
+		// 创建controller
 		s.controller = New(cfg)
 		s.controller.(*controller).clock = s.clock
 		s.started = true
@@ -198,8 +198,8 @@ type DeltaFIFO struct {
 
 	// knownObjects list keys that are "known" --- affecting Delete(),
 	// Replace(), and Resync()
-    knownObjects KeyListerGetter
-    // 省略部分字段...
+	knownObjects KeyListerGetter
+	// 省略部分字段...
 }
 
 type Delta struct {
@@ -331,15 +331,15 @@ func (r *Reflector) ListAndWatch(stopCh <-chan struct{}) error {
 	klog.V(3).Infof("Listing and watching %v from %s", r.expectedTypeName, r.name)
 	var resourceVersion string
 
-    // relistResourceVersion决定开始list的版本号，不低于已经存在cache中的版本号
-    // 对于错误码410 Gone的情况（对应版本的数据etcd不存在了），这个方法返回""，表示从最新的版本号开始list
+	// relistResourceVersion决定开始list的版本号，不低于已经存在cache中的版本号
+	// 对于错误码410 Gone的情况（对应版本的数据etcd不存在了），这个方法返回""，表示从最新的版本号开始list
 	options := metav1.ListOptions{ResourceVersion: r.relistResourceVersion()}
 
-    // 这个匿名函数执行List操作
+	// 这个匿名函数执行List操作
 	if err := func() error {
 		initTrace := trace.New("Reflector ListAndWatch", trace.Field{"name", r.name})
 		defer initTrace.LogIfLong(10 * time.Second)
-        // 这个list变量就是List的结果，是一个ListItem类型，需要转换为对应资源的Slice列表
+		// 这个list变量就是List的结果，是一个ListItem类型，需要转换为对应资源的Slice列表
         var list runtime.Object 
 		var paginatedResult bool
 		var err error
@@ -353,8 +353,8 @@ func (r *Reflector) ListAndWatch(stopCh <-chan struct{}) error {
 			}()
 			// 尝试使用分块传输，如果ListWatch不支持，则一次返回所有结果
 			pager := pager.New(pager.SimplePageFunc(func(opts metav1.ListOptions) (runtime.Object, error) {
-                // 使用定制化的listwatcher进行List，可以只list etcd的部分资源
-                return r.listerWatcher.List(opts)
+            	// 使用定制化的listwatcher进行List，可以只list etcd的部分资源
+        		return r.listerWatcher.List(opts)
 			}))
 			switch {
 			case r.WatchListPageSize != 0:
@@ -414,8 +414,8 @@ func (r *Reflector) ListAndWatch(stopCh <-chan struct{}) error {
 		if err != nil {
 			return fmt.Errorf("unable to understand list result %#v (%v)", list, err)
 		}
-        initTrace.Step("Objects extracted")
-        // syncWith调用DeltaFIFO的Replace，用List的结果，替换DeltaFIFO中的内容
+		initTrace.Step("Objects extracted")
+		// syncWith调用DeltaFIFO的Replace，用List的结果，替换DeltaFIFO中的内容
 		if err := r.syncWith(items, resourceVersion); err != nil {
 			return fmt.Errorf("unable to sync list result: %v", err)
 		}
@@ -431,8 +431,8 @@ func (r *Reflector) ListAndWatch(stopCh <-chan struct{}) error {
 	cancelCh := make(chan struct{})
     defer close(cancelCh)
     
-    // 下面是resync goroutine，就是将DeltaFIFO中的引用的knownObjects，（也就是本地缓存cache或者indexer），全部添加到
-    // DeltaFIFO中，并设置事件类型为sync。周期性的。
+	// 下面是resync goroutine，就是将DeltaFIFO中的引用的knownObjects，（也就是本地缓存cache或者indexer），全部添加到
+	// DeltaFIFO中，并设置事件类型为sync。周期性的。
 	go func() {
 		resyncCh, cleanup := r.resyncChan()
 		defer func() {
@@ -458,7 +458,7 @@ func (r *Reflector) ListAndWatch(stopCh <-chan struct{}) error {
 		}
 	}()
 
-    // 这个是watch的循环，只有出错了才返回，返回之后listwatch要重新调用。
+	// 这个是watch的循环，只有出错了才返回，返回之后listwatch要重新调用。
 	for {
 		// give the stopCh a chance to stop the loop, even in case of continue statements further down on errors
 		select {
@@ -481,7 +481,7 @@ func (r *Reflector) ListAndWatch(stopCh <-chan struct{}) error {
 
 		// start the clock before sending the request, since some proxies won't flush headers until after the first watch event is sent
         start := r.clock.Now()
-        // 调用listerWatcher的Watch方法
+		// 调用listerWatcher的Watch方法
 		w, err := r.listerWatcher.Watch(options)
 		if err != nil {
 			// If this is "connection refused" error, it means that most likely apiserver is not responsive.
@@ -495,7 +495,7 @@ func (r *Reflector) ListAndWatch(stopCh <-chan struct{}) error {
 			return err
 		}
 
-        // 这个方法是阻塞式的，从watch接口的watch.Interface结果中，处理返回的事件
+		// 这个方法是阻塞式的，从watch接口的watch.Interface结果中，处理返回的事件
 		if err := r.watchHandler(start, w, &resourceVersion, resyncerrc, stopCh); err != nil {
 			if err != errorStopRequested {
 				switch {
@@ -517,4 +517,4 @@ func (r *Reflector) ListAndWatch(stopCh <-chan struct{}) error {
 
 本文概述了Reflector的工作原理，最后从[Kubernetes源码剖析](https://item.jd.com/12665791.html)中盗一张图：
 
-![java-javascript](/img/in-post/reflector/reflector.jpeg)
+![java-javascript](/img/in-post/reflector/reflector.jpeg){:height="60%" width="60%"}

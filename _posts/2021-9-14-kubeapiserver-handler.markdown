@@ -10,7 +10,7 @@ tags:
 
 之前尝试过很多次去分析 apiserver 的源代码，但是一直没有串起来，感觉这一块很难啃，在家研究了两天之后（多亏**灿都**台风，能在家办公两天），终于有点头绪了。这篇文章主要分析下 apiserver 中各种 handler 的注册流程，最初的诉求就是：*我对某个资源发起了一个请求，这个请求的代码路径是怎么样的？*，比如我 create 一个 pod，代码该怎么跟踪分析。
 
-在[K8s Apiserver 中关于 etcd 关键链路梳理--《Kubernetes 源码剖析》](https://loverhythm1990.github.io/2021/09/13/etcd-in-k8s/)中，介绍了各种资源存储接口的实现，除了个别资源的请求需要定制化以外，一般都是调用的通用 `RegistryStore` 的方法，通用 `RegistryStore` 的代码路径为：**vendor/k8s.io/apiserver/pkg/registry/generic/registry/store.go**。对于各种资源定制化的部分，都按照其 `group` 放在了目录 **pkg/registry/<资源组>/<资源>/storage/storage.go** 中。这些资源的存储接口，其实就是资源的处理函数，只不过在调用这些接口之前，还有很多工作要做。
+在[K8s Apiserver 中关于 etcd 关键链路梳理--《Kubernetes 源码剖析》](https://loverhythm1990.github.io/2021/09/13/etcd-in-k8s/)中，介绍了各种资源存储接口的实现，除了个别资源的请求需要定制化以外，一般都是调用的通用 `RegistryStore` 的方法，通用 `RegistryStore` 的代码路径为：`vendor/k8s.io/apiserver/pkg/registry/generic/registry/store.go`。对于各种资源定制化的部分，都按照其 `group` 放在了目录 `pkg/registry/<资源组>/<资源>/storage/storage.go` 中。这些资源的存储接口，其实就是资源的处理函数，只不过在调用这些接口之前，还有很多工作要做。
 
 本文还是以 Deployment 为例进行分析。Deployment 在 **pkg/registry/apps/rest/storage_apps.go** 文件中定义了存储接口，在 **pkg/registry/apps/rest/storage_apps.go**中定义了各个资源版本的存储接口实现，不同的资源版本有：v1beta1 / v1beta2 / v1 等，以 v1beta1 为例，其定义方式为：
 ```go
@@ -172,4 +172,4 @@ getterWithOptions, isGetterWithOptions := storage.(rest.GetterWithOptions)
 ```
 可以看到，就是对 storage 做了一个类型转换。
 
-总数所述，我们除了关注各种资源的存储接口实现，也要关注目录 **vendor/k8s.io/apiserver/pkg/endpoints/handlers** 目录下面的处理函数。
+综上所述，我们除了关注各种资源的存储接口实现，也要关注目录 **vendor/k8s.io/apiserver/pkg/endpoints/handlers** 目录下面的处理函数。
