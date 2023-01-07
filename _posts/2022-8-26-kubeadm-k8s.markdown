@@ -117,7 +117,7 @@ kubeadm init --pod-network-cidr=10.244.0.0/16
 ```
 没有意外的话，安装成功，kubeadm 安装完成之后，配置的kubeconfig 文件位置为 `/etc/kubernetes/admin.conf`，需要拷贝到 ~/.kube/config。这个时候，node 还是 `NotReady` 状态，因为还没有配置 CNI 网络。
 
-> 这里也介绍下重置 kubeadm 的方式，命令为 `kubeadm reset`，可能需要安装多次。
+> 这里也介绍下重置 kubeadm 的方式，即删除集群，命令为 `kubeadm reset`（需要在每个节点上都执行一遍），可能需要安装多次。
 
 #### 配置 flannel
 flannel 没有特殊配置，使用 host-gw 时，将 backend-type 改为 host-gw 即可，全部的yaml 文件参考文章末尾。
