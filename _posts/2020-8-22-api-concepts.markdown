@@ -16,21 +16,21 @@ ResourceVersion其实是etcd内部的`ModifiedIndex`，是全局唯一且递增�
 先贴一些`ListOptions`的数据结构，后面会介绍部分字段。
 ```go
 type ListOptions struct {
-	TypeMeta `json:",inline"`
-	LabelSelector string `json:"labelSelector,omitempty" protobuf:"bytes,1,opt,name=labelSelector"`
-	FieldSelector string `json:"fieldSelector,omitempty" protobuf:"bytes,2,opt,name=fieldSelector"`
+  TypeMeta `json:",inline"`
+  LabelSelector string `json:"labelSelector,omitempty" protobuf:"bytes,1,opt,name=labelSelector"`
+  FieldSelector string `json:"fieldSelector,omitempty" protobuf:"bytes,2,opt,name=fieldSelector"`
   // 是否是watch请求
-	Watch bool `json:"watch,omitempty" protobuf:"varint,3,opt,name=watch"`
+  Watch bool `json:"watch,omitempty" protobuf:"varint,3,opt,name=watch"`
   // 是否允许server发送BOOKMARK事件，只在watch请求中有效
-	AllowWatchBookmarks bool `json:"allowWatchBookmarks,omitempty" protobuf:"varint,9,opt,name=allowWatchBookmarks"`
+  AllowWatchBookmarks bool `json:"allowWatchBookmarks,omitempty" protobuf:"varint,9,opt,name=allowWatchBookmarks"`
   ResourceVersion string `json:"resourceVersion,omitempty" protobuf:"bytes,4,opt,name=resourceVersion"`
   // v1.19新加的字段，指定resourceVersion的行为
-	ResourceVersionMatch ResourceVersionMatch `json:"resourceVersionMatch,omitempty" protobuf:"bytes,10,opt,name=resourceVersionMatch,casttype=ResourceVersionMatch"`
-	TimeoutSeconds *int64 `json:"timeoutSeconds,omitempty" protobuf:"varint,5,opt,name=timeoutSeconds"`
+  ResourceVersionMatch ResourceVersionMatch `json:"resourceVersionMatch,omitempty" protobuf:"bytes,10,opt,name=resourceVersionMatch,casttype=ResourceVersionMatch"`
+  TimeoutSeconds *int64 `json:"timeoutSeconds,omitempty" protobuf:"varint,5,opt,name=timeoutSeconds"`
   // 分页时一次response中最多的item数
-	Limit int64 `json:"limit,omitempty" protobuf:"varint,7,opt,name=limit"`
+  Limit int64 `json:"limit,omitempty" protobuf:"varint,7,opt,name=limit"`
   // 从server中获取剩下的item，这个字段要跟server返回的continue一致，后者保存在返回结果的ListMeta结构体中
-	Continue string `json:"continue,omitempty" protobuf:"bytes,8,opt,name=continue"`
+  Continue string `json:"continue,omitempty" protobuf:"bytes,8,opt,name=continue"`
 }
 ```
 

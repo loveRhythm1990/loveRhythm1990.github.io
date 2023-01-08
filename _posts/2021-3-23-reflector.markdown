@@ -59,19 +59,19 @@ pvLister := informer.Core().V1().PersistentVolumeClaims().Lister()
 ###### 初始化及启动
 初始化的过程是，通过`SharedInformerFactory`生成特定资源的informer，然后调用这个informer的Run方法，或者直接调用`SharedInformerFactory`的`Start(stopCh <-chan struct{})`方法，但是这里的informer可能由其他的informerFactory生成（在用户定制化informer的情况下），所以这里调用了特定资源的`Run`方法。
  ```go
- 	informer := informers.NewSharedInformerFactory(client, controller.resyncPeriod)
-    controller.claimInformer = informer.Core().V1().PersistentVolumeClaims().Informer()
+	informer := informers.NewSharedInformerFactory(client, controller.resyncPeriod)
+	controller.claimInformer = informer.Core().V1().PersistentVolumeClaims().Informer()
     
-    claimHandler := cache.ResourceEventHandlerFuncs{
+	claimHandler := cache.ResourceEventHandlerFuncs{
 		AddFunc:    func(obj interface{}) { controller.enqueueClaim(obj) },
 		UpdateFunc: func(oldObj, newObj interface{}) { controller.enqueueClaim(newObj) },
 		DeleteFunc: func(obj interface{}) {},
 	}
-    controller.claimInformer.AddEventHandler(claimHandler)
-    
-    if !ctrl.customClaimInformer {
+	controller.claimInformer.AddEventHandler(claimHandler)
+
+	if !ctrl.customClaimInformer {
 		go ctrl.claimInformer.Run(ctx.Done())
-    }
+	}
  ```
 创建InformerFactory时，除了使用使用默认值时，调用`NewSharedInformerFactory`方法（该方法需要指定一个参数`defaultResync`），还有下面两个方法可用，可以对Informer进行定制化，默认情况下`tweakListOptions`参数为nil。
 ```go
@@ -317,14 +317,17 @@ func WithCustomResyncConfig(resyncConfig map[v1.Object]time.Duration) SharedInfo
 **store**
 这里只`reflector`中的store，这个store是`DeltaFIFO`。reflector将事件同步到`DeltaFIFO`中，再通过`Pop`方法进行消费。
 
-然后就是`Reflecor`的主要方法`ListAndWatch`，这个方法是通过`wait.BackoffUntil`来运行的，后者不考虑运行函数的返回值，会一直运行直到channel关闭，不过如果`ListAndWatch`失败了，可以通过`watchErrorHandler`来处理。另外`ListAndWatch`本来就是无限循环的，只有在出错时才退出。
+然后就是`Reflecor`的主要方法`ListAndWatch`，这个方法是通过`wait.Until`来运行的，（此处不通版本的 K8s 运行 reflector 的方式不同，也有通过 wait.BackoffUntil 方法来运行的，思路差不多），其中 `r.period` 默认是 1s，下面运行方式简单总结就是：运行 `ListAndWatch` 方法，如果这个方法因为某种错误返回了，隔1s重新运行，直到 stopCh 关闭。
 ```go
-	wait.BackoffUntil(func() {
+func (r *Reflector) Run(stopCh <-chan struct{}) {
+	wait.Until(func() {
 		if err := r.ListAndWatch(stopCh); err != nil {
-			r.watchErrorHandler(r, err)
+			utilruntime.HandleError(err)
 		}
-	}, r.backoffManager, true, stopCh)
+	}, r.period, stopCh)
+}
 ```
+
 `ListAndWatch`首先从特定的`ResourceVersion`开始List，List之后，拿到最新的`ResourceVersion`然后开始开始watch。
 ```go
 func (r *Reflector) ListAndWatch(stopCh <-chan struct{}) error {
