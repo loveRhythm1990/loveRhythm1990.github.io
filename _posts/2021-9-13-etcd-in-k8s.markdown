@@ -6,13 +6,14 @@ author:     "weak old dog"
 header-img-credit: false
 tags:
     - etcd
+    - k8s
 ---
 
 这两天在家看了一下《Kubernetes 源码剖析》，主要是关于 Apiserver / etcd 的部分，感觉受益颇多，这里整理一下。总的来说，对于特定资源的处理函数我们只需要关注两个文件就可以了。参考下图，以 Deployment 为例，一个是处理文件 `storage.go`，定义了该资源的 `Storage.Interface` 实现，其实一般用的是默认的 `CacherStorage`，只有个别资源的个别操作比较特殊时，才在这个文件中实现。比如，Deployment 的 `storage.go` 中定义了一些对 Deployment Status 的处理，以及对 Deployment 扩缩容的处理等，这个是 Deployment 相对于其他资源比较特殊的地方。
 
 对于 Deployment，另一个需要注意的文件是 `storage_apps.go` 这个文件定义了 Deployment 资源的 REST 接口，在 Kube-Apiserver 启动进行初始化时，这些 REST 都会被注册到 Http server 中。
 
-![java-javascript](/img/in-post/all-in-one/2021-09-14-15-39-20.png){:height="70%" width="70%"}
+![java-javascript](/img/in-post/all-in-one/2021-09-14-15-39-20.png){:height="50%" width="50%"}
 
 关于 Kube-apiserver 底层存储启动，一共有两个：CacherStorage 以及 RawStorage，前者是后者的封装，添加了对读请求的缓存，后者是直接跟 Etcd 打交道。对于特定资源的处理，我们先看 `storage.go` 文件，再来看 `cacher.go` 文件（后面有 cacher.go 文件的路径）。
 
@@ -189,4 +190,4 @@ func (c *Cacher) Get(ctx context.Context, key string, resourceVersion string, ob
 }
 ```
 Etcd 在 Kube-apiserver 中的层次可以参考下图：
-![java-javascript](/img/in-post/all-in-one/etcd-in-k8s.jpeg){:height="60%" width="60%"}
+![java-javascript](/img/in-post/all-in-one/etcd-in-k8s.jpeg){:height="50%" width="50%"}

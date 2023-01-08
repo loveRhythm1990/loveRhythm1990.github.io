@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "Pod 被驱逐了？看看这篇文章"
+title:      "解析 K8s 集群中的 Pod 驱逐机制"
 date:       2022-8-31 10:10:00
 author:     "decent"
 header-img-credit: false
