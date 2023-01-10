@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "关于k8s informer的基本概念与原理"
+title:      "关于 k8s informer 的基本概念与原理"
 date:       2020-02-25 11:50:00
 author:     "weak old dog"
 header-img-credit: false
@@ -11,11 +11,11 @@ tags:
 ### 以SchedulerServer为例
 SchedulerServer初始化了一个PodInformer，并启动、等待同步。查看一下这个标准流程。
 ```go
-	s.PodInformer = factory.NewPodInformer(client, 0),
+s.PodInformer = factory.NewPodInformer(client, 0),
 
-	go s.PodInformer.Informer().Run(stop)
+go s.PodInformer.Informer().Run(stop)
 
-	controller.WaitForCacheSync("scheduler", stop, s.PodInformer.Informer().HasSynced)
+controller.WaitForCacheSync("scheduler", stop, s.PodInformer.Informer().HasSynced)
 ```
 
 #### create

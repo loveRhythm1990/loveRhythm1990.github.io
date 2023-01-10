@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "Informer reflector 实现细节"
+title:      "K8s 中的 Informer reflector 实现细节全解析"
 date:       2021-3-23 17:31:00
 author:     "weak old dog"
 header-img-credit: false
@@ -8,20 +8,20 @@ tags:
     - k8s
 ---
 
-之前在[关于k8s informer的基本概念与原理](https://loverhythm1990.github.io/2020/02/25/informer-basic-scheduler/)中介绍过informer的一些东西，但是没怎么讲清楚，这里再梳理一下知识点。还是以项目[sig-storage-lib-external-provisioner](https://github.com/kubernetes-sigs/sig-storage-lib-external-provisioner)为例，这些项目逻辑比较简单，相对容易分析，下面文中所称的`项目`都指该项目。
+之前在[关于k8s informer的基本概念与原理](https://loverhythm1990.github.io/2020/02/25/informer-basic-scheduler/)中介绍过informer的一些东西，但是没怎么讲清楚，这里再梳理一下知识点。还是以项目[sig-storage-lib-external-provisioner](https://github.com/kubernetes-sigs/sig-storage-lib-external-provisioner)为例，这些项目逻辑比较简单，相对容易分析。
 
 ##### 主体流程
-这里主要是说从声明一个informer，到启动这个informer的过程，这个应该都比较熟悉了。这里再复习一下相关的数据结构，以及它们之间的相互关系。
+这里主要是说从声明一个 informer，到启动这个 informer 的过程，这个应该都比较熟悉了。这里再复习一下相关的数据结构，以及它们之间的相互关系。
 
 ###### 声明
-provisioner项目主要对pvc以及pv感兴趣，所以声明了如下pvc以及pv Informer，另外这里把存放pvc以及pv的本地cache也暴露出来了。
+provisioner 项目主要对 pvc 以及 pv 感兴趣，所以声明了如下 pvc 以及 pv Informer，另外这里把存放 pvc 以及 pv 的本地 cache 也暴露出来了。
 ```go
-	claimInformer  cache.SharedIndexInformer
-	claimsIndexer  cache.Indexer
-	volumeInformer cache.SharedInformer
-	volumes        cache.Store
+claimInformer  cache.SharedIndexInformer
+claimsIndexer  cache.Indexer
+volumeInformer cache.SharedInformer
+volumes        cache.Store
 ```
-我们先看下`SharedIndexInformer`以及`SharedInformer`的定义，前者嵌入了后者，并添加了`AddIndexers`以及`GetIndexer`方法，需要注意的是，添加indexer需要在informer启动之前添加，否则会返回错误。`SharedInformer`的接口定义主要包括添加EventHandler，启动informer等。
+我们先看下`SharedIndexInformer`以及`SharedInformer`的定义，前者嵌入了后者，并添加了`AddIndexers`以及`GetIndexer`方法，需要注意的是，添加 indexer 需要在 informer 启动之前添加，否则会返回错误。`SharedInformer`的接口定义主要包括添加 EventHandler，启动 informer 等。
 ```go
 type SharedIndexInformer interface {
 	SharedInformer
@@ -31,7 +31,7 @@ type SharedIndexInformer interface {
 }
 type SharedInformer interface {
 	AddEventHandler(handler ResourceEventHandler)
-	// 带resync的EventHandler
+	// 带 resync 的 EventHandler
 	AddEventHandlerWithResyncPeriod(handler ResourceEventHandler, resyncPeriod time.Duration)
 	// GetStore returns the informer's local cache as a Store.
 	GetStore() Store
@@ -47,9 +47,9 @@ type SharedInformer interface {
 	SetWatchErrorHandler(handler WatchErrorHandler) error
 }
 ```
-`Store`接口定义了对本地cache的CRUD操作。除了通过`GetStore`接口直接拿到本地cache的操作接口，我们还可以定义一个Lister来对本地cache进行读操作，`Lister`可以通过`labels.Selector`进行选取，也可以通过name获取特定的资源，通过lister获取的资源，必须视为read-only的，否则会修改本地cache，导致跟etcd数据不一致，另外由于本地cache会自动同步，做的修改可能会被同步操作覆盖掉。
+`Store`接口定义了对本地 cache 的 CRUD 操作。除了通过`GetStore`接口直接拿到本地cache的操作接口，我们还可以定义一个 Lister 来对本地 cache 进行读操作，`Lister`可以通过`labels.Selector`进行选取，也可以通过name获取特定的资源，通过 lister 获取的资源，必须视为 read-only 的，否则会修改本地 cache，导致跟etcd 数据不一致，另外由于本地 cache 会自动同步，做的修改可能会被同步操作覆盖掉。
 
-一般来讲，我们不需要通过`Store`接口来对资源进行get/delete操作，通过`Lister`接口足够了。`Store`接口也不支持通过`labels.Selector`来进行选择。K8s的informer机制会自动更新本地cache，一种case是省去自动同步的时延，手动添加到本地cache之后，后续的操作都直接能看到。
+一般来讲，我们不需要通过`Store`接口来对资源进行 get/delete 操作，通过 `Lister` 接口足够了。`Store`接口也不支持通过`labels.Selector`来进行选择。K8s的informer 机制会自动更新本地 cache，(在某些情况下需要手动添加资源到本地cache，这种操作主要是省去 informer 自动同步的时延，手动添加到本地 cache 之后，后续的操作都直接能看到，这里先不考虑这些 case)。
 
 ```go
 //Informer = informer.Core().V1().PersistentVolumeClaims().Informer()
@@ -57,23 +57,23 @@ pvLister := informer.Core().V1().PersistentVolumeClaims().Lister()
 ```
 
 ###### 初始化及启动
-初始化的过程是，通过`SharedInformerFactory`生成特定资源的informer，然后调用这个informer的Run方法，或者直接调用`SharedInformerFactory`的`Start(stopCh <-chan struct{})`方法，但是这里的informer可能由其他的informerFactory生成（在用户定制化informer的情况下），所以这里调用了特定资源的`Run`方法。
+初始化的过程是，通过`SharedInformerFactory`生成特定资源的 informer，然后调用这个 informer 的 Run 方法，或者直接调用`SharedInformerFactory`的`Start(stopCh <-chan struct{})`方法，但是这里的 informer 可能由其他的 informerFactory 生成（在用户定制化 informer 的情况下），所以这里调用了特定资源的`Run`方法。
  ```go
-	informer := informers.NewSharedInformerFactory(client, controller.resyncPeriod)
-	controller.claimInformer = informer.Core().V1().PersistentVolumeClaims().Informer()
-    
-	claimHandler := cache.ResourceEventHandlerFuncs{
-		AddFunc:    func(obj interface{}) { controller.enqueueClaim(obj) },
-		UpdateFunc: func(oldObj, newObj interface{}) { controller.enqueueClaim(newObj) },
-		DeleteFunc: func(obj interface{}) {},
-	}
-	controller.claimInformer.AddEventHandler(claimHandler)
+informer := informers.NewSharedInformerFactory(client, controller.resyncPeriod)
+controller.claimInformer = informer.Core().V1().PersistentVolumeClaims().Informer()
 
-	if !ctrl.customClaimInformer {
-		go ctrl.claimInformer.Run(ctx.Done())
-	}
+claimHandler := cache.ResourceEventHandlerFuncs{
+	AddFunc:    func(obj interface{}) { controller.enqueueClaim(obj) },
+	UpdateFunc: func(oldObj, newObj interface{}) { controller.enqueueClaim(newObj) },
+	DeleteFunc: func(obj interface{}) {},
+}
+controller.claimInformer.AddEventHandler(claimHandler)
+
+if !ctrl.customClaimInformer {
+	go ctrl.claimInformer.Run(ctx.Done())
+}
  ```
-创建InformerFactory时，除了使用使用默认值时，调用`NewSharedInformerFactory`方法（该方法需要指定一个参数`defaultResync`），还有下面两个方法可用，可以对Informer进行定制化，默认情况下`tweakListOptions`参数为nil。
+创建 InformerFactory 时，除了使用使用默认值时，调用`NewSharedInformerFactory`方法（该方法需要指定一个参数`defaultResync`），还有下面两个方法可用，可以对 Informer 进行定制化，默认情况下`tweakListOptions`参数为 nil。
 ```go
 func NewFilteredSharedInformerFactory(client kubernetes.Interface, defaultResync time.Duration, namespace string, tweakListOptions internalinterfaces.TweakListOptionsFunc) SharedInformerFactory {
 	return NewSharedInformerFactoryWithOptions(client, defaultResync, WithNamespace(namespace), WithTweakListOptions(tweakListOptions))
@@ -98,19 +98,19 @@ func NewSharedInformerFactoryWithOptions(client kubernetes.Interface, defaultRes
 }
 ```
 
-###### 等待同步及启动worker goroutine
- `WaitForCacheSync`是每个informerFactory以及informer启动后都要做的事，根据注释，其含义是等待本地cache至少进行一次`FULL LIST`操作。
+###### 等待同步及启动 worker goroutine
+ `WaitForCacheSync`是每个 informerFactory 以及 informer 启动后都要做的事，根据注释，其含义是等待本地 cache 至少进行一次`FULL LIST`操作。
 
  ```go
-    if !cache.WaitForCacheSync(ctx.Done(), ctrl.claimInformer.HasSynced, ctrl.volumeInformer.HasSynced, ctrl.classInformer.HasSynced) {
-        return
-    }
+if !cache.WaitForCacheSync(ctx.Done(), ctrl.claimInformer.HasSynced, ctrl.volumeInformer.HasSynced, ctrl.classInformer.HasSynced) {
+	return
+}
 
-    for i := 0; i < ctrl.threadiness; i++ {
-		go wait.Until(func() { ctrl.runClaimWorker(ctx) }, time.Second, ctx.Done())
-    }
+for i := 0; i < ctrl.threadiness; i++ {
+	go wait.Until(func() { ctrl.runClaimWorker(ctx) }, time.Second, ctx.Done())
+}
  ```
-`WaitForCacheSync`底层的实现查看Reflector的`pupulated`以及`initialPopulationCount`字段，下面有解释，概括来讲，就是将Reflector的List的操作结果都放到DeltaFifo队列里了，并且又被DeltaFIFO的Pop方法消费了（每调用一次pop，`initialPopulationCount`值就减1），Pop消费的方式之一就是添加到本地cache中。具体实现如下：
+`WaitForCacheSync`底层的实现查看 Reflector 的`pupulated`以及`initialPopulationCount`字段，下面有解释，概括来讲，就是将 Reflector 的 List 的操作结果都放到DeltaFifo队列里了，并且又被 DeltaFIFO 的 Pop 方法消费了（每调用一次 pop，`initialPopulationCount`值就减1），Pop 消费的方式之一就是添加到本地 cache 中。具体实现如下：
 ```go
 func (f *DeltaFIFO) HasSynced() bool {
 	f.lock.Lock()
@@ -118,15 +118,15 @@ func (f *DeltaFIFO) HasSynced() bool {
 	return f.populated && f.initialPopulationCount == 0
 }
 ```
-另一个问题是，为什么启动Controller之前要先等待缓存同步，一个比较容易想到的原因是，本地cache作为etcd的缓存，应该跟etcd保持一致，如果没有等到cache同步，List的结果或者Get结果有可能现象不一致，比如etcd有，但是本地没有。这个可以参考下[A deep dive into Kubernetes controllers](https://engineering.bitnami.com/articles/a-deep-dive-into-kubernetes-controllers.html)，这个文章我还没看，有可能有出入。
+另一个问题是，为什么启动 Controller 之前要先等待缓存同步，一个比较容易想到的原因是，本地 cache 作为 etcd 的缓存，应该跟 etcd 保持一致，如果没有等到 cache同步，List 的结果或者 Get 结果有可能现象不一致，比如 etcd 有，但是本地没有。这个可以参考下[A deep dive into Kubernetes controllers](https://engineering.bitnami.com/articles/a-deep-dive-into-kubernetes-controllers.html)，这个文章我还没看，有可能有出入。
 
-##### Reflector工作原理
-在上一小节中，启动informer用的是`claimInformer.Run`方法，这个方法创建一个informer机制中的`controller`，并在运行此controller的时候创建一个`reflector`并运行。`Run`方法如下：
+##### Reflector 工作原理
+在上一小节中，启动informer用的是`claimInformer.Run`方法，这个方法创建一个 informer 机制中的`controller`，并在运行此 controller 的时候创建一个`reflector`并运行。`Run`方法如下：
 ```go
 func (s *sharedIndexInformer) Run(stopCh <-chan struct{}) {
 	defer utilruntime.HandleCrash()
 
-	// 创建一个Delta队列
+	// 创建一个Delta队列，KnownObjects 是本地缓存的 ListKeys 以及 GetByKey 方法
 	fifo := NewDeltaFIFOWithOptions(DeltaFIFOOptions{
 		KnownObjects:          s.indexer,
 		EmitDeltaTypeReplaced: true,
@@ -169,14 +169,12 @@ func (s *sharedIndexInformer) Run(stopCh <-chan struct{}) {
 	s.controller.Run(stopCh)
 }
 ```
-###### DeltaFIFO队列
-`DeltaFIFO`首先是一个FIFO队列，其主要字段是`items`和`queue`，`items`存放元素的key以及事件列表，事件列表`Deltas`也是一个一个Slice，也是有序的。比如：
+###### DeltaFIFO 队列
+`DeltaFIFO`首先是一个 FIFO 队列，其主要字段是 `items` 和 `queue`，其定义如下：
+* `items`: 是一个 map 结构，其 key 为特定 object 的 Key，value 为这个 object 的事件列表，特定 object 的事件列表 `Deltas` 是一个 Slice，是有序的。但是 items 因为是一个 map 结构，所以是无序的。items 的定义可以参考 `default/pod1: update/update/delete`，表示 default namespace 的 pod1 有三个事件，分别为 update、update、delete。
+* `queue`: 是一个 slice 结构，queue 存在的意义主要是 items 是无序的，为了维护不同 object 事件发生的先后循序，使用了一个 slice 结构。另外需要注意的是，`queue` 字段中不包含重复的元素，在 append 这个Slice的时候，先检查`items`是否有该元素（遍历 queue 检查），如果没有再进行 append，也就是下面注释中说的，`items`与`queue`是1：1映射的，他们的元素个数总是相等的。
 
-`default/pod1: update/update/delete`
-
-另外需要注意的是，`queue`字段中不包含重复的元素，在append这个Slice的时候，先检查`items`是否有该元素，如果没有再进行append，也就是下面注释中说的，`items`与`queue`是1：1映射的。
-
-关于`populated`字段，只要调用过DeltaFIFO的`Delete`或者`Add`或者`Update`等方法，这个字段就是被设置为true。Reflactor的WatchHander是DeltaFIFO的生产者，会调用上面几个CRUD方法往DeltaFIFO里填数据。
+关于 `populated` 字段，只要调用过DeltaFIFO的`Delete`或者`Add`或者`Update`等方法，这个字段就是被设置为 true。Reflactor 的 WatchHander 是 DeltaFIFO 的生产者，会调用上面几个 CRUD 方法往 DeltaFIFO 里填数据。
 
 `initialPopulationCount`字段是第一次调用Replace时，往Delta里填充的资源个数。每次调用DeltaFIFO的`Pop`方法消费资源时，这个数值就会减一。
 
@@ -202,22 +200,56 @@ type DeltaFIFO struct {
 	// 省略部分字段...
 }
 
+// 一个 Delta 表示一个事件
 type Delta struct {
 	Type   DeltaType
 	Object interface{}
 }
 
-// Deltas is a list of one or more 'Delta's to an individual object.
-// The oldest delta is at index 0, the newest delta is the last one.
+// Deltas 是某个特定 object 的时间列表，这个也是有序的，最老的的事件在 index 0 的位置
 type Deltas []Delta
 ```
 
 ###### controller
-controller不介绍了，比较容易理解，就是启动reflector，并消费DeltaFIFO的资源，一方面触发EventHandler，另一方面放到本地cache中。
+controller 不介绍了，比较容易理解，就是启动 reflector，并消费 DeltaFIFO 的资源，一方面触发 EventHandler，另一方面放到本地cache中。
 
-这里可以说一下Pop消费Delta的方式，因为DeltaFIFO中一个资源可以有多个事件，这个事件列表放在`items map[string]Deltas`中，每次调用Pop弹出元素的时候，每次弹出的都是一个事件列表，然后在`(s *sharedIndexInformer) HandleDeltas(obj interface{}) error`方法中，对每个事件都进行一次分发。
+这里可以说一下Pop消费Delta的方式，因为DeltaFIFO中一个资源可以有多个事件，这个事件列表放在`items map[string]Deltas`中，每次调用Pop弹出元素的时候，每次弹出的都是一个事件列表，然后在`(s *sharedIndexInformer) HandleDeltas(obj interface{}) error`方法中，对每个事件都进行一次分发。下面是 HandleDeltas代码，可以看出其有两个任务：1）更新或者删除本地 cache，2）分发事件。
+```go
+func (s *sharedIndexInformer) HandleDeltas(obj interface{}) error {
+	s.blockDeltas.Lock()
+	defer s.blockDeltas.Unlock()
 
-###### reflector
+	// from oldest to newest
+	for _, d := range obj.(Deltas) {
+		switch d.Type {
+		case Sync, Added, Updated:
+			isSync := d.Type == Sync
+			s.cacheMutationDetector.AddObject(d.Object)
+			if old, exists, err := s.indexer.Get(d.Object); err == nil && exists {
+				if err := s.indexer.Update(d.Object); err != nil {
+					return err
+				}
+				// sync 会被当成 update 事件 
+				s.processor.distribute(updateNotification{oldObj: old, newObj: d.Object}, isSync)
+			} else {
+				if err := s.indexer.Add(d.Object); err != nil {
+					return err
+				}
+				// 如果本地 cache 没有，那就是 add 事件
+				s.processor.distribute(addNotification{newObj: d.Object}, isSync)
+			}
+		case Deleted:
+			if err := s.indexer.Delete(d.Object); err != nil {
+				return err
+			}
+			s.processor.distribute(deleteNotification{oldObj: d.Object}, false)
+		}
+	}
+	return nil
+}
+```
+
+###### reflector 运行框架
 在看`reflector`工作原理之前，先看一下`reflector`的一些参数配置。其创建代码在`controller`的Run方法中，
 ```go
 func (c *controller) Run(stopCh <-chan struct{}) {
@@ -229,6 +261,7 @@ func (c *controller) Run(stopCh <-chan struct{}) {
 	r := NewReflector(
 		c.config.ListerWatcher,
 		c.config.ObjectType,
+		// reflector 的 store 是 DeltaFIFO 
 		c.config.Queue,
 		c.config.FullResyncPeriod,
 	)
@@ -254,7 +287,7 @@ func (c *controller) Run(stopCh <-chan struct{}) {
 
 **ListerWatcher**
 
-我们在启动PVC Informer的时候，并没有指定`ListerWatcher`，那我们看一下默认值是怎么构建的。我们创建informer时，使用的方法为：`claimInformer = informer.Core().V1().PersistentVolumeClaims().Informer()`
+我们在启动 PVC Informer 的时候，并没有指定 `ListerWatcher`，那我们看一下默认值是怎么构建的。我们创建 informer 时，使用的方法为：`claimInformer = informer.Core().V1().PersistentVolumeClaims().Informer()`
 其最终调用的方法为`NewFilteredPersistentVolumeClaimInformer`，代码路径为：`client-go/informers/core/v1/persistentvolumeclaim.go`，其中`tweakListOptions`在创建factory时没有指定，默认为nil。
 
 ```go
@@ -284,11 +317,11 @@ func NewFilteredPersistentVolumeClaimInformer(client kubernetes.Interface, names
 
 **resyncPeriod**
 
-这个参数还是得从Factory的创建说起，我们在创建时指定了一个参数`defaultResync time.Duration`，这个参数最终被赋值给了`sharedInformerFactory`的`defaultResync`字段。
+这个参数还是得从 Factory 的创建说起，我们在创建时指定了一个参数`defaultResync time.Duration`，这个参数最终被赋值给了`sharedInformerFactory`的`defaultResync`字段。
 ```go
 informer := informers.NewSharedInformerFactory(client, controller.resyncPeriod)
 ```
-然后当我们使用`sharedInformerFactory`的方法`InformerFor`为特定资源创建Informer的时候，先检查有没有为该种资源定制化同步时间，没有定制化，就使用factory的`defaultResync`方法，定制化是使用装饰器方法，如下：
+然后当我们使用 `sharedInformerFactory` 的方法 `InformerFor` 为特定资源创建Informer的时候，先检查有没有为该种资源定制化同步时间，没有定制化，就使用factory的`defaultResync`方法，定制化是使用装饰器方法，如下：
 ```go
 func WithCustomResyncConfig(resyncConfig map[v1.Object]time.Duration) SharedInformerOption {
 	return func(factory *sharedInformerFactory) *sharedInformerFactory {
@@ -301,21 +334,38 @@ func WithCustomResyncConfig(resyncConfig map[v1.Object]time.Duration) SharedInfo
 ```
 此方法跟`WithTweakListOptions`方法使用方式一致。上面提到了在创建`sharedInformerFactory`时，将`resyncPeriod`传递给了`resyncCheckPeriod`，这个参数在创建配置`controller`以及`Reflactor`的config时，再次被赋值给了`Config`的`FullResyncPeriod`，这个参数被传递了多次，还每次都重新起个名字，很绕。
 ```go
-	cfg := &Config{
-		Queue:            fifo,
-		ListerWatcher:    s.listerWatcher,
-		ObjectType:       s.objectType,
-		FullResyncPeriod: s.resyncCheckPeriod,
-		RetryOnError:     false,
-		ShouldResync:     s.processor.shouldResync,
+cfg := &Config{
+	Queue:            fifo,
+	ListerWatcher:    s.listerWatcher,
+	ObjectType:       s.objectType,
+	FullResyncPeriod: s.resyncCheckPeriod,
+	RetryOnError:     false,
+	ShouldResync:     s.processor.shouldResync,
 
-		Process:           s.HandleDeltas,
-		WatchErrorHandler: s.watchErrorHandler,
-	}
+	Process:           s.HandleDeltas,
+	WatchErrorHandler: s.watchErrorHandler,
+}
+```
+
+这个 resync 的作用通过 knownobjects 把本地缓存的所有数据都拿出来，并触发一个 `Sync` 事件，这个 `Sync` 事件最终反映到我们的事件处理器中，是一个 update 事件，因为 Sync 是定时触发的，并不是事件驱动，所以很有可能我们收到这个 update 事件之后，什么都不需要做，在 reconcile 逻辑中，current 跟 expect 是匹配的。下面是 Sync 的定义，通过定义我们也可以看到 Sync 触发的两种情况：
+* 调用全量 list 之后，因为第一次全量 list 之后要调用 replace 方法，而 replace 方法中，对所有 list 到的所有最新资源，都触发一个 Sync 事件。
+* 定期的 reync。这个就是把 knownobjects 全部拿出来，触发一个 sync 事件。
+
+```go
+const (
+	Added   DeltaType = "Added"
+	Updated DeltaType = "Updated"
+	Deleted DeltaType = "Deleted"
+	// The other types are obvious. You'll get Sync deltas when:
+	//  * A watch expires/errors out and a new list/watch cycle is started.
+	//  * You've turned on periodic syncs.
+	// (Anything that trigger's DeltaFIFO's Replace() method.)
+	Sync DeltaType = "Sync"
+)
 ```
 
 **store**
-这里只`reflector`中的store，这个store是`DeltaFIFO`。reflector将事件同步到`DeltaFIFO`中，再通过`Pop`方法进行消费。
+这里指 `reflector` 中的 store，这个 store 是 `DeltaFIFO`。reflector将事件同步到`DeltaFIFO`中，再通过`Pop`方法进行消费。
 
 然后就是`Reflecor`的主要方法`ListAndWatch`，这个方法是通过`wait.Until`来运行的，（此处不通版本的 K8s 运行 reflector 的方式不同，也有通过 wait.BackoffUntil 方法来运行的，思路差不多），其中 `r.period` 默认是 1s，下面运行方式简单总结就是：运行 `ListAndWatch` 方法，如果这个方法因为某种错误返回了，隔1s重新运行，直到 stopCh 关闭。
 ```go
@@ -328,7 +378,8 @@ func (r *Reflector) Run(stopCh <-chan struct{}) {
 }
 ```
 
-`ListAndWatch`首先从特定的`ResourceVersion`开始List，List之后，拿到最新的`ResourceVersion`然后开始开始watch。
+`ListAndWatch`首先从特定的`ResourceVersion`开始List，List之后，拿到最新的`ResourceVersion`然后开始开始watch。下面是 `ListAndWatch` 的整体框架。整体思路就是: 全量 list 一遍，然后基于 list 返回的 resourceVersion 开始 watch，在 watchHandler 中进行相应的事件生产（放到 DeltaFIFO 的 item 队列中），同时事件生产的时候，也要更新最新的 resourceVersion。
+
 ```go
 func (r *Reflector) ListAndWatch(stopCh <-chan struct{}) error {
 	klog.V(3).Infof("Listing and watching %v from %s", r.expectedTypeName, r.name)
@@ -370,12 +421,6 @@ func (r *Reflector) ListAndWatch(stopCh <-chan struct{}) error {
 			list, paginatedResult, err = pager.List(context.Background(), options)
 			if isExpiredError(err) || isTooLargeResourceVersionError(err) {
 				r.setIsLastSyncResourceVersionUnavailable(true)
-				// Retry immediately if the resource version used to list is unavailable.
-				// The pager already falls back to full list if paginated list calls fail due to an "Expired" error on
-				// continuation pages, but the pager might not be enabled, the full list might fail because the
-				// resource version it is listing at is expired or the cache may not yet be synced to the provided
-				// resource version. So we need to fallback to resourceVersion="" in all to recover and ensure
-				// the reflector makes forward progress.
 				list, paginatedResult, err = pager.List(context.Background(), metav1.ListOptions{ResourceVersion: r.relistResourceVersion()})
 			}
 			close(listCh)
@@ -390,17 +435,6 @@ func (r *Reflector) ListAndWatch(stopCh <-chan struct{}) error {
 		if err != nil {
 			return fmt.Errorf("failed to list %v: %v", r.expectedTypeName, err)
 		}
-
-		// We check if the list was paginated and if so set the paginatedResult based on that.
-		// However, we want to do that only for the initial list (which is the only case
-		// when we set ResourceVersion="0"). The reasoning behind it is that later, in some
-		// situations we may force listing directly from etcd (by setting ResourceVersion="")
-		// which will return paginated result, even if watch cache is enabled. However, in
-		// that case, we still want to prefer sending requests to watch cache if possible.
-		//
-		// Paginated result returned for request with ResourceVersion="0" mean that watch
-		// cache is disabled and there are a lot of objects of a given type. In such case,
-		// there is no need to prefer listing from watch cache.
 		if options.ResourceVersion == "0" && paginatedResult {
 			r.paginatedResult = true
 		}

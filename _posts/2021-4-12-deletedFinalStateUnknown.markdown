@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "事件处理中的DeletedFinalStateUnknown是什么"
+title:      "事件处理中的 DeletedFinalStateUnknown 是什么"
 date:       2021-4-12 10:10:00
 author:     "weak old dog"
 header-img-credit: false
@@ -8,66 +8,47 @@ tags:
     - k8s
 ---
 
-我们在k8s中处理delete事件时，有可能传入的资源并不是我们期望的资源，而是一个`DeletedFinalStateUnknown`，以`sig-storage-local-static-provisioner`项目为例，处理pv事件的方法如下，可以看到在处理delete事件时，如果类型断言不成功，需要看一下是不是`cache.DeletedFinalStateUnknown`类型。
+我们在 K8s 中处理 delete 事件时，有可能传入的资源并不是我们所关注的资源，而是一个 `DeletedFinalStateUnknown`，以`sig-storage-local-static-provisioner` 项目为例，处理 pv 事件的方法如下，可以看到在处理 delete 事件时，如果类型断言不成功，需要看一下是不是`cache.DeletedFinalStateUnknown`类型。
 ```go
-	sharedInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: func(obj interface{}) {
-			pv, ok := obj.(*v1.PersistentVolume)
+sharedInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+	AddFunc: func(obj interface{}) {
+		// handle add 
+	},
+	UpdateFunc: func(oldObj, newObj interface{}) {
+		// handle update		
+	},
+	DeleteFunc: func(obj interface{}) {
+		pv, ok := obj.(*v1.PersistentVolume)
+		if !ok {
+			klog.Warningf("Deleted object is not a v1.PersistentVolume type")
+			// When a delete is dropped, the relist will notice a pv in the local cache but not
+			// in the list, leading to the insertion of a tombstone object which contains
+			// the deleted pv.
+			tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
 			if !ok {
-				klog.Errorf("Added object is not a v1.PersistentVolume type")
+				klog.Errorf("Unknown object type in delete event %+v", obj)
 				return
 			}
-			p.handlePVUpdate(pv)
-		},
-		UpdateFunc: func(oldObj, newObj interface{}) {
-			newPV, ok := newObj.(*v1.PersistentVolume)
+			pv, ok = tombstone.Obj.(*v1.PersistentVolume)
 			if !ok {
-				klog.Errorf("Updated object is not a v1.PersistentVolume type")
+				klog.Errorf("Tombstone contained object is not a v1.PersistentVolume %+v", obj)
 				return
 			}
-			p.handlePVUpdate(newPV)
-		},
-		DeleteFunc: func(obj interface{}) {
-			pv, ok := obj.(*v1.PersistentVolume)
-			if !ok {
-				klog.Warningf("Deleted object is not a v1.PersistentVolume type")
-
-				// When a delete is dropped, the relist will notice a pv in the local cache but not
-				// in the list, leading to the insertion of a tombstone object which contains
-				// the deleted pv.
-				tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
-				if !ok {
-					klog.Errorf("Unknown object type in delete event %+v", obj)
-					return
-				}
-				pv, ok = tombstone.Obj.(*v1.PersistentVolume)
-				if !ok {
-					klog.Errorf("Tombstone contained object is not a v1.PersistentVolume %+v", obj)
-					return
-				}
-			}
-			p.handlePVDelete(pv)
-		},
-	})
+		}
+		// 仍然要处理删除事件
+		p.handlePVDelete(pv)
+	},
+})
 ```
 
-根据注释，这个是Reflector的ListWatch在发送Relist的时候（这里的relist其实就是wait循环里重新调用了一次listwatch方法），发现最新list的的对象没有这个object，但是本地cache里却有这个object，也就是本地cache比etcd多出来一些资源。那对于多出来的资源，就会被Reflector以`DeletedFinalStateUnknown`的形式添加到Reflector的DeltaFIFO队列中，并将事件类型标记为`Deleted`表示这个资源从etcd中删除了。如下：
+根据注释，这个是 Reflector 的 ListWatch 在发送Relist的时候（这里的 relist 其实就是 reflector 在 wait 循环里重新调用了一次 list 方法），发现最新 list的对象没有这个 object，但是本地 cache 里却有这个 object，也就是本地 cache 比 etcd 多出来一些资源。那对于多出来的资源，就会被 Reflector 以`DeletedFinalStateUnknown` 的形式添加到 Reflector 的 DeltaFIFO 队列中，并将事件类型标记为 `Deleted` 表示这个资源从etcd中删除了。Replace 代码如下：
 ```go
 func (f *DeltaFIFO) Replace(list []interface{}, resourceVersion string) error {
 	f.lock.Lock()
 	defer f.lock.Unlock()
 	keys := make(sets.String, len(list))
-
-	for _, item := range list {
-		key, err := f.KeyOf(item)
-		if err != nil {
-			return KeyError{item, err}
-		}
-		keys.Insert(key)
-		if err := f.queueActionLocked(Sync, item); err != nil {
-			return fmt.Errorf("couldn't enqueue object: %v", err)
-		}
-	}
+	
+	// 省去其他代码... 
 
 	if f.knownObjects == nil {
 		// Do deletion detection against our own list.
@@ -81,19 +62,11 @@ func (f *DeltaFIFO) Replace(list []interface{}, resourceVersion string) error {
 				deletedObj = n.Object
 			}
             queuedDeletions++
-            // 添加DeletedFinalStateUnknown
+			// 添加DeletedFinalStateUnknown
 			if err := f.queueActionLocked(Deleted, DeletedFinalStateUnknown{k, deletedObj}); err != nil {
 				return err
 			}
 		}
-
-		if !f.populated {
-			f.populated = true
-			// While there shouldn't be any queued deletions in the initial
-			// population of the queue, it's better to be on the safe side.
-			f.initialPopulationCount = len(list) + queuedDeletions
-		}
-
 		return nil
 	}
 
@@ -114,38 +87,30 @@ func (f *DeltaFIFO) Replace(list []interface{}, resourceVersion string) error {
 			klog.Infof("Key %v does not exist in known objects store, placing DeleteFinalStateUnknown marker without object", k)
 		}
         queuedDeletions++
-        // 添加DeletedFinalStateUnknown
+		// 添加DeletedFinalStateUnknown
 		if err := f.queueActionLocked(Deleted, DeletedFinalStateUnknown{k, deletedObj}); err != nil {
 			return err
 		}
 	}
-
-	if !f.populated {
-		f.populated = true
-		f.initialPopulationCount = len(list) + queuedDeletions
-	}
-
 	return nil
 }
 ```
 
+`Replace` 的代码其实包含两种 case：
+1. knownObjects 为 nil 时只从 reflector 的 item 队列里查看 object 存不存在，knownObject 是获取本地 cache 中资源的方法，（即 indexer 的 ListKeys 以及 GetByKey 方法），一般情况下 knowObjects 是不为空的（从 informer 初始化的情况看也是这样），毕竟 reflector 的主要任务就是更新本地 cache，knownObjects 为 nil 的case 可能是为了测试考虑，ut 中会出现这种 case。
+2. knownObjects 不为 nil 的情况，正常情况，查看本地 cache 中是否存在 object。
+
+DeletedFinalStateUnknown 这个资源只有在 `Replace` 这个方法中才会被添加，而 `Replace` 被调用的时机就是在进行全量 list 之后。第一次 list 时本地 cache 是空的，是不会有这个资源的，只有在 relist 时才会发生。
+
 这其实是一种事件丢失的补救手段，那为什么会发生事件丢失呢？或者为什么会发生relist呢？关于后者，我们只要看下Reflector的方法`ListAndWatch`什么情况下会退出就好了，只要`ListAndWatch`退出了，下次执行时又要重新list一下。
 
-一种情况是watch开始的resourceVersion太小了，server端已经不存在对应记录了，etcd只保存最近5分钟的事件，5分钟之前的resourceVersion都没有了。
+一种情况是 watch 开始的 resourceVersion 太小了，server端已经不存在对应记录了，etcd只保存最近5分钟的事件，5分钟之前的resourceVersion都没有了。
 ```s
 W0224 15:34:39.762384       1 reflector.go:302] k8s.io/client-go/informers/factory.go:133: watch of *v1.PersistentVolume ended with: too old resource version: 8834140265 (8835125434)
 W0224 15:58:56.777447       1 reflector.go:302] k8s.io/client-go/informers/factory.go:133: watch of *v1.PersistentVolume ended with: too old resource version: 8835256883 (8835485735)
 W0224 16:19:23.792176       1 reflector.go:302] k8s.io/client-go/informers/factory.go:133: watch of *v1.PersistentVolume ended with: too old resource version: 8835949058 (8836034791)
 W0224 17:26:53.822864       1 reflector.go:302] k8s.io/client-go/informers/factory.go:133: watch of *v1.PersistentVolume ended with: too old resource version: 8836528786 (8837627927)
 W0224 17:54:32.840258       1 reflector.go:302] k8s.io/client-go/informers/factory.go:133: watch of *v1.PersistentVolume ended with: too old resource version: 8838377648 (8838666047)
-W0224 18:30:22.869686       1 reflector.go:302] k8s.io/client-go/informers/factory.go:133: watch of *v1.PersistentVolume ended with: too old resource version: 8839212626 (8839715876)
-W0224 19:43:27.892497       1 reflector.go:302] k8s.io/client-go/informers/factory.go:133: watch of *v1.PersistentVolume ended with: too old resource version: 8840261219 (8840346479)
-W0224 20:37:03.911906       1 reflector.go:302] k8s.io/client-go/informers/factory.go:133: watch of *v1.PersistentVolume ended with: too old resource version: 8842315974 (8843140207)
-W0225 00:50:28.968473       1 reflector.go:302] k8s.io/client-go/informers/factory.go:133: watch of *v1.PersistentVolume ended with: too old resource version: 8843776515 (8845226552)
-W0225 06:15:01.029696       1 reflector.go:302] k8s.io/client-go/informers/factory.go:133: watch of *v1.PersistentVolume ended with: too old resource version: 8851020613 (8853640366)
-W0225 14:50:39.121279       1 reflector.go:302] k8s.io/client-go/informers/factory.go:133: watch of *v1.PersistentVolume ended with: too old resource version: 8860108671 (8873871992)
-W0225 15:20:18.137869       1 reflector.go:302] k8s.io/client-go/informers/factory.go:133: watch of *v1.PersistentVolume ended with: too old resource version: 8874885161 (8875025595)
-W0225 15:39:37.158988       1 reflector.go:302] k8s.io/client-go/informers/factory.go:133: watch of *v1.PersistentVolume ended with: too old resource version: 8875623516 (8876042631)
 ```
 
 另外，watch请求也有超时时间，如果watch请求一段时间内没有收到事件，这个watch也会断开。下面的`TimeoutSeconds`默认设置是5到10分钟。
