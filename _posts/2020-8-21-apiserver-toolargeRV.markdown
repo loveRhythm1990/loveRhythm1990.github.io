@@ -20,8 +20,8 @@ E0513 19:46:05.473007     598 reflector.go:178] object-"kube-system"/"default-to
 
 ### Apiserver 缓存层
 在 kube-apiserver 的设计中，存在一个存储层，所有资源的 RESTful 请求都会传递到这个存储层进行处理，这个存储层的通用定义是 `Storage.Interface`，位于代码文件`kubernetes/staging/src/k8s.io/apiserver/pkg/storage/interfaces.go`中。其代码定义在下面。这个接口的实现有两个：
-* UnderlyingStorage：对 etcd 的直接封装，将 etcd 作为存储层，这个封装是不带缓存的，所有的 crud 操作都是直接操作的 etcd。
-* CacherStorage: 带缓存的存储层，这个是对 UnderlyingStorage 的封装，对于一些读操作，比如get/list 等，如果对数据的一致性要求不高（resourceVersion不为空，设置为0，或者设置为了特定值），可以从缓存中读取，避免请求 etcd。这个 CacheStorage 的实现是一个 Cache 结构体，在`kubernetes/staging/src/k8s.io/apiserver/pkg/storage/cacher/cacher.go`文件中。
+* underlyingStorage (rawStorage)：对 etcd 的直接封装，将 etcd 作为存储层，这个封装是不带缓存的，所有的 crud 操作都是直接操作的 etcd。
+* cacherStorage: 带缓存的存储层，这个是对 UnderlyingStorage 的封装，对于一些读操作，比如get/list 等，如果对数据的一致性要求不高（resourceVersion不为空，设置为0，或者设置为了特定值），可以从缓存中读取，避免请求 etcd。这个 CacheStorage 的实现是一个 Cache 结构体，在`kubernetes/staging/src/k8s.io/apiserver/pkg/storage/cacher/cacher.go`文件中。
 
 ```go
 type Interface interface {

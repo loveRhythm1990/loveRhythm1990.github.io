@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "使用 kubeadm 部署 Kubernetes"
+title:      "使用 kubeadm 部署一个 Kubernetes 集群"
 date:       2022-8-26 10:10:00
 author:     "decent"
 header-img-credit: false
@@ -8,7 +8,7 @@ tags:
     - k8s
 ---
 
-这里使用 kubeadm 部署下 kubernetes，并配置 flannel 网络模型为 `host-gw`。kubeadm 的官方文档为[Creating a cluster with kubeadm](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/)，这个文档还没好好研究，这里重点不是 kubeadm 的使用，使用 kubeadm 部署 kubenetes 细节很多。
+这里使用 kubeadm 部署下 kubernetes，并配置 flannel 网络模型为 `host-gw`。kubeadm 的官方文档为 [Creating a cluster with kubeadm](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/)，这个文档还没好好研究，这里重点不是 kubeadm 的使用，使用 kubeadm 部署 kubenetes 细节很多。本文提供的方法只是搭建测试集群，并不适用于生产环境的搭建。
 
 测试系统为 centos，两台机器，master: 192.168.31.201; worker: 192.168.31.202.
 

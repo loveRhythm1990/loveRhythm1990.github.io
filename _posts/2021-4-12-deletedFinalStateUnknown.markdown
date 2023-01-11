@@ -61,7 +61,7 @@ func (f *DeltaFIFO) Replace(list []interface{}, resourceVersion string) error {
 			if n := oldItem.Newest(); n != nil {
 				deletedObj = n.Object
 			}
-            queuedDeletions++
+			queuedDeletions++
 			// 添加DeletedFinalStateUnknown
 			if err := f.queueActionLocked(Deleted, DeletedFinalStateUnknown{k, deletedObj}); err != nil {
 				return err
@@ -86,7 +86,7 @@ func (f *DeltaFIFO) Replace(list []interface{}, resourceVersion string) error {
 			deletedObj = nil
 			klog.Infof("Key %v does not exist in known objects store, placing DeleteFinalStateUnknown marker without object", k)
 		}
-        queuedDeletions++
+		queuedDeletions++
 		// 添加DeletedFinalStateUnknown
 		if err := f.queueActionLocked(Deleted, DeletedFinalStateUnknown{k, deletedObj}); err != nil {
 			return err
@@ -96,7 +96,7 @@ func (f *DeltaFIFO) Replace(list []interface{}, resourceVersion string) error {
 }
 ```
 
-`Replace` 的代码其实包含两种 case：
+`Replace` 的代码在添加 DeletedFinalStateUnknown 资源时，其实包含两种 case：
 1. knownObjects 为 nil 时只从 reflector 的 item 队列里查看 object 存不存在，knownObject 是获取本地 cache 中资源的方法，（即 indexer 的 ListKeys 以及 GetByKey 方法），一般情况下 knowObjects 是不为空的（从 informer 初始化的情况看也是这样），毕竟 reflector 的主要任务就是更新本地 cache，knownObjects 为 nil 的case 可能是为了测试考虑，ut 中会出现这种 case。
 2. knownObjects 不为 nil 的情况，正常情况，查看本地 cache 中是否存在 object。
 

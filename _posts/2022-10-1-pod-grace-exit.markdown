@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "Kubernetes框架中关于pod优雅退出的一些总结"
+title:      "K8s 框架中关于 pod 优雅退出的一些总结"
 date:       2022-10-1 10:10:00
 author:     "decent"
 header-img-credit: false
