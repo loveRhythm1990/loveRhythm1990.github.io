@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "使用xfs_quota实现容量隔离"
+title:      "使用 xfs_quota 实现磁盘容量隔离"
 date:       2020-08-20 16:35:00
 author:     "weak old dog"
 header-img-credit: false
@@ -8,10 +8,10 @@ tags:
     - 存储
 ---
 
-使用xfs_quota可以实现磁盘容量隔离，本文以xfs_quota为例，介绍一个xfs_quota的使用
+使用 xfs_quota 可以实现磁盘容量隔离，本文介绍一下 xfs_quota 工具的使用
 
 #### 准备
-分为未挂载设和已挂载设备两种，对于未挂载设备，在挂载设备的时候指定prjquota就可以了，比如：
+分为未挂载设和已挂载设备两种，对于未挂载设备，在挂载设备的时候指定 prjquota 就可以了，比如：
 ```s
 root@ubuntu:~# mount -o prjquota /dev/loop5 /data/volumes/xfs32m
 root@ubuntu:~# mount | grep loop5
@@ -47,20 +47,20 @@ Project ID   Used   Soft   Hard Warn/Grace
 #200            0    10M    10M  00 [------]
 ```
 #### 删除
-查了一下，删除某个project是比较困难的，有个workground的方法:
+查了一下，删除某个 project 是比较困难的，有个 workground 方法:
 ```s
 xfs_quota -x -c 'limit -p bsoft=0 bhard=0 100' /data/volumes/xfs32m
 ```
-然后再删除目录：`/data/volumes/xfs32m/5m`，这个样子在调用xfs_quota report的时候应就看不到projectid了。
+然后再删除目录：`/data/volumes/xfs32m/5m`，这个样子在调用 xfs_quota report 的时候应就看不到 projectid 了。
 另外有个命令：
 ```s
 $ xfs_quota -x -c "off -up" /data/volumes/xfs32m
 $ xfs_quota -x -c "remove -p" /data/volumes/xfs32m
 ```
-这个是删除所有的project，慎用。
+这个是删除所有的 project，慎用。
 
 #### 使用配置文件
-也可以使用配置文件来配置xfs quota project
+也可以使用配置文件来配置 xfs quota project
 ```s
 # 挂载
 mount -o prjquota /dev/sdb /disks/local-ssd

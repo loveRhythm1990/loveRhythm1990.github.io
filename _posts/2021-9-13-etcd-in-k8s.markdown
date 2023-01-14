@@ -1,11 +1,11 @@
 ---
 layout:     post
-title:      "K8s Apiserver 中关于 Etcd 关键链路梳理--《Kubernetes 源码剖析》"
+title:      "K8s Apiserver 中的存储层调用链路梳理"
+subtitle:   " \"参考《Kubernetes 源码剖析》\""
 date:       2021-09-13 19:21:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - Etcd
     - K8s
 ---
 

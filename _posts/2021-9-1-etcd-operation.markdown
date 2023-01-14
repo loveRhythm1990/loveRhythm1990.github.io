@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "Etcd 集群运维基础"
+title:      "Etcd 集群基础运维"
 date:       2021-08-28 10:10:00
 author:     "decent"
 header-img-credit: false
@@ -58,14 +58,14 @@ sudo ./etcdctl --endpoints=https://<etcd-server>:2379 endpoint status -w table
 ```s
 ETCDCTL_API=3 etcdctl --endpoints=https://192.168.1.36:2379,https://192.168.1.37:2379,https://192.168.1.38:2379 endpoint health
 ```
-**f. Compact Etcd**
-Compact 对 etcd 数据没有影响，下面两条命令一起执行。
+**f. Compact Etcd**，
+Compact 对 etcd 数据没有影响（只清理历史数据，不会清理最新数据，但会影响 watch 功能，因为历史数据可能没了），下面两条命令一起执行。一般 etcd 都配置了自动 Compact 机制，要么是周期性的，要么是按照 revision 进行 Compact，(参考命令行参数 `–auto-compaction-mode` 和 `–auto-compaction-retention`)。 另外执行 Compact 之后，etcd db 的数据库文件并不会减小，因为虽然进行了压缩，删除了一些历史数据，但是在 boltdb 的实现中，产生的空白页并没有归还给操作系统，这些空白页会被 boltdb 缓存起来继续用。 
 ```s
 rev=$(sudo etcdctl --endpoints=https://host1:2379 endpoint status --write-out="json" | egrep -o '"revision":[0-9]*' | egrep -o '[0-9].*')`
 sudo etcdctl --endpoints=https://host1:2379 compact $rev
 ```
-**h. 清理碎片**
-compact 会产生碎片，defrag 清理碎片，etcd 磁盘容量较大时可用，参考文档[defrag](https://etcd.io/docs/v3.2/op-guide/maintenance/#defragmentation)
+**h. 清理碎片**，
+compact 会产生碎片，defrag 清理碎片，etcd 磁盘容量较大时可用，参考文档[defrag](https://etcd.io/docs/v3.2/op-guide/maintenance/#defragmentation)，defrag 会影响 etcd 性能，争用读写锁，所以这个命令慎用使用，只要在业务空闲的时候，或者 db 大小快满了，不得不使用的时候再用。
 ```s
 sudo etcdctl --endpoints=https://host1:2379 defrag
 ```
@@ -96,6 +96,16 @@ etcd [flags]
 * 如果 etcd 是以容器的方式启动的，可以使用 `docker run --rm -v /var/run/docker.sock:/var/run/docker.sock assaflavie/runlike etcd` 命令获取 etcd 容器的启动命令，主要是使用 `assaflavie/runlike` 这个镜像。获取启动命令之后，一个非常重要的事情是设置选项 `--initial-cluster-state=existing`，如果不设置这个参数，使用之前的 `--initial-cluster-state=new`参数，则会得到错误：[request ignored (cluster ID mismatch)](https://etcd.io/docs/v3.3/faq/#what-does-the-etcd-warning-request-ignored-cluster-id-mismatch-mean)
 
 > 在 rancher 系统中，个人经常使用 `assaflavie/runlike` 镜像替换失败的 etcd 实例，就是需要注意上面的两点，一个是清空旧的 etcd 数据，另一个设置 `--initial-cluster-state` 为 `existing`.
+
+### K8s event 资源分集群存储
+这个主要参考[大规模场景下 kubernetes 集群的性能优化](https://zhuanlan.zhihu.com/p/111244925)，有时间要分析一下这篇文章。将 Object 资源分开存储的方式为使用 Apiserver 的参数 `--etcd-servers-overrides`，配置方式为：
+```s
+--etcd-servers-overrides=/events#https://xxx:3379;https://xxx:3379;https://xxx:3379
+```
+关于 `--etcd-servers-overrides` 参数，官方文档的解释为：
+> Per-resource etcd servers overrides, comma separated. The individual override format: group/resource#servers, where servers are URLs, semicolon separated. Note that this applies only to resources compiled into this server binary.
+
+不同资源的配置之间用**逗号**分隔，同一个资源的 servers 之间用**分号**分隔。
 
 ### 备份以及恢复
 备份以及恢复的思路，就是将之前的 etcd 全部数据拷贝一份，然后生成一个新的 etcd 集群，对于坏掉的 etcd 节点，踢掉后，找个新的节点加进去。
