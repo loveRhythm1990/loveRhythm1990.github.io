@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "Apiserver问题排查: too old resource version"
+title:      "Apiserver 问题排查: too old resource version"
 date:       2020-08-22 15:22:00
 author:     "decent"
 header-img-credit: false
@@ -19,7 +19,7 @@ tags:
 
 同时 etcd 在 MVCC 中保存历史数据时，也会只保留特定时间段的，或者保留特定数量的历史数据，具体是通过下面两个 flag 确定的。
 * --auto-compaction-mode：可以配置成 `periodic` 或者`revision`，分别表示使用周期性压缩，或者按版本号压缩，。
-* --auto-compaction-retention 配置为 periodic 时，它表示启用时间周期性压缩，为保留的时间的周期，比如 1h。auto-compaction-mode 为 revision 时，它表示启用版本号压缩模式，auto-compaction-retention 为保留的历史版本号数，比如 10000。
+* --auto-compaction-retention 配置为 periodic 时，为周期性压缩保留的时间周期，比如 1h。auto-compaction-mode 为 revision 时，auto-compaction-retention 为保留的历史版本号数，比如 10000。
 
 在官方文档中说，调用 watch 请求的时候，客户端应该具有感知到 `410 Gone` 错误的能力，当收到这个错误的时候，要重新执行一遍 list 操作，以获取最新的版本号。
 
@@ -30,7 +30,7 @@ bookmark 的实现在缓存层的 cacher 中，具体可以参考《[Apiserver �
 
 官方文档对于 `too old rv` 问题只有简单的描述，似乎是理解了，但是看代码的时候其实还是有点疑惑，看文章后面分析~
 
-### apiserver 缓存层的实现
+### Apiserver 缓存层的实现
 这个比较简单，我们一两句概括下，就是在处理 watch 请求的时候，发现 watch 请求携带的 rv，比窗口中的最旧的还小，就报错。相关实现参考《[Apiserver 中缓存层 Cacher 的实现](https://loverhythm1990.github.io/2020/08/21/watchCache/)》
 ```go
 func (w *watchCache) GetAllEventsSinceThreadUnsafe(resourceVersion uint64) ([]*watchCacheEvent, error) {
@@ -55,7 +55,7 @@ func (w *watchCache) GetAllEventsSinceThreadUnsafe(resourceVersion uint64) ([]*w
 	return result, nil
 }
 ```
-我们重点思考下，为什么会有 `too old rv` 的问题，也就是什么情况下会发生，问题的现象还解决方式还是比较简单的。
+我们重点思考下，为什么会有 `too old rv` 的问题，也就是什么情况下会发生。
 
 ### 相关 github issue
 关于 too old rv 问题，有几个相关 issue：
@@ -73,7 +73,7 @@ type statusError interface {
 	Status() metav1.Status
 }
 ```
-对于这个 too old resource version 问题，刚开始返回的错误应该是用 fmt.Error 生成的，参考[Making error "too old resource version" a NewInternalError #15107](https://github.com/kubernetes/kubernetes/pull/15107/commits/d1cb0b7a7a779fa496c4c89f83485bdc2a0faf28)
+对于这个 too old resource version 问题，刚开始返回的错误应该是用 fmt.Errorf 生成的，参考[Making error "too old resource version" a NewInternalError #15107](https://github.com/kubernetes/kubernetes/pull/15107/commits/d1cb0b7a7a779fa496c4c89f83485bdc2a0faf28)
 
 ![java-javascript](/pics/errorof_toooldrv.jpg){:height="70%" width="70%"}
 
@@ -192,9 +192,10 @@ func NewEmptyWatch() Interface {
 	return emptyWatch(ch)
 }
 ```
+下图中是 PR 对应的修改。
 ![java-javascript](/pics/emptywatcher.jpg){:height="70%" width="70%"}
 
-另外我们需要注意，我们在 listoption 中配置了 TimeoutSeconds 超时时间，这个超时时间是全局的，并且不管有没有事件都会超时。这个时间最终会配置到 Request 的 timeout 字段，并且会通过这个字段生产一个 context，请求的时候会通过 req.WithContext 生产一个新请求。下面的 timeout 字段除了我们在 options 中配置，还有一个配置入口，就是通过 kubeconfig 文件生成 restconfig 的时候，那个配置入口是全局的，一般我们不会配置。
+另外我们需要注意，我们在 listoption 中配置了 TimeoutSeconds 超时时间，这个超时时间是全局的，并且不管有没有事件都会超时。这个时间最终会配置到 Request 的 timeout 字段，并且会通过这个字段生成一个 context，请求的时候会通过 req.WithContext 生成一个新请求。下面的 timeout 字段除了我们在 options 中配置，还有一个配置入口，就是通过 kubeconfig 文件生成 restconfig 的时候，那个配置入口是全局的，一般我们不会配置。
 ``` go
 // 位于文件：staging/src/k8s.io/client-go/rest/request.go
 
