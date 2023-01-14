@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "基于resourceversion的List与Watch"
+title:      "基于 ResourceVersion 的 List 与 Watch"
 date:       2021-03-26 15:22:00
 author:     "decent"
 header-img-credit: false
@@ -37,7 +37,7 @@ type ListOptions struct {
 ##### Watch与Watch BookMark
 K8s以watch机制来同步资源的增量修改。一般是通过Reflector来实现的，使用watch监听资源变化时，首先通过list接口获取资源全量，调用list时，会返回获得一个ResourceVersion，表示当前的资源版本号，后续watch会根据这个ResourceVersion进行监听，只监听大于这个版本号的事件。
 
-K8s中的etcd3默认值储存5分钟内的事件，当客户端请求一个已经被删除的resourceVersion对应的资源时，就会收到错误码为`410 Gone`的错误。当客户端收到这个错误的时候，应该清除本地cache，重新进行list。
+K8s中的etcd3默认值储存5分钟内的事件（更正，这个应该是根据 etcd 的 flag 配置，可以设置周期性 compact 或者按照 revision compact，比如只保存五分钟的事件，或者最保留最新的 10000 个事件），当客户端请求一个已经被删除的resourceVersion对应的资源时，就会收到错误码为`410 Gone`的错误。当客户端收到这个错误的时候，应该清除本地cache，重新进行list。
 
 BookMark机制的引入就是定期更新reflector中记录的最新的ResourceVersion，哪怕最新的ResourceVersion没有这个Reflector感兴趣的事件，更新ResourceVersion靠的是`BookMark`事件，这个事件只有资源种类以及版本号，没有具体资源信息，如下：
 ```json
