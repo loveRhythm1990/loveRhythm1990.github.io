@@ -1,11 +1,11 @@
 ---
 layout:     post
-title:      "容器PageCache使用过多，导致内存利用率较高"
+title:      "容器 PageCache 使用过多，导致内存利用率较高"
 date:       2022-11-07 10:10:00
 author:     "decent"
 header-img-credit: false
 tags:
-    - linux
+    - Linux
 ---
 
 

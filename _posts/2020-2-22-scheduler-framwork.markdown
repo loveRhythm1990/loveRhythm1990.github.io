@@ -1,12 +1,12 @@
 ---
 layout:     post
-title:      "k8s scheduler framework调度流程概述"
+title:      "K8s Scheduler framework 调度流程概述"
 date:       2020-02-22 16:36:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - k8s
-    - scheduler
+    - K8s
+    - Scheduler
 ---
 
 Scheduling Framework定义了一些扩展点，让scheduler更容易定制化。k8s最新版本1.18 release中，已经使用了Scheduler Framework的形式，本文对着文档翻一下K8s的源代码。

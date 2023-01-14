@@ -5,7 +5,7 @@ date:       2020-12-20 11:56:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - golang
+    - Golang
 ---
 
 #### 准备工作

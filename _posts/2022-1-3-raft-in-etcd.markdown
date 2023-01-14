@@ -5,7 +5,7 @@ date:       2022-1-3 10:10:00
 author:     "decent"
 header-img-credit: false
 tags:
-    - etcd
+    - Etcd
 ---
 
 本文为转载，原文信息如下，请移步原文阅读。

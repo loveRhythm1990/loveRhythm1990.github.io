@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "CNI实现-使用Golang配置网络设备"
+title:      "CNI 实现：使用 Golang 配置网络设备"
 date:       2022-12-20 10:10:00
 author:     "decent"
 header-img-credit: false

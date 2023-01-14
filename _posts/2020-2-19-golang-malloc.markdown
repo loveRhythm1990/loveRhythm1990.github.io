@@ -1,11 +1,11 @@
 ---
 layout:     post
-title:      "golang内存相关源码"
+title:      "Golang 内存相关源码"
 date:       2020-2-19 18:07:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - golang
+    - Golang
 ---
 
 

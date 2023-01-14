@@ -5,7 +5,7 @@ date:       2021-4-12 10:10:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - k8s
+    - K8s
 ---
 
 我们在 K8s 中处理 delete 事件时，有可能传入的资源并不是我们所关注的资源，而是一个 `DeletedFinalStateUnknown`，以`sig-storage-local-static-provisioner` 项目为例，处理 pv 事件的方法如下，可以看到在处理 delete 事件时，如果类型断言不成功，需要看一下是不是`cache.DeletedFinalStateUnknown`类型。

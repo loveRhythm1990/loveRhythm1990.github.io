@@ -5,7 +5,7 @@ date:       2021-12-11 10:10:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - etcd
+    - Etcd
 ---
 
 今天去参加前同事聚会了，大佬们都很厉害，我什么时候才能成为大佬。

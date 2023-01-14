@@ -1,18 +1,18 @@
 ---
 layout:     post
-title:      "pv controller框架梳理"
+title:      "PV Controller 框架梳理"
 date:       2020-11-27 10:10:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - volume
+    - Volume
 ---
 
 #### syncUnboundClaim
-1. 寻找可用的pv，并绑定pv和pvc。
-2. 对于设置了`pvc.Spec.VolumeName`字段的PVC，检查pv状态
+1. 寻找可用的 pv，并绑定 pv 和 pvc。
+2. 对于设置了`pvc.Spec.VolumeName`字段的 PVC，检查 pv 状态
 
-在动态bind的时候发现的问题，
+在动态 bind 的时候发现的问题，
 
 问题一：
 
@@ -75,5 +75,3 @@ if !found && metav1.HasAnnotation(volume.ObjectMeta, annBoundByController) {
 	}
 }
 ```
-
-##### template

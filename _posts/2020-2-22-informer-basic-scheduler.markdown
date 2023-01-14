@@ -1,11 +1,11 @@
 ---
 layout:     post
-title:      "关于 k8s informer 的基本概念与原理"
+title:      "关于 K8s informer 的基本概念与原理"
 date:       2020-02-25 11:50:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - k8s
+    - K8s
 ---
 
 ### 以SchedulerServer为例

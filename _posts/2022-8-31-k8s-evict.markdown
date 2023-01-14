@@ -5,7 +5,7 @@ date:       2022-8-31 10:10:00
 author:     "decent"
 header-img-credit: false
 tags:
-    - k8s
+    - K8s
 ---
 
 K8s 对于 Pod 驱逐机制的官方文档为[Node-pressure Eviction](https://kubernetes.io/docs/concepts/scheduling-eviction/node-pressure-eviction/)，建议首先阅读官方文档。本文对一些细节进行探究，并做相关验证。

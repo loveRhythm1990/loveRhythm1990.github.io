@@ -1,11 +1,11 @@
 ---
 layout:     post
-title:      "K8s scheduler及Apiserver是如何处理binding请求的"
+title:      "K8s Scheduler 及 Apiserver 是如何处理 binding 请求的"
 date:       2021-1-2 17:42:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - k8s
+    - K8s
 ---
 
 研究一下k8s是如何处理pod的binding请求的，如何将pod与node绑定的

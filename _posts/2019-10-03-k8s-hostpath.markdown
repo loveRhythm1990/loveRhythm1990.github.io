@@ -1,14 +1,14 @@
 ---
 layout:     post
-title:      "k8s hostpath实现"
-subtitle:   " \"如何跟docker对接\""
+title:      "K8s hostpath 实现"
+subtitle:   " \"如何跟 docker 对接\""
 date:       2019-10-03 09:22:00
 author:     "wm"
 header-img-credit: false
 tags:
-    - k8s
-    - kubelet
-    - volume
+    - K8s
+    - Kubelet
+    - Volume
 ---
 
 ## 前言

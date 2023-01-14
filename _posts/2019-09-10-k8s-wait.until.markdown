@@ -1,18 +1,17 @@
 ---
 layout:     post
-title:      "k8s中的wait.Until"
-subtitle:   " \"k8s中一些设计模式\""
+title:      "K8s 中的 wait.Until"
+subtitle:   " \"K8s中一些设计模式\""
 date:       2019-09-10 19:48:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - k8s
-    - k8s设计模式
+    - 设计模式
 ---
 
 > 因为理论还没成型，很多知识点看着很零散；理解深度也不够，所以一些硬骨头啃不动。需要一个循序渐进的过程。
 
-k8s代码中有很多这样的调用，一看大概意思就是每隔一段时间就执行一个方法，直到stopChan关闭（或者收到数据）。但是不仔细看一下总觉得有点虚，决定看一下。下面代码取自`pkg/kubelet/kubelet.go`, 启动一个用于kill不需要的pod的goroutine。
+K8s 代码中有很多这样的调用，一看大概意思就是每隔一段时间就执行一个方法，直到stopChan关闭（或者收到数据）。但是不仔细看一下总觉得有点虚，决定看一下。下面代码取自`pkg/kubelet/kubelet.go`, 启动一个用于kill不需要的pod的goroutine。
 ```golang
 // Start a goroutine responsible for killing pods (that are not properly
 // handled by pod workers).

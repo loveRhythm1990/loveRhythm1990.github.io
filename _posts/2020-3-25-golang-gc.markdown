@@ -1,11 +1,11 @@
 ---
 layout:     post
-title:      "golang gc"
+title:      "Golang gc 概述"
 date:       2020-03-25 10:10:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - golang
+    - Golang
 ---
 
 本文分析的算法是根据go1.12版本。

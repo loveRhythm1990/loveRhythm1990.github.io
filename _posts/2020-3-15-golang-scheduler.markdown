@@ -1,11 +1,11 @@
 ---
 layout:     post
-title:      "golang 调度器[转载]"
+title:      "Golang 调度器[转载]"
 date:       2020-03-15 8:42:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - golang
+    - Golang
 ---
 
 本文是对*tonybai*老师的[也谈goroutine调度器](https://tonybai.com/2017/06/23/an-intro-about-goroutine-scheduler/)的理解与整理

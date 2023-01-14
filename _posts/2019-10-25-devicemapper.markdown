@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "实现自己的device mapper"
+title:      "实现自己的 device mapper"
 subtitle:   " \"这是一篇翻译\""
 date:       2019-10-25 22:55:00
 author:     "weak old dog"

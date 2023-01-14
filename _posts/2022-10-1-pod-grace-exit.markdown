@@ -5,7 +5,7 @@ date:       2022-10-1 10:10:00
 author:     "decent"
 header-img-credit: false
 tags:
-    - k8s
+    - K8s
 ---
 
 前几天在跟同事沟通的时候，提到了一种 pod 优雅退出的实现方式是在 preStop hook 中 sleep 几秒，主要是 service 摘除 pod 的 endpoint 有时延，pod 退出之后可能还有流量打进来，sleep 的目的是给 Controller manager 中的 endpoint controller 足够的时间来删除特定 pod 的 endpoint。这里涉及到好几个组件，本文总结下这几个组件的交互流程。

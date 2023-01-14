@@ -1,11 +1,11 @@
 ---
 layout:     post
-title:      "关于InClusterConfig的一些知识"
+title:      "关于 InClusterConfig 的一些知识"
 date:       2020-09-20 10:10:00
 author:     "decent"
 header-img-credit: false
 tags:
-    - k8s
+    - K8s
 ---
 
 我们在容器中，一般使用InClusterConfig来构造Kubernetes ClientSet，并访问K8s Apiserver。使用示例如下：

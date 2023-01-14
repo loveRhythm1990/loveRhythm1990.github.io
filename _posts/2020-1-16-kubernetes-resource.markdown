@@ -1,23 +1,23 @@
 ---
 layout:     post
-title:      "kubernetes资源控制"
+title:      "K8s 资源控制概述"
 subtitle:   " \"cpu与mem的request与limit\""
 date:       2020-1-16 10:06:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - k8s
+    - K8s
 ---
 
 这部分关注三个问题
-* k8s是如何对cpu和mem做资源限制的，涉及到的是cgroup的东西
-* pod层面的cgroup存在的意义，可能是除container以外的本pod使用的资源
-* best effort/burstable/guaranteed三者存在的意义
+* K8s 是如何对 cpu 和 mem 做资源限制的，涉及到的是 cgroup 的东西
+* pod 层面的 cgroup 存在的意义，可能是除 container 以外的本 pod 使用的资源
+* best effort/burstable/guaranteed 三者存在的意义
 
 首先从观察现象出发，然后试图解释现象
 
 分别介绍这三部分
-### k8s是如何做资源限制的
+### K8s是如何做资源限制的
 这部分内容要区分mem与cpu，两者都使用cgroup，但是稍有区别，以下面pod为例，描述k8s限制资源使用时的现象。
 ```yaml
 apiVersion: v1
@@ -88,4 +88,4 @@ root@z-Latitude:resourceLimit# cat /proc/8976/cgroup | grep cpu
 
 [Understanding resource limits in kubernetes: cpu time](https://medium.com/@betz.mark/understanding-resource-limits-in-kubernetes-cpu-time-9eff74d3161b)
 
-[k8s文档：Managing Compute Resources for Containers](https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/#how-pods-with-resource-limits-are-run)
+[K8s文档：Managing Compute Resources for Containers](https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/#how-pods-with-resource-limits-are-run)

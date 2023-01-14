@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "leetcode题解"
+title:      "Leetcode 题解"
 subtitle:   " \"持续更新...\""
 date:       2020-2-22 22:06:00
 author:     "weak old dog"

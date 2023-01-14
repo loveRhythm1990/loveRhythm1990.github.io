@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "awk命令基础"
+title:      "awk 命令基础"
 date:       2021-5-22 16:53:00
 author:     "decent"
 header-img-credit: false

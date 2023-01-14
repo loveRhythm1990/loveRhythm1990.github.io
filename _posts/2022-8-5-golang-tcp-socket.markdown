@@ -1,11 +1,11 @@
 ---
 layout:     post
-title:      "Go语言TCP Socket编程[转载]"
+title:      "Go 语言 TCP Socket 编程[转载]"
 date:       2022-8-5 10:10:00
 author:     "decent"
 header-img-credit: false
 tags:
-    - golang
+    - Golang
 ---
 
 > 本文转载自：[Go语言TCP Socket编程](https://tonybai.com/2015/11/17/tcp-programming-in-golang/)，作者：Tony Bai

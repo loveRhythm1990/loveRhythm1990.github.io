@@ -1,11 +1,11 @@
 ---
 layout:     post
-title:      "探究golang slice的一些实现"
+title:      "探究 Golang slice 的一些实现"
 date:       2020-03-25 10:10:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - golang
+    - Golang
 ---
 
 关注slice的具体实现，基于的golang版本为go1.12.1

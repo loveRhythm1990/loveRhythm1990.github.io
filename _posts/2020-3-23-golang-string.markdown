@@ -1,11 +1,11 @@
 ---
 layout:     post
-title:      "golang string使用总结与分析"
+title:      "Golang string 使用总结与分析"
 date:       2020-03-23 10:10:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - golang
+    - Golang
 ---
 
 #### 基础使用方法

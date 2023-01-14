@@ -5,10 +5,10 @@ date:       2019-09-18 22:32:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - golang
+    - Golang
 ---
 
-> golang基础知识
+> Golang基础知识
 
 最开始遇到这问题是在看golang堆的实现的时候，堆的接口是下面这样的，一共需要实现五个接口。
 ```go

@@ -1,12 +1,12 @@
 ---
 layout:     post
-title:      "K8s调度器SchedulerCache工作原理"
+title:      "K8s 调度器 SchedulerCache 工作原理"
 date:       2020-08-15 10:10:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - k8s
-    - scheduler
+    - K8s
+    - Scheduler
 ---
 
 K8s调度器的SchedulerCache是其工作的核心，用来缓存所有已经调度过的pod，这些pod按照Node来进行划分，每个Node包含一个NodeInfo，包含一个该节点上的所有的pod。本文基于K8s1.14分析下SchedulerCache涉及到的一些东西。

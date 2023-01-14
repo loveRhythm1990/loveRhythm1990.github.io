@@ -1,11 +1,11 @@
 ---
 layout:     post
-title:      "golang memory[翻译]"
+title:      "Golang memory 概述[翻译]"
 date:       2020-2-9 18:51:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - golang
+    - Golang
 ---
 
 这部分内容是对一篇英文博客的理解，对涉及到的一些知识点进行了拓展，原文地址为：

@@ -1,11 +1,11 @@
 ---
 layout:     post
-title:      "golang mod 速记"
+title:      "Golang mod 速记"
 date:       2020-05-23 19:23:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - golang
+    - Golang
 ---
 
 Go 1.11以及1.12版本开始支持Go mod，使用Go mod来管理依赖，本文理解思路以及记录一些常用命令。

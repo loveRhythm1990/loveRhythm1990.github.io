@@ -1,11 +1,11 @@
 ---
 layout:     post
-title:      "实现k8s client-go的监控"
+title:      "实现 K8s client-go 的监控"
 date:       2020-07-18 10:10:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - k8s
+    - K8s
 ---
 
 这里的client-go的监控是指，对client-go的请求时延、QPS等的监控，任何第三方控制器可以使用client-go来向K8s apiserver发送请求，并实现对client-go的监控。本文以k8s 1.14为例，介绍如何实现client-go的监控。

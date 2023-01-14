@@ -1,11 +1,11 @@
 ---
 layout:     post
-title:      "k8s存储的一些概念"
+title:      "K8s 存储的一些概念"
 date:       2020-03-30 10:10:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - k8s
+    - K8s
     - 存储
 ---
 
@@ -72,7 +72,7 @@ Kubernetes如何定义和区分这两个阶段？在具体的 Volume 插件的�
 * 而对于“第二阶段”（Mount），Kubernetes 提供的可用参数是dir，即Volume的宿主机目录。
 
 #### csi插件相关
-我们知道一个volume在k8s里的声明周期有provision/delete，attach/detach，mount/umount等。那csi就是把这些代码给抽象出来了，做成了单独的插件，之前都是in tree的，现在不需要嵌入到k8s代码里面了，成了out tree了。
+我们知道一个volume在K8s里的声明周期有provision/delete，attach/detach，mount/umount等。那csi就是把这些代码给抽象出来了，做成了单独的插件，之前都是in tree的，现在不需要嵌入到k8s代码里面了，成了out tree了。
 在k8s的[CSI文档](https://kubernetes-csi.github.io/docs/sidecar-containers.html)中，列出了所有的sidecar containers列表：
 * external-provisioner
 * external-attacher

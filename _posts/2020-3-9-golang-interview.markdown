@@ -1,11 +1,11 @@
 ---
 layout:     post
-title:      "golang常见面试题整理"
+title:      "Golang 常见面试题整理"
 date:       2020-03-09 10:10:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - golang
+    - Golang
 ---
 
 ##### struct以及interface的比较

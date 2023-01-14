@@ -1,14 +1,14 @@
 ---
 layout:     post
-title:      "PV controller的本地cache及其indexer"
+title:      "PV Controller 的本地 cache 及其 indexer"
 date:       2020-07-25 8:44:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - k8s
+    - K8s
 ---
 
-众所周知，在K8s的informer缓存里，通过添加indexer能加快查询，这里看看为什么。
+众所周知，在 K8s 的 informer 缓存里，通过添加 indexer 能加快查询，这里看看为什么。
 
 以pv controller为例，在初始化pv controller的时候，创建了两份本地cache，这个cache实际上跟informer cache工作原理一致，其中一个添加了索引，看一下这个缓存是怎么使用，以及怎么实现的。
 ```go

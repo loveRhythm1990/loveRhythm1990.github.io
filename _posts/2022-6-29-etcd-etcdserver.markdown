@@ -1,11 +1,11 @@
 ---
 layout:     post
-title:      "EtcdServer架构及初始化"
+title:      "EtcdServer 架构及初始化"
 date:       2022-6-29 10:10:00
 author:     "decent"
 header-img-credit: false
 tags:
-    - etcd
+    - Etcd
 ---
 
 介绍一些 EtcdServer 包含的组件，其初始化流程，以及相关调用。

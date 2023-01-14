@@ -1,11 +1,11 @@
 ---
 layout:     post
-title:      "流式 grpc"
+title:      "流式 gRPC"
 date:       2021-12-18 10:10:00
 author:     "decent"
 header-img-credit: false
 tags:
-    - grpc
+    - gRPC
 ---
 
 流式 grpc 示例及理解，参考《gRPC与云原生应用开发》

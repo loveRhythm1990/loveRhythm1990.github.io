@@ -5,7 +5,7 @@ date:       2022-3-20 10:10:00
 author:     "decent"
 header-img-credit: false
 tags:
-    - etcd
+    - Etcd
 ---
 
 

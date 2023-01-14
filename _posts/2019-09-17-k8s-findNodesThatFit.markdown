@@ -1,13 +1,13 @@
 ---
 layout:     post
-title:      "k8s的findNodesThatFit实现"
+title:      "K8s 调度器中 findNodesThatFit 实现"
 subtitle:   " \"scheduler中的细节\""
 date:       2019-09-17 19:48:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - k8s
-    - scheduler
+    - K8s
+    - Scheduler
 ---
 
 > 由点到线，由线到面。本文针对的k8s的版本是1.16.0

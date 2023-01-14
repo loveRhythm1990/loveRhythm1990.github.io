@@ -5,7 +5,7 @@ date:       2020-08-22 15:22:00
 author:     "decent"
 header-img-credit: false
 tags:
-    - k8s
+    - K8s
 ---
 
 回顾一下常见的 `too old resource version` 问题，该报错错误信息如下，其中 `1785219` 是请求带过去的 rv（resource version），`1787027` 是 apiserver 缓存中最新的 rv，本文基于的 K8s 版本是 K8s1.16。

@@ -5,7 +5,7 @@ date:       2021-3-23 17:31:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - k8s
+    - K8s
 ---
 
 之前在《[关于k8s informer的基本概念与原理](https://loverhythm1990.github.io/2020/02/25/informer-basic-scheduler/)》中介绍过informer的一些东西，但是没怎么讲清楚，这里再梳理一下知识点。还是以项目 [sig-storage-lib-external-provisioner](https://github.com/kubernetes-sigs/sig-storage-lib-external-provisioner) 为例，这些项目逻辑比较简单，相对容易分析。

@@ -1,11 +1,11 @@
 ---
 layout:     post
-title:      "2021面试经历"
+title:      "2021 面试经历"
 date:       2021-5-8 16:53:00
 author:     "decent"
 header-img-credit: false
 tags:
-    - 瞎聊
+    - 随笔
 ---
 
 #### 初期准备

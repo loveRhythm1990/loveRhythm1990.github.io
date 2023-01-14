@@ -1,17 +1,17 @@
 ---
 layout:     post
-title:      "Kubelet volume manager"
+title:      "Kubelet volume manager 概述"
 date:       2019-10-04 19:16:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - k8s
-    - kubelet
+    - K8s
+    - Kubelet
 ---
 
 
 ## 前言
-本身是做k8s存储相关工作的，但对kubelet volume-manager怎么工作的，了解的还不够多，这里分析一下吧。基于的k8s版本为1.16。volume-manager的入口函数在`pkg/kubelet/kubelet.go`文件中。程序启动非常简单：
+本身是做 K8s 存储相关工作的，但对kubelet volume-manager怎么工作的，了解的还不够多，这里分析一下吧。基于的 K8s 版本为1.16。volume-manager的入口函数在`pkg/kubelet/kubelet.go`文件中。程序启动非常简单：
 ```golang
 	// Start volume manager
 	go kl.volumeManager.Run(kl.sourcesReady, wait.NeverStop)

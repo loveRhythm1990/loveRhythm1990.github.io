@@ -1,11 +1,11 @@
 ---
 layout:     post
-title:      "golang 反向代理 reverse proxy 示例"
+title:      "Golang 反向代理 reverse proxy 示例"
 date:       2022-2-10 10:10:00
 author:     "decent"
 header-img-credit: false
 tags:
-    - golang
+    - Golang
 ---
 
 一个 golang 反向代理的极简实现。关于反向代理，实际包含三部分：客户端、反向代理、服务端。其请求流程如下：

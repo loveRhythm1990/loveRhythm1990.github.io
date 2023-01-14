@@ -5,7 +5,7 @@ date:       2021-08-28 10:10:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - etcd
+    - Etcd
 ---
 
 #### 安装部署

@@ -1,13 +1,13 @@
 ---
 layout:     post
-title:      "影响k8s调度器的一些因素"
+title:      "影响 K8s 调度器调度结果的一些因素"
 subtitle:   " \"Assigning Pods to Nodes\""
 date:       2019-09-29 12:04:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - k8s
-    - scheduler
+    - K8s
+    - Scheduler
 ---
 
 ## 前言
@@ -59,7 +59,7 @@ spec:
 
 在node和pod上打标签，允许一部分pod只能调度到特定的node上，这可以被用来做隔离、安全、或者特定的管理策略，当我们出于这种目的给node打标签时，**必须要保证我们的标签不能被kubelet进程修改**。`NodeRestriction`准入插件禁止kubelet修改node的以`node-restriction.kubernetes.io`为前缀的标签，为保证此配置生效，我们需要：
 
-  1. 确保k8s在v1.11以上，比此版本高的k8s NodeRestriction才可用。
+  1. 确保 K8s 在v1.11以上，比此版本高的 K8s NodeRestriction才可用。
   2. 配置`--authorization-mode=Node,...`，以及添加`NodeRestriction`准入控制插件。
   3. 给node打标签的时候，以`node-restriction.kubernetes.io/`为前缀，比如:`example.com.noderestriction.kubernetes.io/fips=true `
 

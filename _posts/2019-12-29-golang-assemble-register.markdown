@@ -1,11 +1,11 @@
 ---
 layout:     post
-title:      "golang寄存器相关[入门]"
+title:      "Golang 寄存器相关[入门]"
 date:       2019-12-29 21:40:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - golang
+    - Golang
 ---
 
 > 介绍golang汇编中的几个寄存器，golang汇编对我来说来说太难了，一点一点啃，我学习golang汇编的动力在于了解golang运行原理，目前还没有这样的体验。

@@ -1,11 +1,11 @@
 ---
 layout:     post
-title:      "golang 类型系统"
+title:      "Golang 类型系统"
 date:       2020-03-09 17:10:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - golang
+    - Golang
 ---
 
 主要参考《golang核心编程》李文塔，与golang官方文档，个人感觉go语言类型系统很细也很碎，有些东西一直没理清楚，这里主要是读书笔记。

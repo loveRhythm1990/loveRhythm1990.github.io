@@ -1,12 +1,12 @@
 ---
 layout:     post
-title:      "k8s 1.9版本scheduler调度流程概述"
+title:      "K8s1.9 版本 Scheduler 调度流程概述"
 date:       2020-02-28 14:46:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - k8s
-    - scheduler
+    - K8s
+    - Scheduler
 ---
 
 k8s 1.9 scheduler概述，因为之前工作中是基于1.9版本的，还没有引入scheduler framework。

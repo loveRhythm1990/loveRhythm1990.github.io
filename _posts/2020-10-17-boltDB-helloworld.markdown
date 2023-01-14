@@ -5,7 +5,7 @@ date:       2021-06-20 10:10:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - etcd
+    - Etcd
     - bbolt
 ---
 

@@ -5,7 +5,7 @@ date:       2021-08-28 10:10:00
 author:     "decent"
 header-img-credit: false
 tags:
-    - etcd
+    - Etcd
 ---
 
 关于证书相关配置参考：[《Transport security model》](https://etcd.io/docs/v3.5/op-guide/security/)，可以通过查看 etcd 的启动命令，来判断证书的位置，参考参数：

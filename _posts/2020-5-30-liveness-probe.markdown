@@ -1,11 +1,11 @@
 ---
 layout:     post
-title:      "k8s liveness & readiness probe"
+title:      "K8s liveness & readiness probe 简述"
 date:       2020-05-30 10:10:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - k8s
+    - K8s
 ---
 
 

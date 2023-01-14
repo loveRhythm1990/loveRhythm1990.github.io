@@ -5,7 +5,7 @@ date:       2020-08-21 15:22:00
 author:     "decent"
 header-img-credit: false
 tags:
-    - k8s
+    - K8s
 ---
 
 因为前段时间集群遇到了 `Too large resource version` 的问题，感觉有必要理解下 Apiserver 中的缓存层是怎么工作的，以及其事件窗口是怎么设计的。本文参考的 K8s 版本为 1.16。缓存层主要设计到三个组件 Cacher、watchCache、cacherWatcher，本文不会面面俱到的介绍，重在理解整个过程。

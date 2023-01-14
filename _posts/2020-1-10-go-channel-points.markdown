@@ -1,11 +1,11 @@
 ---
 layout:     post
-title:      "golang中channel知识点"
+title:      "Golang 中 channel 知识点"
 date:       2020-1-10 21:29:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - golang
+    - Golang
 ---
 
 

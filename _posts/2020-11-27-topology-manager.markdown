@@ -1,11 +1,11 @@
 ---
 layout:     post
-title:      "通过Topology Manager开启绑核功能"
+title:      "通过 Topology Manager 开启绑核功能"
 date:       2020-11-27 10:10:00
 author:     "decent"
 header-img-credit: false
 tags:
-    - k8s
+    - K8s
 ---
 
 Kubelet有个`Topology Manager`可以对`Guaranteed`的Pod进行绑核，绑核有两个条件：

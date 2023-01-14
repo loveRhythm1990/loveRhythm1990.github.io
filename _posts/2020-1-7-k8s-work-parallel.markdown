@@ -1,16 +1,15 @@
 ---
 layout:     post
-title:      "k8s worker queue"
-subtitle:   " \"k8s中的设计模式\""
+title:      "K8s worker queue 设计模式"
+subtitle:   " \"K8s 中的设计模式\""
 date:       2020-1-6 12:13:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - k8s设计模式
-    - 齿轮
+    - 设计模式
 ---
 
-k8s generic scheduler中判断每个node是否符合条件是并行执行的，具体是通过下面语句：
+K8s generic scheduler 中判断每个 node 是否符合条件是并行执行的，具体是通过下面语句：
 
 `workqueue.Parallelize(16, len(nodes), checkNode)`
 

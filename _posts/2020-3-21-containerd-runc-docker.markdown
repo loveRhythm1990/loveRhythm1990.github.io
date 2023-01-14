@@ -1,11 +1,11 @@
 ---
 layout:     post
-title:      "containerd runc docker之间的关系"
+title:      "containerd runc docker 之间的关系"
 date:       2020-03-21 18:10:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - docker
+    - Docker
 ---
 
 从 Docker 1.11 开始，Docker 容器运行已经不是简单的通过 Docker daemon 来启动，而是集成了containerd、runC 等多个组件。Docker 服务启动之后，我们也可以看见系统上启动了 dockerd、docker-containerd 等进程，本文主要介绍新版 Docker（1.11 以后）每个部分的功能和作用。

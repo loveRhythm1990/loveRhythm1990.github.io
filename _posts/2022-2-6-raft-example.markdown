@@ -5,7 +5,7 @@ date:       2022-2-6 10:10:00
 author:     "decent"
 header-img-credit: false
 tags:
-    - etcd
+    - Etcd
 ---
 
 etcd 中的 `etcd-raft` 模块是一个 raft 的标准实现，raftexample 通过这个 `etcd-raft` 模块构建了一个分布式的一致性的存储驱动，通过 raftexample 这个例子可以看下使用 raft 的设计思想。从这例子中可以看出 raft 是跟业务无关的，它只关心数据在几个 raft 实例之间的一致性，具体是什么数据它不关心。同时它也不关心数据持久化的问题，他只是提供一个 committed 状态，表示这个数据已经在多个实例之间达成共识，需要上层应用来实现持久化，也就是 apply。

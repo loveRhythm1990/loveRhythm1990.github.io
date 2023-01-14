@@ -5,7 +5,7 @@ date:       2022-3-2 10:10:00
 author:     "decent"
 header-img-credit: false
 tags:
-    - etcd
+    - Etcd
 ---
 
 Etcd 的官方文档 [https://etcd.io/docs/v3.4/metrics/](https://etcd.io/docs/v3.4/metrics/) 介绍了 Etcd 的核心监控 Metrics，主要分下面几部分。

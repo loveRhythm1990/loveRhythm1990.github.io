@@ -5,12 +5,12 @@ date:       2021-03-26 15:22:00
 author:     "decent"
 header-img-credit: false
 tags:
-    - k8s
+    - K8s
 ---
 
-K8s文档[Kubernetes API Concepts](https://kubernetes.io/docs/reference/using-api/api-concepts/)介绍了很多关于ListWatch的一些知识，值得好好研究，这里结合文档进行理解一下。
+K8s 文档[Kubernetes API Concepts](https://kubernetes.io/docs/reference/using-api/api-concepts/)介绍了很多关于 ListWatch 的一些知识，值得好好研究，这里结合文档进行理解一下。
 
-ResourceVersion其实是etcd内部的`ModifiedIndex`，是全局唯一且递增的正整数，每次在etcd集群中对key有update操作的时候就会递增。在K8s集群中，可以看做与具体资源无关的一个逻辑时钟。对于一般资源（比如pod）来说，它的ResourceVersion就是其发生update时的最新版本号，对于List资源来说，其版本号是给客户端构建待返回的List那个时刻的版本号。
+ResourceVersion 其实是etcd内部的 `ModifiedIndex`，是全局唯一且递增的正整数，每次在etcd集群中对key有update操作的时候就会递增。在K8s集群中，可以看做与具体资源无关的一个逻辑时钟。对于一般资源（比如pod）来说，它的ResourceVersion就是其发生update时的最新版本号，对于List资源来说，其版本号是给客户端构建待返回的List那个时刻的版本号。
 
 ##### ListOptions 数据结构
 先贴一些`ListOptions`的数据结构，后面会介绍部分字段。

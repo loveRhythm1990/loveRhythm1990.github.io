@@ -1,11 +1,11 @@
 ---
 layout:     post
-title:      "Apiserver问题排查: Too large resource version"
+title:      "Apiserver 问题排查: Too large resource version"
 date:       2020-08-21 15:22:00
 author:     "decent"
 header-img-credit: false
 tags:
-    - k8s
+    - K8s
 ---
 
 前段时间集群内的 elastic-operator 一直报错，报错跟下面类似，都是报 `Too large resource version` 的问题。记录下排查过程和相关知识点。

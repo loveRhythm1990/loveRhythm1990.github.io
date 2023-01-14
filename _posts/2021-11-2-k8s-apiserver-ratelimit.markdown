@@ -1,11 +1,11 @@
 ---
 layout:     post
-title:      "Kubernetes max-requests-inflight 流控实现"
+title:      "K8s Apiserver max-requests-inflight 流控实现"
 date:       2020-11-27 10:10:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - k8s
+    - K8s
 ---
 
 了解下，Kubernetes Apiserver 中的 `--max-mutating-requests-inflight`(Default: 200)以及 `--max-requests-inflight`(Default: 400)是怎么实现的。

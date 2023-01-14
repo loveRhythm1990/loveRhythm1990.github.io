@@ -1,11 +1,11 @@
 ---
 layout:     post
-title:      "golang unsafe pointer"
+title:      "Golang unsafe pointer"
 date:       2020-03-21 11:58:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - golang
+    - Golang
 ---
 
 官方文档地址：[Package unsafe](https://golang.org/pkg/unsafe/)

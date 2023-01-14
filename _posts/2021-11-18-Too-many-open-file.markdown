@@ -5,7 +5,7 @@ date:       2021-11-18 10:10:00
 author:     "decent"
 header-img-credit: false
 tags:
-    - linux
+    - Linux
 ---
 
 经常在集群中遇到 `too many open files` 问题，整理下原因与配置

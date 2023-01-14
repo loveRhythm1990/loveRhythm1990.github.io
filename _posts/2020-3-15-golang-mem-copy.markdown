@@ -1,11 +1,11 @@
 ---
 layout:     post
-title:      "golang 内存框架[转载]"
+title:      "Golang 内存框架[转载]"
 date:       2020-03-15 10:42:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - golang
+    - Golang
 ---
 
 本文转载自[《Go 内存管理》](https://my.oschina.net/renhc/blog/2236782?spm=a2c4e.10696291.0.0.752a19a4hBLCh1)

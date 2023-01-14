@@ -1,12 +1,12 @@
 ---
 layout:     post
-title:      "golang map概述"
-subtitle:   " \"从宏观角度看map实现\""
+title:      "Golang map 概述"
+subtitle:   " \"从宏观角度看 map 实现\""
 date:       2019-09-21 22:32:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - golang
+    - Golang
 ---
 
 > 这是一篇翻译，原文在这里：[Macro View of Map Internals In Go](https://www.ardanlabs.com/blog/2013/12/macro-view-of-map-internals-in-go.html)

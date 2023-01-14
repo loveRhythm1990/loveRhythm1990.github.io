@@ -1,12 +1,12 @@
 ---
 layout:     post
-title:      "理解K8s CSI存储插件机制"
+title:      "理解 K8s CSI 存储插件机制"
 date:       2020-06-06 10:10:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - k8s
-    - volume
+    - K8s
+    - Volume
 ---
 
 官方文档地址：[https://kubernetes-csi.github.io/docs/](https://kubernetes-csi.github.io/docs/)。

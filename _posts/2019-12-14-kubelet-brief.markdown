@@ -1,11 +1,11 @@
 ---
 layout:     post
-title:      "kubelet概述"
+title:      "Kubelet 概述"
 date:       2019-12-14 7:54:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - kubelet
+    - Kubelet
 ---
 
 > kubelet 比较庞大，涉及的东西很多，相互之间关联性也不强，目前还没有了解每个模块的能力，因此只能做一个概述。以后在这个提纲的基础上再深入研究某一模块。kubelet的启动流程以及参数初始化不会涉及，主要是每个管理器的初始化过程，以及kubelet的同步过程。基于的代码是k8s 1.9。

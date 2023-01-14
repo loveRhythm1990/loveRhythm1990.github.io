@@ -1,11 +1,11 @@
 ---
 layout:     post
-title:      "当我尝试在rke环境下通过Learner实现Etcd热备"
+title:      "当我尝试在 rke 环境下通过 Learner 实现 Etcd 热备"
 date:       2022-5-30 10:10:00
 author:     "decent"
 header-img-credit: false
 tags:
-    - etcd
+    - Etcd
 ---
 
 ### 集群基础信息

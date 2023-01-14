@@ -1,11 +1,11 @@
 ---
 layout:     post
-title:      "golang内存逃逸分析"
+title:      "Golang 内存逃逸分析"
 date:       2020-1-10 17:03:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - golang
+    - Golang
 ---
 
 首先是内存逃逸的定义，我倾向于使用这篇文章中的说法 [Golang Escape Analysis: reduce pressure on GC!](https://medium.com/faun/golang-escape-analysis-reduce-pressure-on-gc-6bde1891d625) :

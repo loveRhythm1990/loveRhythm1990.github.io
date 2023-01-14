@@ -1,13 +1,13 @@
 ---
 layout:     post
-title:      "Sts控制器概述"
+title:      "K8s Sts 控制器概述"
 subtitle:   " \"关于一个方法的概述\""
 date:       2019-09-23 19:16:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - k8s
-    - statefulset
+    - K8s
+    - Statefulset
 ---
 
 

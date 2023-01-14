@@ -5,7 +5,7 @@ date:       2021-6-12 10:10:00
 author:     "decent"
 header-img-credit: false
 tags:
-    - golang
+    - Golang
 ---
 
 使用`Context`限制 Http 请求的超时时间。客户端代码如下。这里设置的超时时间是1秒钟，过了一秒钟，如果服务端还没有返回请求，则客户端主动发送 `fin` 报文断开请求。

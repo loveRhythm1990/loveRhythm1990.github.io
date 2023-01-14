@@ -1,11 +1,11 @@
 ---
 layout:     post
-title:      "restart卡主"
+title:      "docker 执行 restart 命令卡主了"
 date:       2020-05-01 20:28:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - docker
+    - Docker
 ---
 
 使用下面yaml创建pod

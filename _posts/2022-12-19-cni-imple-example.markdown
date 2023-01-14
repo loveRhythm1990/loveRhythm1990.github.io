@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "以 flannel 为例解析 CNI 插件的实现"
+title:      "CNI 实现：以 flannel 为例解析 CNI 插件的实现"
 subtitle:   " \"也有一点如何实现自定义插件的思考\""
 date:       2022-12-19 10:10:00
 author:     "decent"

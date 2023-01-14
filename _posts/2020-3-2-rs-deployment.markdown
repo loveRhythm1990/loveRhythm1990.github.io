@@ -1,12 +1,12 @@
 ---
 layout:     post
-title:      "k8s中的ReplicaSet源码解析"
+title:      "K8s 中的 ReplicaSet 源码解析"
 date:       2020-3-2 16:56:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - k8s
-    - controller
+    - K8s
+    - Controller
 ---
 
 学习一下ReplicaSet Controlelr代码，基于的k8s版本为1.9.6

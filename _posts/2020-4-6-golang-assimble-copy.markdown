@@ -1,11 +1,11 @@
 ---
 layout:     post
-title:      "golang汇编入门-从输出HelloWorld说起[转载]"
+title:      "Golang 汇编入门-从输出 HelloWorld 说起[转载]"
 date:       2020-04-06 10:10:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - golang
+    - Golang
 ---
 
 原文地址：[Go 语言汇编入门 —— 从输出 HelloWorld 说起](https://juejin.im/post/5d6c58465188251a875b169e)

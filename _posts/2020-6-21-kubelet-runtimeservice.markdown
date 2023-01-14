@@ -1,12 +1,12 @@
 ---
 layout:     post
-title:      "kubelet容器运行时/CRI/CNI初始化"
+title:      "Kubelet 容器运行时/CRI/CNI 初始化"
 date:       2020-06-21 14:10:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - k8s
-    - kubelet
+    - K8s
+    - Kubelet
     - 网络
 ---
 

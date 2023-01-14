@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "K8s dockershim CNI 实现解析"
+title:      "CNI 实现：K8s dockershim CNI 实现"
 date:       2022-12-17 10:10:00
 author:     "decent"
 header-img-credit: false

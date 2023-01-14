@@ -1,11 +1,11 @@
 ---
 layout:     post
-title:      "多副本选主LeaderElection的实现"
+title:      "多副本选主 LeaderElection 的实现"
 date:       2020-11-30 00:21:00
 author:     "decent"
 header-img-credit: false
 tags:
-    - k8s
+    - K8s
 ---
 
 一些K8s控制组件有多个副本，如Kube-Scheduler，Kube-ControllerManager等。但同一个时刻，只有一个副本处于工作状态，其他组件处于Standby状态。这里以[sig-storage-lib-external-provisioner](https://github.com/kubernetes-sigs/sig-storage-lib-external-provisioner)为例研究一下选主的实现与使用。

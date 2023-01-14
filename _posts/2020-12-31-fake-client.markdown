@@ -1,19 +1,19 @@
 ---
 layout:     post
-title:      "K8s编写可测试代码"
+title:      "为 K8s 编写可测试代码"
 date:       2021-01-01 13:53:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - k8s
+    - K8s
 ---
 
-研究一下K8s测试代码是怎么写的，以[https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner)为例。
+研究一下 K8s 测试代码是怎么写的，以[https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner)为例。
 
-我们有时候需要mock一个apiserver，或者mock一个clientset，这时候该怎么做呢？本文罗里吧嗦研究一下
+我们有时候需要 mock 一个 Apiserver，或者 mock 一个 clientset，这时候该怎么做呢？本文稍微研究一下。
 
 #### Mock clientset
-Discovery的测试代码里有下面的代码片段，由此看出，使用runtime.Object的Slice就可以构造。
+Discovery 的测试代码里有下面的代码片段，由此看出，使用 runtime.Object 的 Slice 就可以构造。
 ```go
 import ""k8s.io/client-go/kubernetes/fake""
 
@@ -25,7 +25,7 @@ for _, o := range testStorageClasses {
 // 使用上述slice初始化一个clientset
 test.client = fake.NewSimpleClientset(objects...)
 ```
-首先看下`runtime.Object`其定义如下，`runtime.Object`是Kubernetes类型系统的基石，K8s中所有的资源都是`runtime.Object`类型，也就是实现了这个接口定义的方法。
+首先看下`runtime.Object`其定义如下，`runtime.Object`是 Kubernetes 类型系统的基石，K8s中所有的资源都是`runtime.Object`类型，也就是实现了这个接口定义的方法。
 ```go
 // Object interface must be supported by all API types registered with Scheme. Since objects in a scheme are
 // expected to be serialized to the wire, the interface an Object must provide to the Scheme allows
@@ -36,7 +36,7 @@ type Object interface {
 	DeepCopyObject() Object
 }
 ```
-`schema.ObjectKind`也是一个interface，定义如下，允许通过接口拿到资源的`group/version/kind`，比如pod的group为core（group为core在yaml文件中都可以不写），version为v1，kind为Pod，
+`schema.ObjectKind`也是一个 interfac e，定义如下，允许通过接口拿到资源的`group/version/kind`，比如 pod 的 group 为 core（group 为 core 在 yaml 文件中都可以不写），version 为v1，kind 为 Pod，
 ```go
 // All objects that are serialized from a Scheme encode their type information. This interface is used
 // by serialization to set type information from the Scheme onto the serialized version of an object.
@@ -50,7 +50,7 @@ type ObjectKind interface {
 	GroupVersionKind() GroupVersionKind
 }
 ```
-言归正传，我们看下初始化clientset的`NewSimpleClientset`方法：
+言归正传，我们看下初始化 clientset 的`NewSimpleClientset`方法：
 ```go
 func NewSimpleClientset(objects ...runtime.Object) *Clientset {
     // 新建一个object tracker，将所有Object添加到tracker中
@@ -78,7 +78,7 @@ func NewSimpleClientset(objects ...runtime.Object) *Clientset {
 	return cs
 }
 ```
-得先看一下`ObjectTracker`这个接口，这个接口持有一个Object的集合，像是一个假的Server，支持对Object的增删改查操作，对Object的操作是根据`GroupVersionResource`的。接口定义如下，tracker的实现中，有个map，用来保存每个`GroupVersionResource`到该资源下的资源列表，`objects map[schema.GroupVersionResource][]runtime.Object`。其Add操作就是添加到这个map中。
+得先看一下`ObjectTracker`这个接口，这个接口持有一个 Object 的集合，像是一个假的 Server，支持对 Object 的增删改查操作，对 Object 的操作是根据`GroupVersionResource`的。接口定义如下，tracker的实现中，有个map，用来保存每个`GroupVersionResource`到该资源下的资源列表，`objects map[schema.GroupVersionResource][]runtime.Object`。其Add操作就是添加到这个map中。
 ```go
 type ObjectTracker interface {
 	// Add adds an object to the tracker. If object being added is a list, its items are added separately.
@@ -98,7 +98,7 @@ var daemonsetsResource = schema.GroupVersionResource{Group: "apps", Version: "v1
 // Kind首字母大写，并且是单数
 var daemonsetsKind = schema.GroupVersionKind{Group: "apps", Version: "v1", Kind: "DaemonSet"}
 ```
-mock一个clientset看上去简单一些，把一些前置资源添加到tracker中去即可。返回的数据结构是fake.Clientset
+mock 一个 clientset 看上去简单一些，把一些前置资源添加到 tracker 中去即可。返回的数据结构是fake.Clientset
 ```go
 // Clientset implements clientset.Interface. Meant to be embedded into a
 // struct to get a default implementation. This makes faking out just the method
@@ -125,7 +125,7 @@ type Fake struct {
 ```
 
 #### 添加Reactor
-没有明确的定义说明Reactor是什么，从代码中看，Reactor像是一个事件处理列表，当事件的动作（create/update/delete等）以及resource（persistentvolumes/pods等）匹配时，就会触发Reactor。Discovery代码中的添加的两个Reactor是：
+没有明确的定义说明 Reactor 是什么，从代码中看，Reactor 像是一个事件处理列表，当事件的动作（create/update/delete等）以及resource（persistentvolumes/pods等）匹配时，就会触发Reactor。Discovery 代码中的添加的两个 Reactor 是：
 ```go
     // 当创建pv时，添加到本地pv cache中
 	test.client.PrependReactor("create", "persistentvolumes", func(action core.Action) (bool, runtime.Object, error) {

@@ -1,11 +1,11 @@
 ---
 layout:     post
-title:      "容器网络基础概述：CNI、vxlan等"
+title:      "容器网络基础概述：CNI、vxlan 等"
 date:       2021-4-1 19:54:00
 author:     "decent"
 header-img-credit: false
 tags:
-    - k8s
+    - K8s
     - 网络
 ---
 

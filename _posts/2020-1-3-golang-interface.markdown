@@ -1,12 +1,12 @@
 ---
 layout:     post
-title:      "关于golang的interface"
+title:      "关于 Golang 的 interface"
 subtitle:   " \"学习golang中的一些类型\""
 date:       2020-1-3 17:47:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - golang
+    - Golang
 ---
 
 > 了解一些golang中的interface，通过阅读golang的源代码理清一下golang中的类型，基于的golang版本为1.12.1。本文主要参考[go语言核心编程-李文塔]

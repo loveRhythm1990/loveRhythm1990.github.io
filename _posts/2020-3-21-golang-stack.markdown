@@ -1,11 +1,11 @@
 ---
 layout:     post
-title:      "golang stack基础"
+title:      "Golang stack 基础"
 date:       2020-03-21 16:23:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - golang
+    - Golang
 ---
 
 在Go 1.4中，Go语言的stack处理由之前的"segmented stack"改为了"continuous stack"，在这两种方式中，每个goroutine的栈空间都不是固定的，只不过按需增长的方式不同。

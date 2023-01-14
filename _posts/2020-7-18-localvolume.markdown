@@ -1,11 +1,11 @@
 ---
 layout:     post
-title:      "Local volume provisioner架构分析"
+title:      "Local volume provisioner 架构分析"
 date:       2020-07-18 03:10:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - k8s
+    - K8s
     - 存储
 ---
 

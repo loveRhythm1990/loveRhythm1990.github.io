@@ -1,11 +1,11 @@
 ---
 layout:     post
-title:      "通过--force-new-cluster实现Etcd容灾"
+title:      "通过 --force-new-cluster 实现 Etcd 容灾"
 date:       2022-6-8 10:10:00
 author:     "decent"
 header-img-credit: false
 tags:
-    - etcd
+    - Etcd
 ---
 
 ### 集群初始状态

@@ -1,11 +1,11 @@
 ---
 layout:     post
-title:      "kube-apiserver handler 注册源码分析"
+title:      "K8s Apiserver restful handler 注册过程源码分析"
 date:       2021-09-14 21:43:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - k8s
+    - K8s
 ---
 
 之前尝试过很多次去分析 apiserver 的源代码，但是一直没有串起来，感觉这一块很难啃，在家研究了两天之后（多亏**灿都**台风，能在家办公两天），终于有点头绪了。这篇文章主要分析下 apiserver 中各种 handler 的注册流程，最初的诉求就是：*我对某个资源发起了一个请求，这个请求的代码路径是怎么样的？*，比如我 create 一个 pod，代码该怎么跟踪分析。

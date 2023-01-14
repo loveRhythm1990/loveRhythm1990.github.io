@@ -5,7 +5,7 @@ date:       2021-11-03 10:10:00
 author:     "decent"
 header-img-credit: false
 tags:
-    - etcd
+    - Etcd
 ---
 
 ## 从 clientv3 说起
