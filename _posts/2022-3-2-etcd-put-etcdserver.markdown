@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "Etcd put 请求过程：Raft 处理概述"
+title:      "Etcd put 请求过程：EtcdServer 处理概述"
 date:       2022-3-2 10:10:00
 author:     "decent"
 header-img-credit: false
@@ -29,27 +29,27 @@ func (s *EtcdServer) processInternalRaftRequestOnce(ctx context.Context, r pb.In
 	ai := s.getAppliedIndex()
 	ci := s.getCommittedIndex()
 	if ci > ai+maxGapBetweenApplyAndCommitIndex {
-		return nil, ErrTooManyRequests		// 返回 too many request 错误，
+		return nil, ErrTooManyRequests	// 返回 too many request 错误，
 	}
 	r.Header = &pb.RequestHeader{
-		ID: s.reqIDGen.Next(),				// 给这个请求随机生成一个 ID，保证是唯一的
+		ID: s.reqIDGen.Next(),	// 给这个请求随机生成一个 ID，保证是唯一的
 
 	}
 	// 省去非主要代码...
 	id := r.ID
-	ch := s.w.Register(id)					// Etcd 的 Wait 保存了所有事件等待的 channel，
+	ch := s.w.Register(id)	// Etcd 的 Wait 保存了所有事件等待的 channel，
 	start := time.Now()
-	err = s.r.Propose(cctx, data)			// 向 raft 模块发请求
+	err = s.r.Propose(cctx, data)	// 向 raft 模块发请求
 	if err != nil {
 		proposalsFailed.Inc()
 		s.w.Trigger(id, nil) // GC wait
 		return nil, err
 	}
-	proposalsPending.Inc()					// 在 proposal 过程中，该监控指标增1 
+	proposalsPending.Inc()	// 在 proposal 过程中，该监控指标增1 
 	defer proposalsPending.Dec()
 
 	select {
-	case x := <-ch:							// 阻塞等待整个 proposals 处理过程
+	case x := <-ch:	// 阻塞等待整个 proposals 处理过程
 		return x.(*applyResult), nil
 	case <-cctx.Done():
 		proposalsFailed.Inc()
@@ -104,16 +104,16 @@ func (n *node) stepWithWaitOption(ctx context.Context, m pb.Message, wait bool) 
 	ch := n.propc 
 	pm := msgWithResult{m: m}
 	if wait {
-		pm.result = make(chan error, 1)		// 用来保存处理结果， wait 表示要等待处理完成
+		pm.result = make(chan error, 1)	// 用来保存处理结果， wait 表示要等待处理完成
 	}
 	// ...
 	select {
-	case ch <- pm:							// 将 msgWithResult 写入 propc channel
-		if !wait {	return nil }			// 如果不等待，写入 propc channel 就退出			
+	case ch <- pm:	// 将 msgWithResult 写入 propc channel
+		if !wait {	return nil }	// 如果不等待，写入 propc channel 就退出			
 		// ...
 	}
 	select {
-	case err := <-pm.result:				// 阻塞等待处理结果
+	case err := <-pm.result:	// 阻塞等待处理结果
 		if err != nil { return err }
 		// ...
 	}
@@ -128,13 +128,13 @@ func (n *node) run() {
 	for {
         // ...
 		select {
-		case pm := <-propc:					// raft 模块从 channel 中取出 prop 消息进行处理
+		case pm := <-propc:	// raft 模块从 channel 中取出 prop 消息进行处理
 			m := pm.m
 			m.From = r.id
-			err := r.Step(m)				// 进入到 Step 方法，处理 message
-			if pm.result != nil {			// 处理返回，将结果返回 result channel
+			err := r.Step(m)	// 进入到 Step 方法，处理 message
+			if pm.result != nil {	// 处理返回，将结果返回 result channel
 				pm.result <- err
-				close(pm.result)			// 写入结果后 close result channel，这样之前阻塞的 select 就能解除阻塞了
+				close(pm.result)	// 写入结果后 close result channel，这样之前阻塞的 select 就能解除阻塞了
 			}
 		// 忽略其他 case
 		}
@@ -155,9 +155,9 @@ func stepFollower(r *raft, m pb.Message) error {
 		} else if r.disableProposalForwarding {
 			return ErrProposalDropped
 		}
-		m.To = r.lead				// 指定消息的接收者为 leader
+		m.To = r.lead	// 指定消息的接收者为 leader
 		r.send(m)
-	case pb.MsgApp:					// 忽略这些消息类型的处理
+	case pb.MsgApp:	// 忽略这些消息类型的处理
 	case pb.MsgHeartbeat:
 	case pb.MsgSnap:
 	case pb.MsgTransferLeader:
@@ -179,11 +179,11 @@ func stepFollower(r *raft, m pb.Message) error {
 ```go
 func stepLeader(r *raft, m pb.Message) error {
 	switch m.Type {
-	case pb.MsgBeat:						// 忽略这些 case
+	case pb.MsgBeat:	// 忽略这些 case
 	case pb.MsgCheckQuorum:
 	case pb.MsgProp:
 		if r.prs.Progress[r.id] == nil {
-			return ErrProposalDropped		// 返回 “raft proposal dropped” 错误
+			return ErrProposalDropped	// 返回 “raft proposal dropped” 错误
 		}
 		if r.leadTransferee != None {
 			r.logger.Debugf("%x [term %d] transfer leadership to %x is in progress; dropping proposal", r.id, r.Term, r.leadTransferee)
@@ -193,7 +193,7 @@ func stepLeader(r *raft, m pb.Message) error {
 		if !r.appendEntry(m.Entries...) {	// 1. 执行 append Entry
 			return ErrProposalDropped
 		}
-		r.bcastAppend()						// 2. 向 follower 广播 append
+		r.bcastAppend()	// 2. 向 follower 广播 append
 		return nil
 	case pb.MsgReadIndex: 
 		// ...
@@ -214,9 +214,9 @@ func (r *raft) appendEntry(es ...pb.Entry) (accepted bool) {
 		// Drop the proposal.
 		return false
 	}
-	li = r.raftLog.append(es...)		// 添加到 raftLog 的 unstable 缓存中
+	li = r.raftLog.append(es...)	// 添加到 raftLog 的 unstable 缓存中
 	r.prs.Progress[r.id].MaybeUpdate(li)
-	r.maybeCommit()						// 看下能否提高下 Commit Index。
+	r.maybeCommit()	// 看下能否提高下 Commit Index。
 	return true
 }
 ```

@@ -5,7 +5,7 @@ date:       2020-2-20 15:55:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - 算法
+    - 数据结构/算法
 ---
 
 leetcode题目：
