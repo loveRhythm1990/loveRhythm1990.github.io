@@ -11,7 +11,7 @@ tags:
 对于 unsafe.Pointer，在编程过程中用的不多，但是源码中经常遇到，理解 unsafe.Pointer 有助于更好的理解 Golang 的运行机制。
 
 ### 定义及使用
-在 unsafe 包中，unsafe.Pointer 的定义为 `ArbitratyType`，代表任意类型，代码中的注释说这个类似起占位符的作用，我们就理解成 unsafe.Pointer 是一个可以指向任意类型的指针就可以了。
+在 unsafe 包中，unsafe.Pointer 的定义为 `ArbitratyType`，代表任意类型，代码中的注释说这个类似起占位符的作用，我们就理解成 unsafe.Pointer 是一个可以指向任意类型的指针就可以了。另外 unsafe.Pointer 的零值是 nil。
 ```go
 type Pointer *ArbitraryType
 ```
