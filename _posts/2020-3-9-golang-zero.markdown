@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "Golang 常见面试题整理"
+title:      "Golang 中零碎的知识点"
 date:       2020-03-09 10:10:00
 author:     "weak old dog"
 header-img-credit: false
@@ -8,12 +8,12 @@ tags:
     - Golang
 ---
 
-##### struct以及interface的比较
+##### struct 以及 interface 的比较
 golang官方对于此问题的描述在[Comparison operators](https://golang.org/ref/spec#Comparison_operators)，这部分操作符有两种：
 * 判断是否相等（comparable），==， ！=
 * 排序（ordered），<，>，<=，>=
 
-先看comparable，一般基础类型都是可以判断是否相等的，比如Boolean, Integer, Floating-point, Complex, String, Pointer
+先看 comparable，一般基础类型都是可以判断是否相等的，比如Boolean, Integer, Floating-point, Complex, String, Pointer
 。
 
 对于Pointer来说，判等运算就是比较的指针的指，如果两个指针指向相同的内存地址，则Pointer相等，当两个指针都是nil的时候也是相等的，这里要求是同类型的，下面的pa以及pb是不能判等的，因为是不同类型：
