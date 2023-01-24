@@ -1,7 +1,7 @@
 ---
 layout:     post
 title:      "通过 Learner 节点实现 Etcd 集群实时备份"
-subtitle:   " \"以 rke 环境为例\""
+subtitle:   "\"以 rke 环境为例\""
 date:       2022-6-1 10:10:00
 author:     "decent"
 header-img-credit: false
