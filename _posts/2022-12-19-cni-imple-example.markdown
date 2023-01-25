@@ -8,13 +8,13 @@ tags:
     - 网络
 ---
 
-在 [K8s dockershim CNI 实现解析](https://loverhythm1990.github.io/2022/12/17/k8s-cni-imple/) 文章中，我们解释了 CNI 在 K8s 侧的一些实现，包括涉及到的 dockershim 的一些数据结构、CNI 仓库 libcni 的一些数据结构，以及 CNI 调用具体插件的参数、参数传递方式等。在本文中，我们将以 flannel 为例大概介绍一下 cni 插件的实现，其实flannel实现涉及到好几个项目：
+在《[K8s dockershim CNI 实现解析](https://loverhythm1990.github.io/2022/12/17/k8s-cni-imple/)》文章中，我们解释了 CNI 在 K8s 侧的一些实现，包括涉及到的 dockershim 的一些数据结构、CNI 仓库 libcni 的一些数据结构，以及 CNI 调用具体插件的参数、参数传递方式等。在本文中，我们将以 flannel 为例大概介绍一下 cni 插件的实现，其实flannel实现涉及到好几个项目：
 * [cni-plugin](https://github.com/flannel-io/cni-plugin)：这个就是我们要解析的项目，这个项目生成的是一个二进制文件 `flannel`，并且放到目录 `/opt/cni/bin/`目录，供kubelet 消费。但是光有这个项目是不行的，或者说这个项目做的事情比较简单。
-* [flanneld](https://github.com/flannel-io/flannel)：这个是一个daemonset，运行在每个节点上，这个项目作用有在生成每个节点的 `/run/flannel/subnet.env` 文件，供上面的 cni-plugin，这个文件是根据 node.spec.podCIDR 实现的，关于这个项目本文不做详细介绍，后面希望会有文章介绍这个。
+* [flanneld](https://github.com/flannel-io/flannel)：这个是一个daemonset，运行在每个节点上，这个项目作用为：在生成每个节点的 `/run/flannel/subnet.env` 文件，供上面的 cni-plugin 消费，这个文件是根据 node.spec.podCIDR 实现的，关于这个项目本文不做详细介绍，后面希望会有文章介绍这个。
 * 公共 [cni plugins](https://github.com/containernetworking/plugins)：flannel 其实把这个项目 fork 了一份[https://github.com/flannel-io/plugins](https://github.com/flannel-io/plugins)，可能做了一些修改，这里我们只介绍官方的 cni 实现，主要是两个插件`bridge`、`ipam`。
 
 
-### CNI插件实现框架
+### CNI 插件实现框架
 CNI 官方提供了一些库[github.com/containernetworking/cni]([github.com/containernetworking/cni)，在这些库的支持下，实现一个插件还是非常简单的，只要实现三个参数即可：`cmdAdd`、`cmdCheck`、`cmdDel`。
 ```go
 func main() {
@@ -44,7 +44,7 @@ func main() {
 }
 ```
 #### cmdAdd 配置网络
-我们在 [K8s dockershim CNI 实现解析](https://loverhythm1990.github.io/2022/12/17/k8s-cni-imple/) 中介绍过，执行cni二进制文件时，有两种方式传入数据，一种是环境变量，另一种是标准输入，其中标准输入是一大包数据，包含 cni 官方的数据，自定义的数据（字段）；也可以划分为运行时数据（如网络ns、pod 名字等）或者网络配置数据。对于自定义的字段，在反序列化为 cni 官方的数据结构时会丢失，但是反序列化为自定义的数据结构就没问题了，一般都是在官方数据结构`types.NetConf`外面再包一层。
+我们在《[K8s dockershim CNI 实现解析](https://loverhythm1990.github.io/2022/12/17/k8s-cni-imple/)》中介绍过，执行 cni 二进制文件时，有两种方式传入数据，一种是环境变量，另一种是标准输入，其中标准输入是一大包数据，包含 cni 官方的数据，自定义的数据（字段）；也可以划分为运行时数据（如网络ns、pod 名字等）或者网络配置数据。对于自定义的字段，在反序列化为 cni 官方的数据结构时会丢失，但是反序列化为自定义的数据结构就没问题了，一般都是在官方数据结构`types.NetConf`外面再包一层。
 
 下面的`loadFlannelNetConf`方法就是反序列化标准输入为 flannel 自定义的数据结构`NetConf`，其中嵌入包含 cni 的表示数据结构`types.NetConf`
 ```go
@@ -201,11 +201,11 @@ result, err := invoke.DelegateAdd(context.TODO(), netconf["type"].(string), netc
     }
 }
 ```
-这个配置文件需要以`.conf`结尾，而不是`.conflist`，因为是一个单个插件，而不是插件列表。从这个配置看，其实就是配置了一个 bridge 插件，只不过对 bridge 插件进行了二次开发，在 ipam 部分有一些自定义的配置，很明显这些自定义的配置 cni 的标准数据结构 `types.NetConf` 是不识别的，不过不用慌，我们可以跟 flannel 一样，在 `types.NetConf`再包一层数据结构，然后再进行反序列化，另外我们之前也强调过，所有在配置文件中的内容，都会已 `args.StdinData`的方式传入给插件，我们拿到这些数据之后，基本就可以根据自己的配置随便处理了。
+这个配置文件需要以`.conf`结尾，而不是`.conflist`，因为是一个单个插件，而不是插件列表。从这个配置看，其实就是配置了一个 bridge 插件，只不过对 bridge 插件进行了二次开发，在 ipam 部分有一些自定义的配置，很明显这些自定义的配置 cni 的标准数据结构 `types.NetConf` 是不识别的，不过不用慌，我们可以跟 flannel 一样，在 `types.NetConf` 上再包一层数据结构，然后再进行反序列化，另外我们之前也强调过，所有在配置文件中的内容，都会以 `args.StdinData` 的方式传入给插件，我们拿到这些数据之后，基本就可以根据自己的配置随便处理了。
 
-bridge插件一般有三个功能：1）创建网桥，2）创建veth 设备，3）委托ipam分配ip。前面两个功能听上去简单，不理解我们对cni流程的认识，但是有很多实现上的细节，后面希望写一篇文章来单独介绍一些这些细节。
+bridge插件一般有三个功能：1）创建网桥，2）创建 veth 设备，3）委托 ipam 分配 ip。前面两个功能听上去简单，不影响我们对cni流程的认识，但是有很多实现上的细节，后面希望写一篇文章来单独介绍一些这些细节。
 
-上面配置中，ipam 的配置是 delegate 给了 ipam 插件，在delegate 时，将上述配置文件作为标准参数传递给 ipam 插件。ipam 的执行就是获得一个可用的ip，并打印到标准输出，ipam的调用者，会收集这些输出，并进行反序列化，比如，我们可以将下列数据结构返打印到标准输出：
+上面配置中，ipam 的配置是 delegate 给了 ipam 插件，在 delegate 时，将上述配置文件作为标准参数传递给 ipam 插件。ipam 的执行就是获得一个可用的 ip，并打印到标准输出，ipam 的调用者，会收集这些输出，并进行反序列化，比如，我们可以将下列数据结构返打印到标准输出：
 ```go
 // cni库标准数据结构：types.Result
 result := IPamResult{
@@ -224,4 +224,4 @@ if err != nil {
 // 打印到标准输出
 fmt.Print(string(b))
 ```
-实现就暂且分析到这里，也只是梳理了一个大概的流程，以理解实现流程为主。后面希望有文章分析 bridge/ipam插件的实现细节，这个可能涉及到很多网络知识了。
+实现就暂且分析到这里，也只是梳理了一个大概的流程，以理解实现流程为主。后面希望有文章分析 bridge/ipam 插件的实现细节，这个可能涉及到很多网络知识了。

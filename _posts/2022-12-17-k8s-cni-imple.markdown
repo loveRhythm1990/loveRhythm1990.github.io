@@ -293,6 +293,8 @@ func (c *CNIConfig) args(action string, rt *RuntimeConf) *invoke.Args {
 	}
 }
 ```
+> 关于 `c.args("ADD",rt)` 这里还需要说明一下，这个方法的第二个参数是 `RuntimeConf`，在这个方法中，将 RuntimeConf 的 Args 参数赋值给了 `invoke.Args` 结构体，这个结构体在调用 AsEnv() 方法时，会将 RuntimeConf.Args 作为环境变量传递 `"CNI_ARGS="+pluginArgsStr`（格式为`k1=v1;k2=v2`），在执行 cni 二进制文件时，这些作为二进制文件的环境变量。说这么多，其实就想说，这个 RuntimeConf.Args 提供了一种传递运行时自定义参数的方式，比如 pod 的一些 annotation，在 cni 的自定义实现中，这个是非常重要的。
+
 * exec Exec: 二进制文件的执行器，这个执行器可以看成无状态的。这个默认为 `DefaultExec` 可以指定一个标准错误输出。
 
 ```go
@@ -326,7 +328,6 @@ func (e *RawExec) ExecPlugin(ctx context.Context, pluginPath string, stdinData [
 	if err := c.Run(); err != nil {
 		return nil, pluginErr(err, stdout.Bytes())
 	}
-
 	return stdout.Bytes(), nil
 }
 ```
