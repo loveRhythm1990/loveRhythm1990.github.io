@@ -68,7 +68,7 @@ type IPConfig struct {
 注意上面的 `ContainerId` 是有可能会变化的，比如 pod 重启，但是只要 pod 的 namespace 和 name 没有变化就行。每次要给 pod 分配 ip 时，首先根据 namespace 和 name 查找有无已经预留的 ip，有则返回，没有则继续分配。
 
 #### 怎么知道要不要预留
-pod 有 annotation 标识要不要预留 ip，这个要讲这个 annotation 传递到插件中，Openkruise 每说怎么做（代码中是从 ipamConfig 中取的 pod annotation，由此可见可能扩展了 bridge 插件），但是这个可以通过在 Kubelet 中扩展 `RuntimeConf` 的 Args 来做（这个需要扩展 Kubelet，还是有一点代价的），在调用插件时，这些 args 会通过 `CNI_ARGS` 这个环境变量传递给插件。例子如下，代码文件为 `kubernetes/pkg/kubelet/dockershim/network/cni/cni.go` (以 dockershim 为例)
+pod 有 annotation 标识要不要预留 ip，但是要将这个 annotation 传递到插件中，Openkruise 没说怎么做（从代码中看，是从 ipamConfig 中取的 pod annotation，由此可见可能扩展了 bridge 插件），但是这个可以通过在 Kubelet 中扩展 `RuntimeConf` 的 Args 来做（这个需要扩展 Kubelet，还是有一点代价的），在调用插件时，这些 args 会通过 `CNI_ARGS` 这个环境变量传递给插件。例子如下，代码文件为 `kubernetes/pkg/kubelet/dockershim/network/cni/cni.go` (以 dockershim 为例)
 ```go
 func (plugin *cniNetworkPlugin) addToNetwork(ctx context.Context, network *cniNetwork, podName string, podNamespace string, podSandboxID kubecontainer.ContainerID, podNetnsPath string, annotations, options map[string]string) (cnitypes.Result, error) {
 	rt, _ := plugin.buildCNIRuntimeConf(podName, podNamespace, podSandboxID, podNetnsPath, annotations, options)
@@ -95,3 +95,5 @@ func (plugin *cniNetworkPlugin) addToNetwork(ctx context.Context, network *cniNe
 host-local 官方文档为 [host-local IP address management plugin](https://www.cni.dev/plugins/current/ipam/host-local/)，
 
 host-local 代码仓库： [https://github.com/containernetworking/plugins/tree/main/plugins/ipam/host-local](https://github.com/containernetworking/plugins/tree/main/plugins/ipam/host-local)
+
+[OpenKruise 例子程序](https://github.com/openkruise/samples)
