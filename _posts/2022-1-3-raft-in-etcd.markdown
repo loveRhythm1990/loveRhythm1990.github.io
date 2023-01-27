@@ -293,7 +293,7 @@ type Ready struct {
 4. 如果发现CommittedEntries中有成员变更类型的entry，调用node.ApplyConfChange()方法让node知道。
 5. 最后再调用node.Advance()告诉raft，这批状态更新处理完了，状态已经演进了，可以给我下一批Ready让我处理。
 
-## Life of q Request
+## Life of a Request
 前面我们把整个包的结构过了一遍，下面来结合具体的代码看看raft对一个请求的处理过程是怎样的。我一直觉得，如果能从代码的层面追踪到一个请求的处理过程，那无论是从宏观还是微观的角度，对理解整个系统都是非常有帮助的。
 
 ### Life of a Vote Request
