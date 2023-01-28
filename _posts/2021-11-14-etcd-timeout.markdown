@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "关于 Etcd 超时：read-only request took too long to execute 的零零碎碎"
+title:      "Etcd 超时：read-only request took too long to execute"
 date:       2021-11-14 10:10:00
 author:     "weak old dog"
 header-img-credit: false
@@ -9,7 +9,7 @@ tags:
 ---
 
 ## 背景
-etcd 的日志中，经常有下面的 warning 信息，这个东西本没有好分析的，只不过自己太懒了，只能靠一边写博客一边分析，这样才有点动力。
+etcd 的日志中，经常有下面的 warning 信息，这个东西本没有什么好分析的，只不过自己太懒了，只能靠一边写博客一边分析，这样才有点动力。
 ```s
 2021-10-24 01:36:29.048037 W | etcdserver: read-only range request "key:\"/registry/roles/cattle-global-data/mcapprevision-9gc5b-mr-u\" " with result "range_response_count:0 size:8" took too long (189.874669ms) to execute
 2021-10-24 01:36:29.048394 W | etcdserver: read-only range request "key:\"/registry/apps.kruise.io/containerrecreaterequests\" range_end:\"/registry/apps.kruise.io/containerrecreaterequestt\" count_only:true " with result "range_response_count:0 size:8" took too long (204.0239ms) to execute
@@ -25,7 +25,7 @@ etcd 的日志中，经常有下面的 warning 信息，这个东西本没有好
 plog.Warningf("%srequest %q with result %q took too long (%v) to execute", prefix, reqStringer.String(), result, d)
 ```
 从调用处看，调用处不多，逐个分析一下。
-![java-javascript](/img/in-post/all-in-one/2021-11-14-10-32-14.png)
+![java-javascript](/img/in-post/all-in-one/2021-11-14-10-32-14.png){:height="70%" width="70%"}
 
 从下面函数 `warnOfExpensiveReadOnlyRangeRequest` 开始分析，其调用处只有一个地方，由此可见，这个日志包含的信息也不多，是指从收到请求到返回请求的总时延，中间还包括很多动作。
 ```go

@@ -11,11 +11,11 @@ tags:
 最近做了很多 Etcd 运维工作，也遇到了一些场景，这里结合 《Kubernetes 生产化实践之路》 （后面称这本书为《实践》）以及网上的一些思路，思考下 Etcd 性能调优相关总结，并对相关引用材料进行整理。这些引用材料可能并没有完全读完，或者理解思考，这里作为索引，后面再对这些内容作为迭代。也就是说性能调优作为主线，相关引用材料作为分支。
 
 ### 减少网络时延
-《实践》这本书中提到“建议 Etcd 应尽量做到同地域部署”，这个信息很重要，因为最近也在做同城双活，一般来说，同城（同城双活）的时延在 1ms 左右，应该是还能符合一个 etcd 的时延要求的。这个我们也使用 tc 来模拟时延，在配置网卡时延在 20ms 时，etcd 性能即功能影响不是很大。 
+《实践》这本书中提到“建议 Etcd 应尽量做到同地域部署”，这个信息很重要，因为最近也在做同城双活，一般来说，同城（同城双活）的时延在 1ms 左右，应该是还能符合一个 Etcd 的时延要求的。这个我们也使用 tc 来模拟时延，在配置网卡时延在 20ms 时，Etcd 性能及功能影响不是很大。 
 
-在 etcd 节点网络流量很大时，我们可以提高 etcd 流量的优先级，这个也可以通过 tc 来完成，具体怎么做，可以参考[《How to use 'tc' (traffic control) to increase / decrease an application's network priority?》](https://www.reddit.com/r/linuxquestions/comments/5vsvnr/how_to_use_tc_traffic_control_to_increase/)，思路是通过 iptables 来对流量进行标记，然后把不同的流量放到 tc 的不同队列里。
+在 Etcd 节点网络流量很大时，我们可以提高 Etcd 流量的优先级，这个也可以通过 tc 来完成，具体怎么做，可以参考[《How to use 'tc' (traffic control) to increase / decrease an application's network priority?》](https://www.reddit.com/r/linuxquestions/comments/5vsvnr/how_to_use_tc_traffic_control_to_increase/)，思路是通过 iptables 来对流量进行标记，然后把不同的流量放到 tc 的不同队列里。
 
-tc 工具很复杂，难得有资料能把事情讲清楚。不过从上面来看，通过 tc 来控制流量优先级还是有一定成本的。《实践》中还提到了一种 case，leader 的连接太多，导致 follower 发往 leader 的请求被丢弃
+tc 工具很复杂，难得有资料能把事情讲清楚。不过从上面来看，通过 tc 来控制流量优先级还是有一定成本的。《实践》中还提到了一种 case: leader 的连接太多，导致 follower 发往 leader 的请求被丢弃
 ```s
 dropped MsgProp to 247ae21ff9436b2d since streamMsg's sending buffer is full
 dropped MsgAppResp to 247ae21ff9436b2d since streamMsg's sending buffer is full
@@ -39,15 +39,15 @@ tc qdisc del dev eth0 root
 
 
 ### 减少磁盘 I/O 延迟
-一般物理磁盘的时延为 10ms，SSD 的时延低于 1ms，所以 etcd 一般用 ssd。而且是单盘只给 ssd 用。另外因为 k8s 的 event 量多且频繁变更，我们可以将 event 单独存储，这个需要修改 kube-apiserver 的参数:`--etcd-servers-overrides`，可以参考[《Etcd 安装、部署、测试》](https://loverhythm1990.github.io/2021/08/28/etcd-hello/)
+一般物理磁盘的时延为 10ms，SSD 的时延低于 1ms，所以 Etcd 一般用 ssd。而且是单盘只给 ssd 用。另外因为 K8s 的 event 量多且频繁变更，我们可以将 event 单独存储，这个需要修改 kube-apiserver 的参数:`--etcd-servers-overrides`，可以参考[《Etcd 安装、部署、测试》](https://loverhythm1990.github.io/2021/08/28/etcd-hello/)
 
-另外，如果 etcd 共享磁盘，那么可以使用 ionice 来提高 etcd 磁盘优先级，命令为：
+另外，如果 Etcd 共享磁盘，那么可以使用 ionice 来提高 Etcd 磁盘优先级，命令为：
 ```s
 ionice -c2 -n0 -p 'pgrep etcd'
 ```
 ionice 的使用，可以参考[利用ionice命令设置程序的IO调度与优先级](https://www.zxzyl.com/archives/750/)。ionice将磁盘IO调度分为三类：
 
-* ilde：空闲磁盘调度，该调度策略是在当前系统没有其他进程需要进行磁盘IO时，才能进行磁盘。
+* ilde：空闲磁盘调度，该调度策略是在当前系统没有其他进程需要进行磁盘 IO 时，才能进行磁盘读写。
 * Best effort：是缺省的磁盘IO调度策略；(1)该调度策略可以指定优先级参数(范围是0~7，数值越小，优先级越高)；
 * Real time：实时调度策略，如果设置了该磁盘IO调度策略，则立即访问磁盘，不管系统中其他进程是否有IO。因此使用实时调度策略，需要注意的是，该访问策略可能会使得其他进程处于等待状态。
 
@@ -73,16 +73,17 @@ Options:
 
 
 ### 自动压缩历史版本
-这个调整 etcd 的参数 `--auto--compaction` 即可，一般默认是开启的，这个有两种压缩模式，一种是周期性的，一种是根据历史记录数，这个看下文档即可，不再赘述。
+这个调整 Etcd 的参数 `--auto--compaction` 即可，一般默认是开启的，这个有两种压缩模式，一种是周期性的，一种是根据历史记录数，这个看下文档即可，不再赘述。
 
 ### 定期消除碎片
-etcd 是不会主动归还空闲的磁盘空间的，这个时候需要调用`etcdctl defrag`命令来释放空间，另外在 etcd 中，我们调用 delete 接口删除数据时，并不会从磁盘删数据，只是对对应的版本数据添加一个`tombstone` 标志，因此我们删除数据并不会释放空间，除非调用 `defrag` 命令释放磁盘空间。
+Etcd 是不会主动归还空闲的磁盘空间的，这个时候需要调用`etcdctl defrag`命令来释放空间，另外在 Etcd 中，我们调用 delete 接口删除数据时，并不会从磁盘删数据，只是对对应的版本数据添加一个`tombstone` 标志，因此我们删除数据并不会释放空间，除非调用 `defrag` 命令释放磁盘空间。调用 `defrag` 会影响读写性能，尽量不要调用，或者在业务低峰期调用。
 
 ### 优化运行参数
 这个主要是`心跳周期(heartbeat，默认100ms)`和`选举超时时间(election timeout，默认1000ms)`，尤其是在高迟延场景下，需要增加这两个参数，避免造成频繁选主，造成集群不稳定。
 
-心跳周期一般设置为 etcd 成员直接平均往返周期的最大值，一般是平均RTT 的 0.55~1.5 倍。选举超时一般设置为心跳周期的10倍。测量 TTL 最简单的方法是使用 ping 工具。
+心跳周期一般设置为 Etcd 成员直接平均往返周期的最大值，一般是平均RTT 的 0.55~1.5 倍。选举超时一般设置为心跳周期的10倍。测量 TTL 最简单的方法是使用 ping 工具。
 
 ### 参考
 《Kubernetes 生产化实践之路》ebay
+
 [《etcd调优(Tuning)》](https://zhuanlan.zhihu.com/p/29806621)
