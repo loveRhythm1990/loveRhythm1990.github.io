@@ -10,15 +10,13 @@ tags:
     - Controller
 ---
 
-> “Somethings Happens”
-
-## 前言
+### 前言
 
 打算开始写一些k8s的文章，已理解并记忆k8s的运行原理与设计模式，基于的k8s版本为1.9.3。
 从volume expand controller开始是因为偶然发现这个控制器比较简单，麻雀虽小，五脏俱全，那就从这个开始吧。
 
 
-## 入口
+### 入口
 
 所有cm中的控制器都是在这里注册的，在后续文章会从宏观上分析整个cm的运行原理。
 `kubernetes/cmd/kube-controller-manager/app/controllermanager.go`
@@ -53,7 +51,7 @@ func startVolumeExpandController(ctx ControllerContext) (bool, error) {
 上述代码在创建一个expand代码之后，接着就调用Run跑起来了。
 
 
-## ExpandController的创建过程
+### ExpandController的创建过程
 
 创建过程就是公开函数NewExpandController的实现了，我会尽量少的贴代码，以理解主线为主，避免陷入细节。
 
@@ -120,11 +118,11 @@ func NewExpandController(
 * 初始化一个SyncVolumeResize，这个是同步Resize的地方
 * 最后是初始化一个PVCPopulator
 
-## 分析PVCPopulator
+### 分析PVCPopulator
 pvcPopulator这部分相对独立，先分析这个。这个数据结构只做了一件事：就是每隔2分钟从apiserver把所有的pvc都拿过来，然后把每个pvc对应的pv也拿过来，然后调用调用resizeMap的AddPVCUpdate方法，参数就是一个pvc以及这个pvc对应的pv。
 需要注意的是PVCPopulator没有做任何检查，上面操作获取的都是所有的PVC，检查在AddPVCUpdate方法中做。另外获取pv的时候，拿的是一个深拷贝。
 
-## SyncVolumeResize
+### SyncVolumeResize
 这个应该是VolumeExpandController的主要处理逻辑。从run函数开始看，这个执行周期是30s，这个数据的sync方法也不麻烦。主要逻辑如下：
 ```go
 
@@ -138,11 +136,11 @@ pvcPopulator这部分相对独立，先分析这个。这个数据结构只做�
 ```
 SyncVolumeResize看上去是resizeMap的消费者，PVCPopulator是resizeMap的生产者。另外，我们之前pvc update事件处理器`UpdateFunc: expc.pvcUpdate`也是resizeMap的生产者。
 
-## ResizeMap缓存
+### ResizeMap缓存
 resizeMap是ExpandController创建并持有的，`	expc.resizeMap = cache.NewVolumeResizeMap(expc.kubeClient)
 `，并将这个resizeMap当做参数传递给SyncVolumeResize以及PVCPopoluator，因此，存在三个可以更新缓存的地方：expandController、PVCPopluator、SyncVolumeResize，前两个是生产者，最后一个是消费者。因为有三个goroutine会访问resizemap所以需要加锁。
 
 另外，resizemap的AddPVCUpdate是需要做资源检查的，只有在Spec.Size比Status.Size大的时候才需要进行扩展。
 
-## 总结
+### 总结
 ExpandOperator的主要流程是这样的，下一步打算介绍OperationExecutor的设计。

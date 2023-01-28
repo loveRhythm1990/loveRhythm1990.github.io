@@ -15,14 +15,14 @@ tags:
 `findNodesThatFit`是scheduler调用predicate的实现，即对每个node调用一系列predicate方法，查看这个node是否满足这个predicate，并返回一个满足这些predicate的node的列表，后续会对这个列表执行priority操作。
 博客最后有这个函数的完整代码。
 
-## podFitsOnNode
+### podFitsOnNode
 检查node是否满足条件的具体方法，返回这个节点是否满足条件，如果不满足，则返回原因。另外`podFitsOnNode`有一个参数`AlwaysCheckAllPredicates`用来控制是否短路predicate，短路是指，如果一个node执行一个predicate失败了，后面的就不执行了。
 podFitsOnNode调用一系列predicates是有序的，目前是安装静态顺序，如下所示：
 ```golang
 	for _, predicateKey := range predicates.Ordering() {
 ```
 
-## ParallelizeUntil
+### ParallelizeUntil
 `ParallelizeUntil`是一个并行任务框架，可以让一个队列里的特定数目（假设为k）的任务并行运行，思路就是启动k个goroutine去读（利用for range循环读，能拿到任务就处理）一个channel。
 主要代码是下面一行，`checkNode`方法是对一个node调用所有的predicate（具体是调用`podFitsOnNode`方法）。
 
@@ -72,7 +72,7 @@ func ParallelizeUntil(ctx context.Context, workers, pieces int, doWorkPiece DoWo
 	wg.Wait()
 }
 ```
-## context
+### context
 `findNodesThatFit`中有一行代码创建了一个context，用来结束worker goroutine，结束goroutine的条件是已经找到了足够的node，不需要再查找其他node了，关于足够的node，有两个默认参数：`minFeasibleNodesToFind`,`DefaultPercentageOfNodesToScore`，默认值分别为100，以及50%，分别表示最少的查找的node，以及一个查找的可行的node占所有node的百分比。
 ```golang
 	ctx, cancel := context.WithCancel(context.Background())
@@ -90,16 +90,14 @@ func ParallelizeUntil(ctx context.Context, workers, pieces int, doWorkPiece DoWo
 ```golang
 if len(filtered) > 0 && len(g.extenders) != 0 {
 
-        // 执行extender的过滤操作
+	// 执行extender的过滤操作
 	filteredList, failedMap, err := extender.Filter(pod, filtered, g.nodeInfoSnapshot.NodeInfoMap)
-        // 忽略其他代码
+	// 忽略其他代码
 }
 ```
 
 完整代码如下：
 ```go
-// Filters the nodes to find the ones that fit based on the given predicate functions
-// Each node is passed through the predicate functions to determine if it is a fit
 func (g *genericScheduler) findNodesThatFit(pluginContext *framework.PluginContext, 
 pod *v1.Pod, nodeLister algorithm.NodeLister) ([]*v1.Node, FailedPredicateMap, framework.NodeToStatusMap, error) {
 

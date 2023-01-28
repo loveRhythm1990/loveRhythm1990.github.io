@@ -10,19 +10,12 @@ tags:
     - Scheduler
 ---
 
-> “Somethings Happens”
-
-## 前言
-
+### 前言
 打算分析一下调度器，将调度器拆成若干部分：调度主干，pod队列管理，缓存管理，调度算法等。本文分析下主干及pod调度队列管理。基于的k8s版本为1.9.3。
-
-## 入口
-
+### 入口
 代码文件：`kubernetes/plugin/pkg/scheduler/scheduler.go`
 方法名字：`func (sched *Scheduler) scheduleOne()`
-
-## 流程
-
+### 流程
 1. 取一个pod，从configFactory的podQueue里取一个pod进行调度，这个pod会从待调度队列删除。
 
     `pod := sched.config.NextPod()`
@@ -59,10 +52,8 @@ tags:
 
 4. bind pod，即更新pod.Spec.NodeName，这个过程是异步的，即一个单独的goroutine去做这个事情，起一个goroutine之后，scheduler又去调度其他pod了。
 
-
-## 队列管理
-
-这里的队列是指scheduler中待调度pod队列，在文件`kubernetes/plugin/pkg/scheduler/factory/factory.go`中，
+### 队列管理
+这里的队列是指Scheduler中待调度pod队列，在文件`kubernetes/plugin/pkg/scheduler/factory/factory.go`中，
 ```go
 // configFactory is the default implementation of the scheduler.Configurator interface.
 type configFactory struct {

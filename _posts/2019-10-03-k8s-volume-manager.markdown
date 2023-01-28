@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "Kubelet volume manager 概述"
+title:      "Kubelet volume manager 工作原理概述"
 date:       2019-10-04 19:16:00
 author:     "weak old dog"
 header-img-credit: false
@@ -9,8 +9,7 @@ tags:
     - Kubelet
 ---
 
-
-## 前言
+### 前言
 本身是做 K8s 存储相关工作的，但对kubelet volume-manager怎么工作的，了解的还不够多，这里分析一下吧。基于的 K8s 版本为1.16。volume-manager的入口函数在`pkg/kubelet/kubelet.go`文件中。程序启动非常简单：
 ```golang
 	// Start volume manager
@@ -18,7 +17,7 @@ tags:
 ```
 下面就从这个入口函数开始分析。在贴代码时，会删去代码中的加锁、校验、监控项、错误处理、以及日志等不影响业务逻辑的代码。
 
-## Run方法
+### Run方法
 volume-manager的主要代码在`pkg/kubelet/volume-manager`这个package中。`Run`方法的实现为：
 ```golang
 func (vm *volumeManager) Run(sourcesReady config.SourcesReady, stopCh <-chan struct{}) {
@@ -37,7 +36,7 @@ func (vm *volumeManager) Run(sourcesReady config.SourcesReady, stopCh <-chan str
 ```
 由此可见，`Run`主要做两件事，启动`desiredStateOfWorldPopulator`以及启动`reconciler`逻辑。下面分别分析。
 
-### 关于desiredStateOfWorldPopulator
+#### 关于desiredStateOfWorldPopulator
 `desiredStateOfWorldPopulator`负责维护desired state world缓存的，下面简称dsw。对于每个active的pod，如果这个pod存在volume，dsw populator确保其在dsw缓存中；对于dsw缓存中的pod，如果被删除了，则从dsw缓存删除。dsw的Run方法就是调用`populatorLoop`方法。这个方法如下，省去了部分代码：
 ```golang
 func (dswp *desiredStateOfWorldPopulator) populatorLoop() {

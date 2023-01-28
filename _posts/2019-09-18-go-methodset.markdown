@@ -10,7 +10,7 @@ tags:
 
 > Golang基础知识
 
-最开始遇到这问题是在看golang堆的实现的时候，堆的接口是下面这样的，一共需要实现五个接口。
+最开始遇到这问题是在看 Golang 堆的实现的时候，堆的接口是下面这样的，一共需要实现五个接口。
 ```go
 type Interface interface {
     // 排序需要实现的接口
@@ -19,7 +19,7 @@ type Interface interface {
 	Pop() interface{}   // remove and return element Len() - 1.
 }
 ```
-golang文档提供了一个示例如下，定义了一个IntHeap类型，奇怪的是实现接口的五个方法时，有三个是值类型（value receiver），另外两个是指针类型（pointer receiver），那IntHeap到底有没有实现这个`Interface`接口呢？
+Golang 文档提供了一个示例如下，定义了一个 IntHeap 类型，奇怪的是实现接口的五个方法时，有三个是值类型（value receiver），另外两个是指针类型（pointer receiver），那 IntHeap 到底有没有实现这个`Interface`接口呢？
 ```go
 // An IntHeap is a min-heap of ints.
 type IntHeap []int
@@ -47,13 +47,13 @@ The method set of a type determines the interfaces that the type implements and 
 另外，go语言规范关于方法调用 [calls](https://golang.org/ref/spec#Calls)时有如下说明:
 > A method call x.m() is valid if the method set of (the type of) x contains m and the argument list can be assigned to the parameter list of m. If x is **addressable** and &x's method set contains m, x.m() is shorthand for (&x).m()
 
-总结起来，对于值类型T，及对应的指针类型*T：
-* T的方法集包括接收者为类型T（Value-receiver）的方法
-* \*T的方法集方法包括接收者为类型T的方法，以及方法为类型*T的方法，即为两者的并集
-* Interface类型的方法集为Interface类型中声明的方法。
-* 在进行方法调用时，如果变量是可寻址(`addressable`)的，则类型T可以调用*T方法集中的方法。
+总结起来，对于值类型 T，及对应的指针类型 *T：
+* T 的方法集包括接收者为类型 T（Value-receiver）的方法
+* \*T 的方法集方法包括接收者为类型 T 的方法，以及方法为类型 *T 的方法，即为两者的并集
+* Interface 类型的方法集为 Interface 类型中声明的方法。
+* 在进行方法调用时，如果变量是可寻址(`addressable`)的，则类型 T 可以调用 *T 方法集中的方法。
 
-基于以上总结，下面代码`aHeap.Pop()`是合法的，因为aHeap是可以寻址的。另外，需要主要的是方法`heap.Init(h Interface)`的参数是一个接口，存在接口中的真实值是不可寻址的，所以必须传一个指针（可以说`*IntHeap`是实现了heap Interface的），另外map中的元素也是不可寻址的。
+基于以上总结，下面代码 `aHeap.Pop()` 是合法的，因为 aHeap 是可以寻址的。另外，需要主要的是方法 `heap.Init(h Interface)` 的参数是一个接口，存在接口中的真实值是不可寻址的，所以必须传一个指针（可以说`*IntHeap`是实现了heap Interface的），另外 map 中的元素也是不可寻址的。
 ```golang
 func main() {
 
@@ -64,7 +64,7 @@ func main() {
 	aHeap.Pop()
 }
 ```
-关于是不是可以寻址可以参数下面参考[go addressable 详解](https://colobu.com/2018/02/27/go-addressable/)，说的已经很清楚了。另外以后希望会对Interface和Map的元素不能寻址做分析。
+关于是不是可以寻址可以参数下面参考[go addressable 详解](https://colobu.com/2018/02/27/go-addressable/)，说的已经很清楚了。另外以后希望会对 Interface 和 Map 的元素不能寻址做分析。
 
 ### 参考：
 * [go语言规范](https://golang.org/ref/spec#Method_sets)

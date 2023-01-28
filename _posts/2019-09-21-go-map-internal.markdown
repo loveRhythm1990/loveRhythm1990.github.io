@@ -1,7 +1,6 @@
 ---
 layout:     post
-title:      "Golang map 概述"
-subtitle:   " \"从宏观角度看 map 实现\""
+title:      "从宏观角度看 Golang map 实现[翻译]"
 date:       2019-09-21 22:32:00
 author:     "weak old dog"
 header-img-credit: false
@@ -11,14 +10,14 @@ tags:
 
 > 这是一篇翻译，原文在这里：[Macro View of Map Internals In Go](https://www.ardanlabs.com/blog/2013/12/macro-view-of-map-internals-in-go.html)
 
-## 简介
+### 简介
 有很多文章来介绍golang slice的内部实现，但是当涉及到map的时候，都有点说不清楚。在好奇之余，去查看了golang map的源代码，知道大家为什么都懵逼了，源代码链接：
 
 [https://golang.org/src/runtime/hashmap.go](https://golang.org/src/runtime/hashmap.go)
 
 至少对我来说，这代码太复杂了，既然如此，我尝试从宏观角度去理解map是怎么构建的，以及怎么扩展（grow）的，通过这样，可以解释为什么map是无序的、高效的。
 
-## 创建和使用map
+### 创建和使用map
 我们先来看一下，map是如何创建以及保存值的。
 ```golang
 // Create an empty map with a key and value of type string
@@ -58,7 +57,7 @@ for key, value := range colors {
 
 现在我们知道了map的创建、添加、以及遍历，现在尝试解开map的面纱。
 
-## map的结构
+### map的结构
 Map是通过hash table实现的，关于hash table已经有很多文章在介绍了，下面是维基百科：
 
 [http://en.wikipedia.org/wiki/Hash_table](http://en.wikipedia.org/wiki/Hash_table)
@@ -106,7 +105,7 @@ type hmap struct {
 译者补充：一个bucket是一大块内存，开始的8*8个字节为HOB字节数组，后面就是keykey...valuevalue...，访问key和value是通过偏移来实现的。下面图来自博客[浅谈go语言实现原理-map](https://draveness.me/golang/datastructure/golang-hashmap.html)
 ![java-javascript](/img/in-post/map-internal/s5.png){:height="70%" width="70%"}
 
-## map是怎么扩展的
+### map是怎么扩展的
 当我们持续在map中添加以及删除元素的时候，map的性能会变得恶化，用来决定map是否扩展的负载因子（load factor）取决于四个因素：
 * % overflow  : Percentage of buckets which have an overflow bucket
 * bytes/entry : Number of overhead bytes used per key/value pair
@@ -124,11 +123,11 @@ type hmap struct {
 当新的bucket可用的时候，旧的bucket中的key/value对会被移动或称为`evacuated`到新的bucket数组中。之前在同一个bucket中的key/value对，被移动到新的bucket之后，可能会处于不同的bucket中，`evacuation`算法倾向于将key/value对均匀地分布在数组中。
 ![java-javascript](/img/in-post/map-internal/s4.png){:height="60%" width="60%"}
 这些都是一些非常精巧的操作（delicate dance），因为在`evacuation`操作完成之前，迭代操作仍然需要访问old array，同时这也会影响key/value的返回顺序，为了保证在扩展时，仍能迭代访问golang做了很多工作。
-## 总结
+### 总结
 正如我开头所说的，这只是map的结构以及增长的宏观视角，代码是用c实现的，并执行了很多内存以及指针操作来保证高效、安全。
 显然，map的实现可能会变，但即使发生变化，保持对map的宏观认识并不是影响我们使用map的能力。至少，在你知道map会存放多少个key/value对时，可以在创建map的时候指定长度，来避免使用map的时候进行扩展；同时也解释了为什么map是无序的。
 
-## 参考
+### 参考
 * [浅谈go语言实现原理-map](https://draveness.me/golang/datastructure/golang-hashmap.html)
 
 * [浅谈Go语言实现原理 for-range](https://draveness.me/golang/keyword/golang-for-range.html)

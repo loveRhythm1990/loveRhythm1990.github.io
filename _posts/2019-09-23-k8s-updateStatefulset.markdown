@@ -10,8 +10,7 @@ tags:
     - Statefulset
 ---
 
-
-## 前言
+### 前言
 在我看来，k8s的statefulset控制器，算是controller-manager中比较重要的一个了（是不是最重要的一个呢？），鉴于也是一块硬骨头，只能一点一点啃，能一次写完整是极好的，但是鉴于精力与能力不足，一点点写也是不错的，而且对我自身来说，也是非常有效的。[k8s文档](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/)中对于statefulset的特定描述为：
 * 稳定的、唯一的网络标识符
 * 稳定的、持久的存储
@@ -24,7 +23,7 @@ sts控制器的入口为: `pkg/controller/statefulset/stateful_set.go`，函数�
 * stateful_set_control，对应文件`pkg/controller/statefulset/stateful_set_control.go`
 * stateful_pod_control，对应文件`pkg/controller/statefulset/stateful_pod_control.go`
 
-## statefulset controller的初始化函数`NewStatefulSetController`
+### statefulset controller的初始化函数`NewStatefulSetController`
 首先是注册pod、statefulset资源的事件处理函数，事件处理器都是stateful_set要干的活，代码在其对应的文件中。
 
 pod的事件处理函数基本没有业务逻辑，基本是取出pod对应的statefulset，然后调用`ssc.enqueueStatefulSet`将sts放入待处理队列。
@@ -61,7 +60,7 @@ worker() --> processNextWorkItem() --> sync() --> syncStatefulSet(set, pods) -->
 
 过程就是取出队列中的所有sts，并针对每个sts，代用sync方法，最终调用了`StatefulSetControlInterface`接口的`UpdateStatefulset`方法，所以，后者就是整个过程的核心了。
 
-## StatefulSetControlInterface的UpdateStatefulset方法
+### StatefulSetControlInterface的UpdateStatefulset方法
 首先看一下这个方法的注释：
 > UpdateStatefulset是sts的核心循环逻辑，执行可预测的，默认单调的更新策略：scale up时是升序的，当前一个pod是unhealthy时，后一个pod是不会创建的。pod终止时是降序的。在burst策略下，pod的创建以及删除是无序的。
 
