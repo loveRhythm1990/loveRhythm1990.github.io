@@ -13,9 +13,9 @@ TLS编程涉及到一些概念，比如非对称加密、私钥、公钥、CA等
 
 首先是`非对称加密`，涉及到公钥和私钥，公钥是随意公布的，公钥加密的内容只有私钥才能解密，私钥加密的东西只有公钥才能解密，一般私钥保存在服务端，是严格保密的，客户端使用公钥加密内容后，发送给服务端，然后服务端使用私钥进行解密。
 
-CA([Certificate Authority](https://en.wikipedia.org/wiki/Certificate_authority))，是一些权威机构，比如`GoDaddy`等，用来验证服务端证书是正确的，没有被篡改的。一个应用服务器想要提供https服务，需要首先产生私钥和CSR(`Certificate Signing Request`)，通过CSR向CA权威机构请求签发证书，这样这个CA就能鉴证服务端证书的真伪。CSR包含这个应用服务端的基本信息，包括：公钥、common name(服务器所在主机的FQDN)，具体可以参考[What is contained in a CSR?](https://www.sslshopper.com/what-is-a-csr-certificate-signing-request.html)
+CA([Certificate Authority](https://en.wikipedia.org/wiki/Certificate_authority))，是一些权威机构，比如`GoDaddy`等，用来验证服务端证书是正确的，没有被篡改的。一个应用服务器想要提供https服务，需要首先产生私钥和CSR(`Certificate Signing Request`)，通过CSR向CA权威机构请求签发证书，这样这个CA就能鉴证服务端证书的真伪。CSR包含这个应用服务端的基本信息，包括：`CN`(Common name，名字)，`O`(Organization)等；具体可以参考 [What is contained in a CSR?](https://www.sslshopper.com/what-is-a-csr-certificate-signing-request.html)
 
-还有个概念`自签发证书`，就是签发证书不是权威机构做的，而是我们自己生成的CA签发的（其实只要openssl生成一个私钥，使用这个私钥就可以做正确的签发工作），同时，做签发证书用的的私钥（ca.key）对应的公钥(ca.crt)，一般要分发到各种设备中，比如客户端所在的主机或者浏览器中，客户端就可以用这个ca.crt来验证服务端的证书。
+还有个概念`自签发证书`，就是签发证书不是权威机构做的，而是我们自己生成的 CA 签发的（其实只要 openssl 生成一个私钥，使用这个私钥就可以做正确的签发工作），同时，做签发证书用的的私钥（ca.key）对应的公钥(ca.crt)，一般要分发到各种设备中，比如客户端所在的主机或者浏览器中，客户端就可以用这个ca.crt来验证服务端的证书。
 
 在TLS编程中，服务端需要自己的私钥server.key，以及用CSR请求的证书server.crt，用这两个就够了。客户端需要`ca.crt`用来验证server.crt的有效性，用这个就够了，客户端在编程时可以提供`ca.crt`，如果不提供，那么这个ca.crt需要实现被导入到主机中，或者被导入到浏览器中。
 
@@ -75,12 +75,12 @@ subjectAltName=@alt_names
 这里主要关注`alt_names`字段，这个是服务端程序所运行的主机域名或者IP。签发的证书只能这个IP用。
 > 我们也可以不使用配置文件，直接使用下面命令生成csr，会通过交互的方式生成csr。`openssl req -new -key server.key -out server.csr`
 
-e. 根据配置文件，生成CSR证书
+e. 根据配置文件，生成 CSR 证书，（输入：私钥、csr 配置；输出：csr证书）
 ```s
 openssl req -new -key server.key -out server.csr -config csr.conf
 ```
 
-f. 使用ca.key和ca.crt以及csr签发证书，生成的`server.crt`文件，就是server端启动https server时需要的。
+f. 使用ca.key和ca.crt以及csr签发证书，生成的`server.crt`文件，就是server端启动https server时需要的。(输入：csr证书、ca私钥、ca证书；输出：server 证书)
 ```s
 openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key \
 -CAcreateserial -out server.crt -days 10000 \
@@ -96,6 +96,37 @@ openssl x509  -noout -text -in ./server.crt
 ```s
 sudo security add-trusted-cert -d -r trustRoot -k "/Library/Keychains/System.keychain" ca.crt
 ```
+
+#### 使用 cfssl 生成证书
+《[jimmysong.io 创建 TLS 证书和秘钥](https://jimmysong.io/kubernetes-handbook/practice/create-tls-and-secret-key.html)》介绍了使用它 cfssl 生成证书的方式，在文章介绍的方式中，生成 ca 私钥和证书之后，使用 csr 配置就可以生成一个服务器的证书和私钥，比如在生成 admin 证书时，假设有如下 `admin-csr.json` 配置。
+```json
+{
+  "CN": "admin",
+  "hosts": [],
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+    {
+      "C": "CN",
+      "ST": "BeiJing",
+      "L": "BeiJing",
+      "O": "system:masters",
+      "OU": "System"
+    }
+  ]
+}
+```
+假设已经有证书文件：`ca.pem`、`ca-key.pem`、`ca-config.json`(ca 配置) 生成的 `admin-key.pem`、`admin.pem` 证书如下。
+```s
+$ cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -profile=kubernetes admin-csr.json | cfssljson -bare admin
+$ ls admin*
+admin.csr  admin-csr.json  admin-key.pem  admin.pem
+```
+kube-apiserver 预定义了一些 RBAC 使用的 RoleBindings，如 `cluster-admin` RoleBinding 将 Group `system:masters` 与 Role `cluster-admin` 绑定，该 Role 授予了调用 kube-apiserver 的所有 API 的权限；
+> 关于CSR中的 CN 和 O。`CN`：Common Name，kube-apiserver 从证书中提取该字段作为请求的用户名 (User Name)；浏览器使用该字段验证网站是否合法；`O`：Organization，kube-apiserver 从证书中提取该字段作为请求用户所属的组 (Group)；
+
 
 #### Golang TLS编程
 现在证书都有了，现在开始TLS编程。另外需要说明一下，我在mac上做实验时，生成证书的方式是参考[How to Create Your Own SSL Certificate Authority for Local HTTPS Development](https://deliciousbrains.com/ssl-certificate-authority-for-local-https-development/)，k8s的文档行不通。即步骤如下：
@@ -270,6 +301,8 @@ func createServerConfig(ca, crt, key string) (*tls.Config, error) {
 关于K8s对于客户端的认证，可以参考：[Kubernetes 中的用户与身份认证授权](https://jimmysong.io/kubernetes-handbook/guide/authentication.html)
 
 #### 参考
+[jimmysong.io 创建 TLS 证书和秘钥](https://jimmysong.io/kubernetes-handbook/practice/create-tls-and-secret-key.html)
+
 [How to Create Your Own SSL Certificate Authority for Local HTTPS Development](https://deliciousbrains.com/ssl-certificate-authority-for-local-https-development/)
 
 [What is a CSR (Certificate Signing Request)?](https://www.sslshopper.com/what-is-a-csr-certificate-signing-request.html)
