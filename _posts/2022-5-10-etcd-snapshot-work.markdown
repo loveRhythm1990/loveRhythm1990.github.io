@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "Etcdctl snapshot 命令是怎么工作的"
+title:      "etcdctl snapshot 命令是怎么工作的"
 subtitle:   " \"snapshot save 实现细节分析\""
 date:       2022-5-10 10:10:00
 author:     "decent"

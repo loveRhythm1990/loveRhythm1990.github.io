@@ -151,7 +151,7 @@ func (l *raftLog) maybeAppend(index, logTerm, committed uint64, ents ...pb.Entry
 follower 处理完 AppMsg 之后，返回一个 AppMsgResp 消息，在这个消息中，Index 表示 follower 已经复制的最大的Index，**从代码里看，这里的已复制是指写到 unstable 存储**。
 
 ### 5.已写入 unstable 的 Entry 可写入 MemoryStorage
-`MemoryStorage` 在 raft 层中扮演一个 Entry 数据库的角色，可对 Entry 进行查询，其实现的 Storage 接口入下。
+`MemoryStorage` 在 raft 层中扮演一个 Entry 数据库的角色，可对 Entry 进行查询，MemoryStorage 中保存了全量的 Entry，请求 FirstIndex() 之前的 Entry 会报 `ErrCompacted` 错误，其实现的 Storage 接口入下。
 ```go
 type Storage interface {
 	InitialState() (pb.HardState, pb.ConfState, error)
