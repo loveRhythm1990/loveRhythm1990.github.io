@@ -5,7 +5,7 @@ date:       2021-4-6 16:49:00
 author:     "decent"
 header-img-credit: false
 tags:
-    - Statefulset
+    - Controller
 ---
 
 [Sts控制器概述](https://loverhythm1990.github.io/2019/09/23/k8s-updateStatefulset/)大概描述了sts控制器的工作原理，这里重点关注下滚动升级的实现。
@@ -138,30 +138,30 @@ func (ssc *defaultStatefulSetControl) updateStatefulSet(
 
 先找到`Partition`的大小，序号大于等于`Partition`值的pod需要升级，从后面序号开始遍历，如果当前pod的`Revision`不等于`updateRevision`并且不是`Terminating`状态，那么将pod删除。
 ```go
-	// we terminate the Pod with the largest ordinal that does not match the update revision.
-	for target := len(replicas) - 1; target >= updateMin; target-- {
+// we terminate the Pod with the largest ordinal that does not match the update revision.
+for target := len(replicas) - 1; target >= updateMin; target-- {
 
-		// delete the Pod if it is not already terminating and does not match the update revision.
-		if getPodRevision(replicas[target]) != updateRevision.Name && !isTerminating(replicas[target]) {
-			klog.V(2).Infof("StatefulSet %s/%s terminating Pod %s for update",
-				set.Namespace,
-				set.Name,
-				replicas[target].Name)
-			err := ssc.podControl.DeleteStatefulPod(set, replicas[target])
-			status.CurrentReplicas--
-			return &status, err
-		}
-
-		// wait for unhealthy Pods on update
-		if !isHealthy(replicas[target]) {
-			klog.V(4).Infof(
-				"StatefulSet %s/%s is waiting for Pod %s to update",
-				set.Namespace,
-				set.Name,
-				replicas[target].Name)
-			return &status, nil
-		}
-
+	// delete the Pod if it is not already terminating and does not match the update revision.
+	if getPodRevision(replicas[target]) != updateRevision.Name && !isTerminating(replicas[target]) {
+		klog.V(2).Infof("StatefulSet %s/%s terminating Pod %s for update",
+			set.Namespace,
+			set.Name,
+			replicas[target].Name)
+		err := ssc.podControl.DeleteStatefulPod(set, replicas[target])
+		status.CurrentReplicas--
+		return &status, err
 	}
+
+	// wait for unhealthy Pods on update
+	if !isHealthy(replicas[target]) {
+		klog.V(4).Infof(
+			"StatefulSet %s/%s is waiting for Pod %s to update",
+			set.Namespace,
+			set.Name,
+			replicas[target].Name)
+		return &status, nil
+	}
+
+}
 ```
 并且在删除pod后直接返回。

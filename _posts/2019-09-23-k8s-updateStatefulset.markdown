@@ -7,11 +7,11 @@ author:     "weak old dog"
 header-img-credit: false
 tags:
     - K8s
-    - Statefulset
+    - Controller
 ---
 
 ### 前言
-在我看来，k8s的statefulset控制器，算是controller-manager中比较重要的一个了（是不是最重要的一个呢？），鉴于也是一块硬骨头，只能一点一点啃，能一次写完整是极好的，但是鉴于精力与能力不足，一点点写也是不错的，而且对我自身来说，也是非常有效的。[k8s文档](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/)中对于statefulset的特定描述为：
+在我看来，K8s 的 statefulset 控制器，算是 controller-manager 中比较重要的一个了（是不是最重要的一个呢？），鉴于也是一块硬骨头，只能一点一点啃，能一次写完整是极好的，但是鉴于精力与能力不足，一点点写也是不错的，而且对我自身来说，也是非常有效的。[k8s文档](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/)中对于statefulset的特定描述为：
 * 稳定的、唯一的网络标识符
 * 稳定的、持久的存储
 * 有序的、优雅的部署和缩放
@@ -103,24 +103,24 @@ func (ssc *defaultStatefulSetControl) UpdateStatefulSet(set *apps.StatefulSet, p
 #### revision与replicas字段
 `revision`翻译过来是`版本`，在k8s里面，也是这个意思，在sts的status中，有下面字段:
 ```go
-	// 副本数
-	Replicas int32 `json:"replicas" protobuf:"varint,2,opt,name=replicas"`
+// 副本数
+Replicas int32 `json:"replicas" protobuf:"varint,2,opt,name=replicas"`
 
-	// ready状态的副本数
-	ReadyReplicas int32 `json:"readyReplicas,omitempty" protobuf:"varint,3,opt,name=readyReplicas"`
+// ready状态的副本数
+ReadyReplicas int32 `json:"readyReplicas,omitempty" protobuf:"varint,3,opt,name=readyReplicas"`
 
-	// 使用currentRevision的副本数
-	CurrentReplicas int32 `json:"currentReplicas,omitempty" protobuf:"varint,4,opt,name=currentReplicas"`
+// 使用currentRevision的副本数
+CurrentReplicas int32 `json:"currentReplicas,omitempty" protobuf:"varint,4,opt,name=currentReplicas"`
 
-	// 使用updateRevision的副本数
-	UpdatedReplicas int32 `json:"updatedReplicas,omitempty" protobuf:"varint,5,opt,name=updatedReplicas"`
-	// currentRevision, 当前sts用来生成pod的revision，有currentReplicas个，下标从0到currentReplicas-1
-	// [0,currentReplicas).
-	CurrentRevision string `json:"currentRevision,omitempty" protobuf:"bytes,6,opt,name=currentRevision"`
+// 使用updateRevision的副本数
+UpdatedReplicas int32 `json:"updatedReplicas,omitempty" protobuf:"varint,5,opt,name=updatedReplicas"`
+// currentRevision, 当前sts用来生成pod的revision，有currentReplicas个，下标从0到currentReplicas-1
+// [0,currentReplicas).
+CurrentRevision string `json:"currentRevision,omitempty" protobuf:"bytes,6,opt,name=currentRevision"`
 
-	// updateRevision, 升级sts用的revision，有updatedReplicas个，下标从replicas-updatedReplicas到replicas-1
-	// [replicas-updatedReplicas,replicas)
-	UpdateRevision string `json:"updateRevision,omitempty" protobuf:"bytes,7,opt,name=updateRevision"`
+// updateRevision, 升级sts用的revision，有updatedReplicas个，下标从replicas-updatedReplicas到replicas-1
+// [replicas-updatedReplicas,replicas)
+UpdateRevision string `json:"updateRevision,omitempty" protobuf:"bytes,7,opt,name=updateRevision"`
 ```
 这个两个字段说明了sts用来生成pod的版本，revision其实也是k8s中的一种资源，在k8s中对应的结构体为v1beta1.ControllerRevision，可以通过`kubectl get controllerrevisions`来查看集群中存在的revision，controllerrevisions看上去像是statefulset或者Daemon set的模板的一个快照，是只读的（不能被修改，只能被删除）。从kubectl get的输出看，controllerrevision是只包括spec，不包含status的。
 

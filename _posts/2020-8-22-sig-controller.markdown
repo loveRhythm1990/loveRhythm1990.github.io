@@ -5,7 +5,6 @@ date:       2020-08-22 06:58:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - K8s
     - Controller
 ---
 
