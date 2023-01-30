@@ -14,7 +14,7 @@ IPtables 这个东西每次都花时间去看，然而真正排查问题的时�
 iptables 的底层实现是 netfilter，netfilter 是Linux内核2.4版引入的一个子系统，它作为一个通用的、抽象的框架，提供一整套 hook 函数的管理机制，使得数据包过滤、包处理（设置标志位、修改TTL等）、地址伪装、网络地址转换、透明代理、访问控制、基于协议类型的连接跟踪，甚至带宽限速等功能成为可能。netfilter 的架构就是在整个网络流程的若干位置放置一些钩子，并在每个钩子上挂载一些处理函数进行处理。
 
 IP层的5个钩子点的位置，对应iptables就是5条内置链，分别是PREROUTING、POSTROUTING、INPUT、OUTPUT和FORWARD。netfilter原理图如图，在下面图中，也列出了每个内置链中所具有的表，
-![](/img/in-post/all-in-one/2022-03-27-22-46-49.png){:height="80%" width="80%"}
+![](/img/in-post/all-in-one/2022-03-27-22-46-49.png){:height="60%" width="60%"}
 当一个报文到达主机时，其处理流程大概如下：
 
 1. 当网卡上收到一个包送达协议栈时，最先经过的 netfilter 钩子是 PREROUTING，如果确实有用户埋了这个钩子函数，那么内核将在这里对数据包进行目的地址转换（DNAT）。不管在 PREROUTING 有没有做过 DNAT，内核都会通过查本地路由表决定这个数据包是发送给本地进程还是发送给其他机器。
@@ -28,7 +28,7 @@ IP层的5个钩子点的位置，对应iptables就是5条内置链，分别是PR
 
 ### table、chain、rule
 iptables 是用户空间的一个程序，通过 netlink 和内核的 netfilter 框架打交道，负责往钩子上配置回调函数。一般情况下用于构建 Linux 内核防火墙，特殊情况下也做服务负载均衡（Kubernetes 操作）。iptables 的工作原理如图所示（果然是工作在 IP 层）。
-![](/img/in-post/all-in-one/2022-03-27-14-30-18.png){:height="50%" width="50%"}
+![](/img/in-post/all-in-one/2022-03-27-14-30-18.png){:height="40%" width="40%"}
 我们常说的iptables 5X5，即5张表（table）和5条链（chain）。5条链即 iptables 的5条内置链，对应上文介绍的netfilter 的5个钩子。这5条链分别是：
 * INPUT链：一般用于处理输入**本地进程**的数据包；
 * OUTPUT链：一般用于处理**本地进程**的输出数据包；
