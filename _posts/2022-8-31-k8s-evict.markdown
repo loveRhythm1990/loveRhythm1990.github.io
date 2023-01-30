@@ -20,7 +20,7 @@ K8s 对于 Pod 驱逐机制的官方文档为[Node-pressure Eviction](https://ku
 * pid.available: node.stats.rlimit.maxpid - node.stats.rlimit.curproc
 
 #### memory.available
-上面列出的计算方式是：`node.status.capacity[memory] - node.stats.memory.workingSet`。减号左边的表达式很容易理解，我们通过 kubectl get node -o yaml 就能看到node 的 capacity。注意在下面的 node 资源配置中，`allocatable` 与 `capacity` 是一致的，说明没有开启节点资源功能，也就是 kubelet 没有配置 reserve 参数。
+上面列出的计算方式是：`node.status.capacity[memory] - node.stats.memory.workingSet`。减号左边的表达式很容易理解，我们通过 kubectl get node -o yaml 就能看到node 的 capacity。注意在下面的 node 资源配置中，`allocatable` 与 `capacity` 是一致的，说明没有开启节点资源预留功能，也就是 kubelet 没有配置 reserve 参数。
 ```yml
 status:
   allocatable:

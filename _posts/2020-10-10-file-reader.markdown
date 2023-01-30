@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "关于文件分片上传下载的一点总结（Go语言）"
+title:      "实现文件分片传输的一个小例子"
 date:       2020-12-20 11:56:00
 author:     "weak old dog"
 header-img-credit: false
@@ -8,7 +8,8 @@ tags:
     - Golang
 ---
 
-#### 准备工作
+实现文件分片传输的一个小例子。
+### 准备工作
 找一个文件，一共42552字节。
 ```s
 fake@Mac iotext % ls -l file  
@@ -16,48 +17,19 @@ fake@Mac iotext % ls -l file
 ```
 查看文件内容hash值。
 ```go
-	content, err := ioutil.ReadFile(fileName)
-	requireNoErr(err)
-	h := fnv.New32a()
-	h.Write(content)
-	fmt.Println(h.Sum32())
+content, err := ioutil.ReadFile(fileName)
+requireNoErr(err)
+h := fnv.New32a()
+h.Write(content)
+fmt.Println(h.Sum32())
 ```
 输出为：1898344699
 
-#### Reader 和 Writer 接口
-golang中，最基本的读写接口是Reader以及Writer。其定义如下：
 
-> Reader 接口，读取内容到缓冲区 p 中，返回读取的字节数，以及遇到的错误; Reader接口的 `实现者` 是持有数据的（理解为，`可以 read`），调用 Read 方法时，会把其持有的数据写到目标缓冲区，即写到参数中。
-
-```go
-type Reader interface {
-	Read(p []byte) (n int, err error)
-}
-```
-
-> Writer 接口，将参数缓冲区的数据写到底层的数据流中，返回写入的数据量以及可能的错误。如果写入的数据量少于 len(p)，会返回错误，（所以缓冲区内的数据要全部写完，否则会报错），writer 接口不能修改作为参数的 slice。
-
-```go
-type Writer interface {
-	Write(p []byte) (n int, err error)
-}
-```
-
-举例说明，申请一个50K的缓冲区，并读取上面的文件。
-```go
-file, _ := os.Open("/Users/fake/iotext/file")
-buf := make([]byte, 50 * 1024)
-n, err := file.Read(buf) // 将文件的内容读到 buf 中
-fmt.Println(err, n)
-// 输出：
-// <nil> 42552
-```
-共读了42552个字节的数据，buf 没有读满，没有返回错误，`os.Open` 函数以只读的形式打开文件，返回的参数为 `os.File` 的指针。
-
-#### 分片读取
+### 分片读取
 如果要读取的文件非常大，不能一次加载到内存里，可能要分多次读取。假设我们要将上面的文件分多次读，每次只读 1K，实现方式如下。
 
-这里还有个很重要的两个接口，这两个接口跟 Reader、Writer 接口最大的不同就是可以从指定位置 `offset` 开始读写数据，这个也是分片读写的关键。
+这里还有两个 Golang 读写接口，这两个接口跟 Reader、Writer 不同之处是可以从指定位置 `offset` 开始读写数据，这个也是分片读写的关键。
 
 * **io.ReaderAt**: 定义为 `ReadAt(buf, offset)(int, error)`，这个接口读数据到 buf 中，如果读到的数据量少于 `len(p)`，会返回错误，比如数量量不够 `len(p)` 时，会返回 `io.EOF` 错误。即使返回了错误，缓冲区的数据仍然是可以消费的，这个可以根据实际读到的字节数来消费。
 * **io.WriteAt**: 从指定位置写数据，如果数据没写完，会报错。
