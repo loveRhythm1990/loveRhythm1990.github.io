@@ -8,7 +8,7 @@ tags:
     - 监控
 ---
 
-基于kubelet分析`pro-me-the-us`监控的使用以及实现，这里主要介绍exporter的使用，其官方文档为：[https://prometheus.io/docs/introduction/overview/](https://prometheus.io/docs/introduction/overview/)
+基于 kubelet 分析 `prometheus` 监控的使用以及实现，这里主要介绍 exporter 的使用，其官方文档为：[https://prometheus.io/docs/introduction/overview/](https://prometheus.io/docs/introduction/overview/)
 
 #### 指标类型及使用
 这里要参考官方文档[METRIC TYPES](https://prometheus.io/docs/concepts/metric_types/)，官方文档里，同时给出了每种指标类型的代码example，使用的时候可以参考。
@@ -73,11 +73,11 @@ http_requests_total{job="prometheus"}[5m]
 * String：一个字符串。（没有用到）
 
 关于prometheus的时序数列指标以及数据类型，[Understanding the Prometheus rate() function](https://www.metricfire.com/blog/understanding-the-prometheus-rate-function/)有两张图值的看一下：
-![java-javascript](/img/in-post/monitor/prometheus_range.png)
+![java-javascript](/img/in-post/monitor/prometheus_range.png){:height="60%" width="60%"}
 
 上面是三个采样指标，指标名称都一样，但是标签不一样，也是通过三个不同的时序序列来表示的。横轴表示时间，上图显示了最近60秒的采样数据，每个指标都是一个序列。上面是一个`Range vector`，有一个时间范围。(**顺便有个思考，因为缺少实战，如果对上面foo求rate，那么每个指标序列应该都有一个平均值**)
 
-![java-javascript](/img/in-post/monitor/prometheus_instant.png)
+![java-javascript](/img/in-post/monitor/prometheus_instant.png){:height="70%" width="70%"}
 
 这个是一个`Instant vector`，只显示了指标`foo`在某一个时刻的值，但是有三个采样，表示不同的采样指标。这两个图很有代表性。
 

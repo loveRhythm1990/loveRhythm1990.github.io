@@ -5,7 +5,7 @@ date:       2020-03-21 10:10:00
 author:     "decent"
 header-img-credit: false
 tags:
-    - K8s
+    - 设计模式
 ---
 
 K8s Controller的一般工作原理是监听资源的变化，将事件放到本地队列里，然后对此队列进行同步。以[sig-storage-lib-external-provisioner](https://github.com/kubernetes-sigs/sig-storage-lib-external-provisioner)为例，简单分析一个K8s Controller的工作原理。

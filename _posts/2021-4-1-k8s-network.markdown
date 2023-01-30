@@ -1,11 +1,10 @@
 ---
 layout:     post
-title:      "容器网络基础概述：CNI、vxlan 等"
+title:      "容器网络基础及 CNI 概述"
 date:       2021-4-1 19:54:00
 author:     "decent"
 header-img-credit: false
 tags:
-    - K8s
     - 网络
 ---
 
@@ -29,50 +28,6 @@ default         172.17.0.1      0.0.0.0         UG    0      0        0 eth0
 * 容器与非本宿主机通信，这个是到了docker0之后，查宿主机路由表，发现得从宿主机的`eth0`出去。
 
 另外补充一点`TUN`设备以及`veth`设备，文末给了一些链接，大概就是`TUN`设备是为了在用户空间和内核空间传输数据，跟`eth0`的区别就是，`eth0`一端是协议栈，而另一端则是物理网络（比如一个交换机），可以通过`/dev/net/tun`设备来读取和发送设备。而`veth`设备最常用的场景就是连接两个不同的net namespace.
-
-#### Flannel UDP解决方案
-UDP解析方法是把容器的流量从`docker0`路由到`flannel0`设备，由用户态的flannel进程来处理，用户态的flannel进程知道每个容器子网对应的nodeIP（储存在etcd里面的，也就是每个节点会被分配一个子网，容器从这个子网中获取ip），flannel知道目的主机的IP之后，将容器的报文（一个IP包），封装在UDP报文里，UDP的目的IP就是目标宿主机的IP，UDP报文的源地址是当前宿主机IP，UDP报文的端口是`8285`，这个是flannel监听的端口，到了目标主机再交给flannel解包。
-
-所以Flannel UDP是靠Flannel进程把容器IP报文封装到UDP报文的解决方案。重点关注UDP。
-
-![java-javascript](/img/in-post/docker-net/udp.jpeg){:height="60%" width="60%"}
-[图片来自张磊大佬的极客时间k8s课程]
-
-Flannel UDP提供的是三层的Overlay网络：它首先对发出端的IP包进行UDP封装，然后在接收端进行解封装拿到原始IP报文，进而把这个报文转发给目标容器。Flannel UDP性能不好主要是要经过三次用户态与内核态的数据拷贝：
-* 业务容器发数据到宿主机网桥，经过veth设备到docker0网桥，即上图中的 container-1 -> docker0
-* flannel0设备拷贝数据到用户态的flannel进程，即上图总的 flannel0 -> flanneld:8285，flannel0是一个tun设备，从docker0到flannel0是不经过用户态的。
-* 用户态的flannel进程封包之后，向对端host发送udp报文，即上图中的，flanneld:8285 -> eth0
-
-#### Flannel VXLAN解决方案
-VXLAN的封包操作放在了内核态去做，把所以容器放在一个二层网络上（所有节点的VTEP设备构成了一个二层网络，就像是在一个局域网，这个二层网络是基于现有三层网络的，最终通信还是要靠现有网络实现传输），二层网络靠mac报文通信，所以它要封装的是mac报文，这个是由`flannel.1`设备去做的，这个`flannel.1`就是一个VTEP设备。VTEP封装的MAC报文，其MAC地址是对端VTEP设备的地址，一般来说，由IP地址（我们通过路由表能拿到对端VTEP设备的IP地址）获得MAC地址，是通过`ARP`地址解析协议来实现的，但是Flannel已经将每个VTEP的MAC地址，记录在节点上了，通过`ip neigh show dev flannel.1`命令可以查看MAC地址。
-
-![java-javascript](/img/in-post/docker-net/vxlan.jpeg){:height="60%" width="60%"}
-[图片来自张磊大佬的极客时间k8s课程]
-
-关于VXLAN网络模式，我有个疑问，所有节点都对每个子网配置一个路由（如下），如果集群中节点数量非常多，那路由表项是不是就特别多？**查找起来花时间吗？**
-```s
-$ route -n
-Kernel IP routing table
-Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
-...
-10.1.16.0       10.1.16.0       255.255.255.0   UG    0      0        0 flannel.1
-```
-上面路由显示凡是发往10.1.16.0/24网段的IP包，都需要经过flannel.1设备发出，并且，它最后被发往的网关地址是：10.1.16.0，10.1.16.0正是Node 2上的VTEP设备（也就是flannel.1 设备）的IP地址。
-
-![java-javascript](/img/in-post/docker-net/vxlans.png)
-最终封包效果如上所示，解释一下各部分：
-* 目的容器的IP地址：这个是容器发出的原始报文的IP地址。
-* 目的VTEP设备的MAC地址：flanneld进程帮我们获取到了，通过`ip neigh`可以看到
-* VXLAN header: Linux加的一个特殊的VXLAN头，用来表示这个数据包实际上是一个VXLAN要使用的数据帧。而这个 VXLAN 头里有一个重要的标志叫作 VNI，它是 VTEP 设备识别某个数据帧是不是应该归自己处理的重要标识。而在 Flannel 中，VNI 的默认值是 1，这也是为何，宿主机上的 VTEP 设备都叫作 flannel.1 的原因，这里的"1"，其实就是 VNI 的值
-* Linux 内核会把这个数据帧封装进一个 UDP 包里发出去，在linux 下，这个端口是 8472，参考[Backend-vxlan](https://github.com/flannel-io/flannel/blob/master/Documentation/backends.md#vxlan)，VTEP设备使用的
-* 目的主机的IP地址：flannel.1这个VTEP设备还要扮演"网桥"的角色，维护了一个FDB（Forwarding DataBase），用来存储MAC地址和IP的对应关系，这个不太懂。使用方式如下：
-```s
-# 在Node 1上，使用"目的VTEP设备"的MAC地址进行查询
-$ bridge fdb show flannel.1 | grep 5e:f8:4f:00:e3:37
-5e:f8:4f:00:e3:37 dev flannel.1 dst 10.168.0.3 self permanent
-```
-发往目标VTEP设备（MAC 地址是 5e:f8:4f:00:e3:37）的二层数据帧，应该通过 flannel.1 设备，发往 IP 地址为 10.168.0.3 的主机。显然，这台主机正是 Node 2，UDP包要发往的目的地就找到了。
-
 
 #### CNI
 CNI的项目地址为：[CNI - the Container Network Interface](https://github.com/containernetworking/cni)，spec的地址为：[https://github.com/containernetworking/cni](https://github.com/containernetworking/cni/blob/master/SPEC.md)，根据spec，CNI主要定义了5个标准：

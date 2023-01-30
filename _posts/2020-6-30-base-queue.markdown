@@ -5,7 +5,7 @@ date:       2020-03-21 10:10:00
 author:     "decent"
 header-img-credit: false
 tags:
-    - K8s
+    - 设计模式
 ---
 
 这里的基本队列是指实现了如下接口的队列，代码路径为：`client-go/util/workqueue/queue.go`，区别于`DelayingInterface`，以及`RateLimitingInterface`，`DelayingInterface`实现延时加入队列的功能，`RateLimitingInterface`要配合限速器使用，实现了加入队列时的速率控制。后两者都内嵌了`Interface`，是基于此队列实现的。

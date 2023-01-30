@@ -303,6 +303,8 @@ func createServerConfig(ca, crt, key string) (*tls.Config, error) {
 #### 参考
 [jimmysong.io 创建 TLS 证书和秘钥](https://jimmysong.io/kubernetes-handbook/practice/create-tls-and-secret-key.html)
 
+[根据kubelet.kubeconfig文件解析到证书](https://blog.csdn.net/yanghuadong_1992/article/details/113794778)
+
 [How to Create Your Own SSL Certificate Authority for Local HTTPS Development](https://deliciousbrains.com/ssl-certificate-authority-for-local-https-development/)
 
 [What is a CSR (Certificate Signing Request)?](https://www.sslshopper.com/what-is-a-csr-certificate-signing-request.html)

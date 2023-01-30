@@ -5,7 +5,7 @@ date:       2022-8-26 10:10:00
 author:     "decent"
 header-img-credit: false
 tags:
-    - K8s
+    - 运维
 ---
 
 这里使用 kubeadm 部署下 kubernetes，并配置 flannel 网络模型为 `host-gw`。kubeadm 的官方文档为 [Creating a cluster with kubeadm](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/)，这个文档还没好好研究，这里重点不是 kubeadm 的使用，使用 kubeadm 部署 kubenetes 细节很多。本文提供的方法只是搭建测试集群，并不适用于生产环境的搭建。
@@ -117,7 +117,7 @@ kubeadm init --pod-network-cidr=10.244.0.0/16
 ```
 没有意外的话，安装成功，kubeadm 安装完成之后，配置的kubeconfig 文件位置为 `/etc/kubernetes/admin.conf`，需要拷贝到 ~/.kube/config。这个时候，node 还是 `NotReady` 状态，因为还没有配置 CNI 网络。
 
-> 这里也介绍下重置 kubeadm 的方式，即删除集群，命令为 `kubeadm reset`（需要在每个节点上都执行一遍），可能需要安装多次。
+> 这里也介绍下重置 kubeadm 的方式，即删除节点(重置节点)，命令为 `kubeadm reset`（需要在每个节点上都执行一遍），另外打印加入集群的 join 命令为：`kubeadm token create --print-join-command`，这个命令会重新生成 token。
 
 #### 配置 flannel
 flannel 没有特殊配置，使用 host-gw 时，将 backend-type 改为 host-gw 即可，全部的yaml 文件参考文章末尾。

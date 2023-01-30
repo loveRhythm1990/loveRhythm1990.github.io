@@ -5,7 +5,7 @@ date:       2020-07-25 8:44:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - K8s
+    - Controller
 ---
 
 众所周知，在 K8s 的 informer 缓存里，通过添加 indexer 能加快查询，这里看看为什么。
