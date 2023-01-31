@@ -8,19 +8,19 @@ tags:
     - Golang
 ---
 
-本文是对*tonybai*老师的[也谈goroutine调度器](https://tonybai.com/2017/06/23/an-intro-about-goroutine-scheduler/)的理解与整理
+> 本文是对 *tonybai* 老师的《[也谈goroutine调度器](https://tonybai.com/2017/06/23/an-intro-about-goroutine-scheduler/)》的理解
 
 #### G-P-M模型
-在Go 1.0版本中，Go team实现了一个简单的调度器。在这个调度器中，goroutine被抽象为G，而os thread作为"物理CPU"被抽象为M，这个模型重要不足：限制了Go*并发程序*的伸缩性，尤其是对那些有*高吞吐*或并行计算需求高的服务程序，主要体现在如下几个方面：
+在Go 1.0版本中，Go team实现了一个简单的调度器。在这个调度器中，goroutine被抽象为G，而os thread作为"物理CPU"被抽象为M，这个模型重要不足：限制了Go并发程序的伸缩性，尤其是对那些有高吞吐或并行计算需求高的服务程序，主要体现在如下几个方面：
 * 单一全局互斥锁（Sched.Lock）和集中状态存储的存在导致所有goroutine相关操作，比如：创建、重新调度等都要上锁；
-* goroutine传递问题：M经常在M之间传递"可运行"的goroutine，这导致调度延迟增大以及额外的性能损耗；(不理解)
-* 每个M做内存缓存，导致内存占用过高，数据局部性较差；(不理解)
-* 由于syscall调用而形成的剧烈的worker thread阻塞和解除阻塞，导致额外的性能损耗。(不理解)
+* goroutine传递问题：M经常在M之间传递"可运行"的goroutine，这导致调度延迟增大以及额外的性能损耗；
+* 每个M做内存缓存，导致内存占用过高，数据局部性较差；
+* 由于syscall调用而形成的剧烈的worker thread阻塞和解除阻塞，导致额外的性能损耗。
 
 > 补充，goroutine占用资源非常少，Go 1.4将每个goroutine stack的size设置为2k，（Go 1.2 goroutine stack has been increased from 4Kb to 8Kb），goroutine调度的切换也不用陷入到操作系统内核层完成，代价很低。
 
 基于以上问题，诞生了G-P-M模型，示意图如下：
-![java-javascript](/img/in-post/go-scheduler/goroutine-scheduler-model.png)
+![java-javascript](/img/in-post/go-scheduler/goroutine-scheduler-model.png){:height="60%" width="60%"}
 
 在上图中P是一个"逻辑Processor"，每个G想要运行起来，首先需要被分配一个P（进入到P的local runq中），对于G来说，P就是运行它的"CPU"，可以说：G的眼里只有P。但从Go scheduler视角来看，真正的"CPU"是M，只有将P和M绑定才能让P的runq中G得以真实运行起来。这样的P与M的关系，就好比Linux操作系统调度层面用户线程(user thread)与核心线程(kernel thread)的对应关系那样(N x M)。
 

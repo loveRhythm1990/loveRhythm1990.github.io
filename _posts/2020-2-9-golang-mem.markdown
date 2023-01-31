@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "Golang memory 概述[翻译]"
+title:      "Golang 内存管理概述[翻译]"
 date:       2020-2-9 18:51:00
 author:     "weak old dog"
 header-img-credit: false
@@ -14,7 +14,7 @@ tags:
 
 ### 理解VSZ与RSS
 以下面为例，VSZ以及RSS的单位都是`KB`：
-```sh
+```s
 root@z-Latitude:~# ps -u --pid 4435
 USER       PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
 root      4435  0.0  0.0 308680  5200 pts/0    Sl   18:27   0:00 /tmp/___go_build_mem_go
