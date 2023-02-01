@@ -8,7 +8,10 @@ tags:
     - Docker
 ---
 
-使用下面yaml创建pod
+在工作中发现执行 `docker restart` 命令重启一个容器的时候，容器卡主了，这里分析总结下原因。
+
+### 问题复现/现象
+使用下面 yaml 创建 pod，在 yaml 中配置了两个容器，并且设置了共享 pid namespace：`shareProcessNamespace: true`
 ```yaml
 apiVersion: v1
 kind: Pod
@@ -28,7 +31,7 @@ spec:
     image: ubuntu
     imagePullPolicy: IfNotPresent
 ```
-使用`docker exec 259da1678e8c ps -ef`命令查看容器中进程，注意到18号进程有个父进程12。其中259da1678e8c为container1容器的id.
+使用 `docker exec 259da1678e8c ps -ef` 命令查看容器 container1 中进程（259da1678e8c 为第一个容器的容器 id），注意到 18 号进程有个父进程 12。
 ```s
 root@ubuntu:~# docker exec 259da1678e8c ps -ef
 UID         PID   PPID  C STIME TTY          TIME CMD
@@ -39,10 +42,9 @@ root         12      0  0 01:39 ?        00:00:00 /bin/sh -c touch /tmp/healthy 
 root         18     12  0 01:39 ?        00:00:00 sleep 1000
 root         19      0  0 01:41 ?        00:00:00 ps -ef
 ```
-现在使用`docker restart a46c18158270`命令重启container2容器，命令卡主了，直到`sleep 1000`执行结束。其中a46c18158270为container2容器的id.
-![java-javascript](/img/in-post/container_hang/containerd.png)
+现在使用 `docker restart a46c18158270` 命令重启 container2 容器（a46c18158270 是第二个容器的 id），命令卡主了，直到`sleep 1000`执行结束。.
 
-继续使用docker exec命令查看容器进程pid，发现`sleep 1000`进程被0号进程接收。
+继续使用 docker exec 命令查看容器 container1 进程 pid，发现 `sleep 1000` 进程被0号进程接收。
 ```s
 root@ubuntu:~# docker exec 259da1678e8c ps -ef
 UID         PID   PPID  C STIME TTY          TIME CMD
@@ -65,7 +67,8 @@ root@ubuntu:~# docker logs a46c18158270
 ^C
 ```
 
-问题原因：在共享pid namespace情况下，containerd在kill容器时并没有kill init进程的子进程，sh进程被kill了，但是sleep进程还存在，导致容器无法退出
+### 问题原因
+问题原因：在共享 pid namespace 情况下，containerd 在 kill 容器时并没有 kill init 进程的子进程，sh 进程被 kill了，但是 sleep 进程还存在，导致容器无法退出
 
 相关issue和pr为：
 

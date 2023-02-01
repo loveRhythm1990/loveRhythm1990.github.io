@@ -90,7 +90,7 @@ func mallocgc(size uintptr, typ *_type, needzero bool) unsafe.Pointer {
 #### GC Percentage
 golang runtime有一个配置选项叫做GC Percentage，默认被配置为100。这个值表示了在下次GC之前多少比例的内容可以被分配。设置为100%就表示：基于上次Collection完成之后存货的object数量，下次有100%的这些数量被分配前，必须要启动GC。这个可以参考下图：
 
-![java-javascript](/img/in-post/go-gc-lab/Picture1.png){:height="70%" width="70%"}
+![java-javascript](/img/in-post/go-gc-lab/Picture1.png){:height="60%" width="60%"}
 
 #### GC Trace
 使用环境变量`GODEBUG`并设置`gctrace=1`可以用来答应gc信息，每次垃圾收集器运行时都会打印GC信息，比如：
@@ -175,7 +175,7 @@ ROUTINE ======================== project/search.rssSearch in project/search/rss.
 ```
 发现有这么一行代码`strings.Contains(strings.ToLower(item.Description), strings.ToLower(term))`占用了很多内存。文章没有给出代码是怎么改的，主要在强调不要再for循环中调用`strings.ToLower`，要拿到for循环外面去，因为这个方法会为字符串重新分配堆内存。文章最后给了修改前后，以及是否开启GC的时间对比（从图中可以看出，不开启GC程序跑起来还是很快的）
 
-![java-javascript](/img/in-post/go-gc-lab/101_figure6.png){:height="70%" width="70%"}
+![java-javascript](/img/in-post/go-gc-lab/101_figure6.png){:height="60%" width="60%"}
 
 
 #### GC Pacing
@@ -212,7 +212,7 @@ root@z-Latitude:trace# go tool trace a.out
 2020/03/26 18:48:50 Opening browser
 Trace viewer is listening on http://127.0.0.1:45761
 ```
-![java-javascript](/img/in-post/go-gc-lab/Picture2.png){:height="70%" width="70%"}
+![java-javascript](/img/in-post/go-gc-lab/Picture2.png){:height="50%" width="50%"}
 在[GC Pacing](https://www.ardanlabs.com/blog/2019/07/garbage-collection-in-go-part3-gcpacing.html)这篇文章中，对同一个任务写了三个程序，第一个是顺序扫描所有的文件，第二个是每个文件起一个goroutine，第三个使用goroutine池，数量为逻辑CPU个数，用池中的goroutine来扫描文件，配合使用Go trace，三类程序的GC时间为：
 ```s
 | Algorithm  | Program | GC Time  | % Of GC | # of GC’s | Avg GC   | Max Heap |

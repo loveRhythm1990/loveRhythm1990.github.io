@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "Golang 调度器[转载]"
+title:      "理解 Golang 调度器[转载]"
 date:       2020-03-15 8:42:00
 author:     "weak old dog"
 header-img-credit: false
