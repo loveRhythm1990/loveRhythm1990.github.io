@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "docker 执行 restart 命令卡主了"
+title:      "容器share pid 导致 restart 命令卡主"
 date:       2020-05-01 20:28:00
 author:     "weak old dog"
 header-img-credit: false
@@ -8,7 +8,7 @@ tags:
     - Docker
 ---
 
-在工作中发现执行 `docker restart` 命令重启一个容器的时候，容器卡主了，这里分析总结下原因。
+在工作中发现执行 `docker restart` 命令重启一个容器的时候，容器卡主了，这里分析总结下原因。其结论是容器 share pid namespace 功能不完善，社区已经有 PR 修复问题。
 
 ### 问题复现/现象
 使用下面 yaml 创建 pod，在 yaml 中配置了两个容器，并且设置了共享 pid namespace：`shareProcessNamespace: true`
