@@ -32,7 +32,7 @@ type Node interface {
 ```
 
 参考《etcd 技术内幕》， raftexample 的整体架构如下。
-![java-javascript](/img/in-post/all-in-one/2022-02-06-17-30-44.png)
+![java-javascript](/img/in-post/all-in-one/2022-02-06-17-30-44.png){:height="70%" width="70%"}
 
 下面大概从三个方面介绍 raftexample，也就是上面提到的三个模块 httpserver、kvstore、raftNode。另外，也通过 raftexample 来看下 snapshot 以及 wal 的实现逻辑，这两者作为单独的模块分析。
 
