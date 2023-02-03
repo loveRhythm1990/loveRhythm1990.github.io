@@ -10,7 +10,7 @@ tags:
 
 当应用实例部署在多个节点的时候，可以通过 Keepalived 来实现高可用，Keepalived 实现高可用的方式是主备模式，也就是只有一个 master 在工作，其余的节点处在 backup 状态，master 节点挂掉时，备节点变成 master 节点继续提供服务。在配置高可用时，首先得有一个 vip，初始情况下， vip 配置在 master 节点的网卡上，master 节点故障后，会漂移到其他节点。
 
-在 K8s 环境中，当应用通过 NodePort 提供服务时，可以通过 Keepalived 实现简单的高可用，如果一个 service 声明为 NodePort 类型，访问任何一个机器的 ip+NodePort 其实都是可以提供服务的。但是我们也不能跟应用说 “你访问随便一个就好了”，也不能提供一个固定的机器 ip 给他，万一这个机器挂了呢？这个时候，我们就可以给他一个 vip，让他访问这个 vip，然后我们通过 Keepalived 将这个 vip 和几台机器绑定，来实现高可用。Keepalived 中的 master 会定期发送 VRRP 报文给 backup，默认周期是 1s；如果 backup 实例连续 3s 没有收到 master 发的报文，配置了最高优先级的 backup 实例将提升为 master。
+在 K8s 环境中，当应用通过 NodePort 提供服务时，可以通过 Keepalived 实现简单的高可用，如果一个 service 声明为 NodePort 类型，访问任何一个机器的 ip+NodePort 其实都是可以提供服务的。但是我们也不能跟应用说 “你访问随便一台机器就好了”，也不能提供一个固定的机器 ip 给他，万一这个机器挂了呢？这个时候，我们就可以给他一个 vip，让他访问这个 vip，然后我们通过 Keepalived 将这个 vip 和几台机器绑定，来实现高可用。Keepalived 中的 master 会定期发送 VRRP 报文给 backup，默认周期是 1s；如果 backup 实例连续 3s 没有收到 master 发的报文，配置了最高优先级的 backup 实例将提升为 master。
 
 本文通过下面几台实例来测试 Keepalived 功能。选定的 vip 为 `192.168.31.250`，要保证没有设备在使用这个 vip，并且这个 vip 在未来也不会被分配。
 
@@ -99,7 +99,7 @@ PING 192.168.31.250 (192.168.31.250): 56 data bytes
 round-trip min/avg/max/stddev = 8.374/12.997/21.898/6.296 ms
 ```
 
-我们启动一个 echo 服务，并配置一个 nodeport 服务访问试一下。nginx 服务的 yaml：
+我们启动一个 echo 服务，并配置一个 nodeport 服务访问试一下。echo 服务的 yaml 如下：
 ```yml
 apiVersion: apps/v1
 kind: Deployment
@@ -136,9 +136,9 @@ spec:
   selector:
     app: echo-server
 ```
-> 上面镜像 `docker.io/agile6v/e2e-test-echo:latest` 是一个简单的 echo 服务器，来自 kubernetes ingress controller 的 e2e 测试。源镜像为：`registry.k8s.io/ingress-nginx/e2e-test-echo@sha256:778ac6d1188c8de8ecabeddd3c37b72c8adc8c712bad2bd7a81fb23a3514934c`
+> 上面镜像 `docker.io/agile6v/e2e-test-echo:latest` 是一个简单的 echo 服务器，来自 kubernetes ingress controller 的 e2e 测试。源镜像为：`registry.k8s.io/ingress-nginx/e2e-test-echo@sha256:778ac6d1188c8de8ecabeddd3c37b72c8adc8c712bad2bd7a81fb23a3514934c`，源镜像无法下载，找了个替代品。
 
-查看 service 端口。
+查看分配的 node port service 端口，并进行访问。
 ```s
 [decent@HostGW-Master resources]$ kubectl get service
 NAME           TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)        AGE
@@ -155,7 +155,7 @@ Pod Information:
 ```
 
 ### 其他
-Keepalived 可以配置邮件通知、访问密码等，可参考相关文档
+Keepalived 可以配置邮件通知、访问密码等，可参考相关文档，本文只进行了最简配置。
 
 ### 参考
 
