@@ -254,3 +254,42 @@ spec:
     - key: ""  # empty means match all taint keys
       operator: Exists
 ```
+
+**NodePort Service**
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: echo-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: echo-server
+  template:
+    metadata:
+      labels:
+        app: echo-server
+    spec:
+      containers:
+        - name: echo-server
+          image: docker.io/agile6v/e2e-test-echo:latest
+          ports:
+            - name: http-port
+              containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: echo-service
+spec:
+  type: NodePort
+  ports:
+    - name: http-port
+      port: 80
+      targetPort: http-port
+      protocol: TCP
+  selector:
+    app: echo-server
+```
