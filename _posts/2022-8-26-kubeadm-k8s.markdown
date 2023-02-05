@@ -119,16 +119,23 @@ kubeadm init --pod-network-cidr=10.244.0.0/16
 
 > 这里也介绍下重置 kubeadm 的方式，即删除节点(重置节点)，命令为 `kubeadm reset`（需要在每个节点上都执行一遍），另外打印加入集群的 join 命令为：`kubeadm token create --print-join-command`，这个命令会重新生成 token。
 
-#### 配置 flannel
-flannel 没有特殊配置，使用 host-gw 时，将 backend-type 改为 host-gw 即可，全部的yaml 文件参考文章末尾。
+安装完成后，通过下面命令拷贝 kubeconfig 文件到 .kube 目录下面。
 ```s
-  net-conf.json: |
-    {
-      "Network": "10.244.0.0/16",
-      "Backend": {
-        "Type": "host-gw"
-      }
+mkdir -p $HOME/.kube
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+```
+
+#### 配置 flannel
+flannel 没有特殊配置，使用 host-gw 时，将 backend-type 改为 host-gw 即可，全部的 yaml 文件参考文章末尾。
+```s
+net-conf.json: |
+  {
+    "Network": "10.244.0.0/16",
+    "Backend": {
+      "Type": "host-gw"
     }
+  }
 ```
 配置完直接 `kubectl apply -f` 即可。这样集群就安装完成了。
 
