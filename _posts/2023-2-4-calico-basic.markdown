@@ -8,7 +8,7 @@ tags:
     - 网络
 ---
 
-本文在一个三个节点的 K8s 集群中体验一下 Calico 网络模型，并对 Calico 的框架和通信模式做一个概述，三个节点的 K8s 集群如下，K8s 使用的版本为 1.20，calico 使用的版本为 3.20。
+本文在一个三个节点的 K8s 集群中体验一下 Calico 网络模型，并对 Calico 的框架和通信模式做一个概述，三个节点的 K8s 集群如下，K8s 使用的版本为 1.20，Calico 使用的版本为 3.20。
 
 |  初始  | 节点 ip  | 
 |  ----  | ----  | 
@@ -26,8 +26,9 @@ kubectl create -f https://docs.projectcalico.org/archive/v3.20/manifests/tigera-
 # install calico
 kubectl create -f https://docs.projectcalico.org/archive/v3.20/manifests/custom-resources.yaml
 ```
-在上面最后一步 install calico 中，需要指定 ip pool 的网段，这个网段需要跟 kubeadm 的网段相同。另外为了简化模型，我们不启用 vxlan 封装，在配置文件中将 `encapsulation: VXLANCrossSubnet` 注释掉，本以为注释掉之后，就不启用 overlay 封装了，发现注释掉之后，默认使用了 IPIP 封装，不清楚 Calico 为什么对 overlay 这么有执念，不是一直在说用 BGP 协议吗。这里我们设置 `encapsulation: None`，表示不使用任何封装。
-> encapsulation 支持的选项有：IPIPCrossSubnet、IPIP、VXLAN、VXLANCrossSubnet、None，默认是 IPIP
+在上面最后一步 install calico 中，需要指定 ip pool 的网段，这个网段需要跟 kubeadm 的网段相同。另外为了简化模型，我们不启用 vxlan 封装，在配置文件中将 `encapsulation: VXLANCrossSubnet` 注释掉，本以为注释掉之后，就不启用 overlay 封装了，发现注释掉之后，默认使用了 IPIP 封装。这里我们设置 `encapsulation: None`，表示不使用任何封装。
+> encapsulation 支持的选项有：IPIPCrossSubnet、IPIP、VXLAN、VXLANCrossSubnet、None，默认是 IPIP。
+
 ```s
 apiVersion: operator.tigera.io/v1
 kind: Installation
@@ -127,7 +128,7 @@ echo-deployment-598f49cc44-wsw2d   1/1     Running   0          91m   10.244.166
 ```
 
 #### 在 master 容器内 ping node 节点上的容器
-看一下 `10.244.219.66 -> 10.244.166.129` 链路通不通，发现是通的。
+首先测试一下网络链路 `10.244.219.66 -> 10.244.166.129`，通的，没有问题。
 ```s
 / # ping 10.244.166.129
 PING 10.244.166.129 (10.244.166.129): 56 data bytes
@@ -163,6 +164,7 @@ eth0      Link encap:Ethernet  HWaddr 2E:3C:C9:8B:C0:0F
 关于上面那个奇怪的地址 `169.254.1.1`，我查了一下，原来 Calico 在 ARP 表中，添加了下面一条记录，即容器在查 `169.254.1.1` ip 所对应的 mac 地址的时候，根据 arp 表就直接返回了 `ee:ee:ee:ee:ee:ee` 地址，不用发送 arp 广播了。官方也有 FAP[Why does my container have a route to 169.254.1.1?](https://projectcalico.docs.tigera.io/reference/faq)
 
 > 回顾一下， ARP 协议是以太网使用的，用来根据 ip 地址来查找 mac 地址的协议。因为以太网是根据 mac 地址通信的。
+
 ```s
 / # ip neigh
 192.168.31.201 dev eth0 lladdr ee:ee:ee:ee:ee:ee used 0/0/0 probes 0 STALE
