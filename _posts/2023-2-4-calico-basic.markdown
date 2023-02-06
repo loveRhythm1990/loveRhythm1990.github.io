@@ -10,11 +10,11 @@ tags:
 
 本文在一个三个节点的 K8s 集群中体验一下 Calico 网络模型，并对 Calico 的框架和通信模式做一个概述，三个节点的 K8s 集群如下，K8s 使用的版本为 1.20，Calico 使用的版本为 3.20。
 
-|  初始  | 节点 ip  | 
+|  K8s 节点  | 节点 ip  | 
 |  ----  | ----  | 
-| Master | 192.168.31.203 |
-| Node1 | 192.168.31.201 | 
-| Node2  | 192.168.31.202 | 
+| Master | 192.168.31.201 |
+| Node | 192.168.31.202 | 
+| Node2  | 192.168.31.203 | 
 
 ### 安装 Calico
 安装这部分参考官方文档 [Quickstart for Calico on Kubernetes](https://projectcalico.docs.tigera.io/getting-started/kubernetes/quickstart)，在使用 `kubeadm init` 初始化集群之后，通过两个 yaml 文件分别安装 `Tigera Calico operator` 和 Calico。
