@@ -181,7 +181,7 @@ nslookup xxl-job-admin.xxl-job.svc 10.43.0.10
 ```s
 #一路回车，生成秘钥
 ssh-keygen
-# 配置免密登录（-i参数是不是可以不加？）
+# 配置免密登录（ -i 参数可以不加）
 ssh-copy-id -i .ssh/id_rsa.pub  用户名字@192.168.x.xxx
 ```
 

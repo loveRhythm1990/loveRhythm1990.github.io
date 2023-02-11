@@ -126,8 +126,8 @@ sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
 sudo chown $(id -u):$(id -g) $HOME/.kube/config
 ```
 
-#### 配置 flannel
-flannel 没有特殊配置，使用 host-gw 时，将 backend-type 改为 host-gw 即可，全部的 yaml 文件参考文章末尾。
+#### 配置网络插件
+以 flannel 为例，总体没有特殊配置，使用 host-gw 时，将 backend-type 改为 host-gw 即可，全部的 yaml 文件参考 [cores提供的yaml](https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml)。
 ```s
 net-conf.json: |
   {
@@ -138,6 +138,8 @@ net-conf.json: |
   }
 ```
 配置完直接 `kubectl apply -f` 即可。这样集群就安装完成了。
+
+其实在安装完 flannel 之后，我发现节点还是 NotReady 的，我看了下 `/opt/cni/bin` 目录，只有 flannel 这一个 binary，我们知道 flannel 其实还依赖了 bridge、ipam 插件，这里我们从[官方 github 库](https://github.com/containernetworking/plugins)中编译一下，放到 /opt/cni/bin 目录。
 
 ### 参考
 [阿里云镜像安装kubeadm和kubernetes](https://blog.51cto.com/u_15162069/2887315)
