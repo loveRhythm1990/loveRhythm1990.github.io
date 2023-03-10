@@ -21,7 +21,7 @@ EtcdServer 在收到 put 请求后，向 raft 层发送 propose 请求，raft �
 
 > 这里还有个问题需要注意，新添加的 Entry 的 index 是怎么确认的？
 
-对于新增的 Entry，从 unstable 里获取 index（只要有任意一个 Entry 或者 snapshot），由此可见 unstable 存储里的 Entry 总是最新的，下面 `appendEntry` 是将 Entry 添加到 unstable 时确定 index 的代码。如果 unstable 里则从 MemoryStorage 里获取 index，其确定 index 的代码为 `ms.ents[0].Index + uint64(len(ms.ents)) - 1`.
+对于新增的 Entry，从 unstable 里获取 index（只要有任意一个 Entry 或者 snapshot），由此可见 unstable 存储里的 Entry 总是最新的，下面 `appendEntry` 是将 Entry 添加到 unstable 时确定 index 的代码。如果 unstable 为空则从 MemoryStorage 里获取 index，其确定 index 的代码为 `ms.ents[0].Index + uint64(len(ms.ents)) - 1`.
 
 ```go
 // etcd/raft/log.go
@@ -96,7 +96,7 @@ func newReady(r *raft, prevSoftSt *SoftState, prevHardSt pb.HardState) Ready {
 ```
 
 ### 4.EtcdServer 处理 Ready
-EtcdServer 收到消息后，发送 MsgApp 消息，已经将 Entry 写到 wal，参考《[Etcd 中的 wal 处理流程](https://loverhythm1990.github.io/2022/05/07/etcd-wal/)》
+EtcdServer 收到消息后，发送 MsgApp 消息，并将 Entry 写到 wal，参考《[Etcd 中的 wal 处理流程](https://loverhythm1990.github.io/2022/05/07/etcd-wal/)》
 ```go
 // etcd/etcdserver/raft.go
 func (r *raftNode) start(rh *raftReadyHandler) {
@@ -150,7 +150,7 @@ func (l *raftLog) maybeAppend(index, logTerm, committed uint64, ents ...pb.Entry
 ```
 follower 处理完 AppMsg 之后，返回一个 AppMsgResp 消息，在这个消息中，Index 表示 follower 已经复制的最大的Index，**从代码里看，这里的已复制是指写到 unstable 存储**。
 
-### 5.已写入 unstable 的 Entry 可写入 MemoryStorage
+### 5.已写入 wal 的 Entry 可写入 MemoryStorage
 `MemoryStorage` 在 raft 层中扮演一个 Entry 数据库的角色，可对 Entry 进行查询，MemoryStorage 中保存了全量的 Entry，请求 FirstIndex() 之前的 Entry 会报 `ErrCompacted` 错误，其实现的 Storage 接口入下。
 ```go
 type Storage interface {

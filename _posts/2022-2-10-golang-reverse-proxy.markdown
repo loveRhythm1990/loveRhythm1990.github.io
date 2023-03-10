@@ -181,6 +181,7 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 }
 ```
 在这个负载均衡的反向代理实现中，实际处理的 Request 都是同一个本地的 Request，即 LB 自己收到的 Request，并传递给了 ReverseProxy。
+> 上面这个自定义的 `Transport` 起了一个中间件的作用，拦截 Request 请求，取出其中 Context 的值，并重新初始化一个 Request，把 Context 的值放到新 Request 的 header 中，然后用 http 原生的 Transport 处理新请求。
 
 #### 反向代理进行请求转发
 这里直接给出反向代理的实现，定义一个反向代理的输入实际只要一个后端 Server 的 URL。这里使用反向代理只是为了转发请求。另外，这里的实现中，如果一个 client 的请求，试探了三个后端 Server 都失败了，则对这个 Client 返回错误。

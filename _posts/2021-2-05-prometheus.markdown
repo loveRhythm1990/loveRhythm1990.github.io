@@ -77,7 +77,7 @@ http_requests_total{job="prometheus"}[5m]
 
 上面是三个采样指标，指标名称都一样，但是标签不一样，也是通过三个不同的时序序列来表示的。横轴表示时间，上图显示了最近60秒的采样数据，每个指标都是一个序列。上面是一个`Range vector`，有一个时间范围。(**顺便有个思考，因为缺少实战，如果对上面foo求rate，那么每个指标序列应该都有一个平均值**)
 
-![java-javascript](/img/in-post/monitor/prometheus_instant.png){:height="70%" width="70%"}
+![java-javascript](/img/in-post/monitor/prometheus_instant.png){:height="50%" width="50%"}
 
 这个是一个`Instant vector`，只显示了指标`foo`在某一个时刻的值，但是有三个采样，表示不同的采样指标。这两个图很有代表性。
 

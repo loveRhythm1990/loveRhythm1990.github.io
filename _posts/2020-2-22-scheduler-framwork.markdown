@@ -15,7 +15,7 @@ Pod在调度框架中的调度过程被分为两个阶段：`Scheduling Cycle`�
 
 下图显示了pod在调度时的scheduing context以及scheduling framework暴露的扩展点。在下图中，`Filter`等价于`Predicate`，`Scoring`等价于`Priority function`，一个插件可以注册多个扩展点来执行更复杂以及有状态的任务。
 
-![java-javascript](/img/in-post/scheduler-framwork/scheduling-framework-extensions.png)
+![java-javascript](/img/in-post/scheduler-framwork/scheduling-framework-extensions.png){:height="70%" width="70%"}
 
 ### 扩展点
 扩展点就是一些可以定制化插件的地方，下面列举了每一个扩展点，其实在代码，对应Plugins结构体，代码路径在`pkg/scheduler/apis/config/types.go`，k8s的这个文档，也算是对这个结构体的说明。
