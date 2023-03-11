@@ -7,6 +7,15 @@ header-img-credit: false
 tags:
     - 网络
 ---
+- [安装 Calico](#安装-calico)
+- [安装 calicoctl](#安装-calicoctl)
+- [calico 架构概述](#calico-架构概述)
+- [报文路径](#报文路径)
+  - [在 master 容器内 ping node 节点上的容器](#在-master-容器内-ping-node-节点上的容器)
+  - [容器网络配置](#容器网络配置)
+  - [主机网络配置](#主机网络配置)
+- [总结](#总结)
+- [参考](#参考)
 
 本文在一个三个节点的 K8s 集群中体验一下 Calico 网络模型，并对 Calico 的框架和通信模式做一个概述，三个节点的 K8s 集群如下，K8s 使用的版本为 1.20，Calico 使用的版本为 3.20。
 

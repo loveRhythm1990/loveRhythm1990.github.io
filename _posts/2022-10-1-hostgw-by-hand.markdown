@@ -7,6 +7,13 @@ header-img-credit: false
 tags:
     - 网络
 ---
+- [部署集群](#部署集群)
+  - [配置网络](#配置网络)
+  - [配置 subnet.env](#配置-subnetenv)
+  - [配置路由](#配置路由)
+  - [添加 iptables 规则](#添加-iptables-规则)
+- [测试](#测试)
+- [其他](#其他)
 
 根据《[flannel host-gw 网络概述](https://loverhythm1990.github.io/2022/08/27/k8s-hostgw/)》，感觉 hostgw 网络模型还是比较简单的，于是萌生了一个想法，手动配置 hostgw 环境，不启用 flanneld，(也就是不启动 flannel daemon程序），手动配置路由，iptables 规则等，看看是不是行得通，以此更好地理解下 k8s 的网络模型。
 

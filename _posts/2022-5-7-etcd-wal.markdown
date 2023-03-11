@@ -7,6 +7,12 @@ header-img-credit: false
 tags:
   - Etcd
 ---
+- [EtcdServer 初始化对 wal 的处理](#etcdserver-初始化对-wal-的处理)
+	- [startNode 通过 wal.Create 新建 wal 文件](#startnode-通过-walcreate-新建-wal-文件)
+	- [restartNode 通过 wal.Open 读取比快照新的那部分 wal](#restartnode-通过-walopen-读取比快照新的那部分-wal)
+- [EtcdServer 消费 Ready 写 wal](#etcdserver-消费-ready-写-wal)
+- [附录](#附录)
+- [参考](#参考)
 
 在 Etcd 数据目录下，有一些类似如下的 wal 日志文件，本文尝试解释下 wal 文件的产生和其工作原理。在下面显示的文件中，其命名格式为`%016x-%016x.wal`，由 `-` 分割的前者为 seq，是一个从 0 开始的序号，每新增一个 wal 文件，这个序号就加 1，从下面也能看出这个序号是递增的，`-` 后面为该 wal 保存的 Entry 的最大的 index，从重放 wal 的时候需要用到这个 index。
 ```s

@@ -7,6 +7,11 @@ header-img-credit: false
 tags:
     - 网络
 ---
+- [CNI 插件实现框架](#cni-插件实现框架)
+	- [cmdAdd 配置网络](#cmdadd-配置网络)
+	- [bridge 插件配置网卡](#bridge-插件配置网卡)
+	- [cmdDel 网络清理](#cmddel-网络清理)
+- [自定义 cni 插件](#自定义-cni-插件)
 
 在《[K8s dockershim CNI 实现解析](https://loverhythm1990.github.io/2022/12/17/k8s-cni-imple/)》文章中，我们解释了 CNI 在 K8s 侧的一些实现，包括涉及到的 dockershim 的一些数据结构、CNI 仓库 libcni 的一些数据结构，以及 CNI 调用具体插件的参数、参数传递方式等。在本文中，我们将以 flannel 为例大概介绍一下 cni 插件的实现，其实flannel实现涉及到好几个项目：
 * [cni-plugin](https://github.com/flannel-io/cni-plugin)：这个就是我们要解析的项目，这个项目生成的是一个二进制文件 `flannel`，并且放到目录 `/opt/cni/bin/`目录，供kubelet 消费。但是光有这个项目是不行的，或者说这个项目做的事情比较简单。

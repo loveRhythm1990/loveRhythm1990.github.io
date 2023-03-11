@@ -7,6 +7,12 @@ header-img-credit: false
 tags:
     - Etcd
 ---
+- [集群初始状态](#集群初始状态)
+- [模拟灾备](#模拟灾备)
+- [force new cluster](#force-new-cluster)
+- [检查集群状态](#检查集群状态)
+- [移除A机房节点](#移除a机房节点)
+- [尝试重启 kube-apiserver，修改 --etcd-servers 参数](#尝试重启-kube-apiserver修改---etcd-servers-参数)
 
 ### 集群初始状态
 K8s 集群信息，master1/master2/master3 是管控节点，node1、node2是 worker 节点，其中 master3/node2 位于 B 机房。

@@ -7,6 +7,12 @@ header-img-credit: false
 tags:
     - Etcd
 ---
+- [EtcdServer 发送请求到 Raft](#etcdserver-发送请求到-raft)
+- [Raft 处理请求](#raft-处理请求)
+	- [Raft 将请求写入 propc channel](#raft-将请求写入-propc-channel)
+	- [Raft 消费 propc channel](#raft-消费-propc-channel)
+		- [stepFollower](#stepfollower)
+		- [stepLeader](#stepleader)
 
 这部分从 EtcdServer 处理 put 请求开始，介绍相关逻辑。这部分内容比较多，涉及到较多模块，这篇文章的主要目的是先有个大题的概念，将各个模块串联起来，同时明确模块之前的接口、通讯方式等，模块内部的细节等有了大概概念之后，再进行分析。
 

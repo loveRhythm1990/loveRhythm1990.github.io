@@ -7,6 +7,16 @@ header-img-credit: false
 tags:
     - 网络
 ---
+- [网络插件初始化](#网络插件初始化)
+	- [ProbeNetworkPlugins 根据配置文件生成网络插件](#probenetworkplugins-根据配置文件生成网络插件)
+	- [InitNetworkPlugin](#initnetworkplugin)
+- [SetupPod 配置容器网络过程](#setuppod-配置容器网络过程)
+	- [buildCNIRuntimeConf 配置一个 libcni 的结构体 RumtimeConf](#buildcniruntimeconf-配置一个-libcni-的结构体-rumtimeconf)
+	- [AddNetworkList](#addnetworklist)
+- [ExecPluginWithResult 调用二进制插件](#execpluginwithresult-调用二进制插件)
+- [附录](#附录)
+	- [libcni中定义的 CNI 接口](#libcni中定义的-cni-接口)
+	- [golang 反序列化的一点知识](#golang-反序列化的一点知识)
 
 解析一下 CNI 的实现，包括网络插件如何初始化，以及调用 cni 接口配置网络等，将整个过程串联了起来。本文对应的 K8s 版本为 1.16.
 

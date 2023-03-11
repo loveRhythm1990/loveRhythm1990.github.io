@@ -8,6 +8,19 @@ header-img-credit: false
 tags:
     - Etcd
 ---
+- [思路](#思路)
+- [集群初始状态](#集群初始状态)
+- [将 master3 节点上的 etcd 变成 learner](#将-master3-节点上的-etcd-变成-learner)
+  - [通过 etcdctl 移除 master3 上的 etcd](#通过-etcdctl-移除-master3-上的-etcd)
+  - [手动在 master3 节点添加一个 learner 节点](#手动在-master3-节点添加一个-learner-节点)
+  - [模拟故障](#模拟故障)
+  - [master3 上的 learner 恢复成单节点集群](#master3-上的-learner-恢复成单节点集群)
+  - [查看集群状态](#查看集群状态)
+  - [相关问题](#相关问题)
+    - [rke 可以直接移除两个 master 节点吗？](#rke-可以直接移除两个-master-节点吗)
+    - [kubelet 不断重启](#kubelet-不断重启)
+    - [ntp 不同步，导致 kubelet 无法启动](#ntp-不同步导致-kubelet-无法启动)
+    - [rke 证书配置格式](#rke-证书配置格式)
 
 ### 思路
 因为同城机房的时延较小，大概在 1ms 左右，整体方案(同城双活)是在两个机房部署同一个 Etcd 集群，即：Etcd 集群的部分节点在 A 机房，另一部分节点在 B 机房（这个方案称为`方案一`）。同时有个兜底手段是，如果两个机房的时延确实造成了一些问题，那么需要升级为`方案二`，即：将 Etcd 集群部署到同一个机房A，同时在 B 机房添加一个 learner，进行实时备份。

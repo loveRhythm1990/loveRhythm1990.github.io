@@ -8,6 +8,11 @@ header-img-credit: false
 tags:
     - 网络
 ---
+- [IP 预留中的几个关键问题](#ip-预留中的几个关键问题)
+	- [实现 ip 预留](#实现-ip-预留)
+	- [怎么知道要不要预留](#怎么知道要不要预留)
+	- [预留的 ip 什么时候回收](#预留的-ip-什么时候回收)
+- [参考](#参考)
 
 OpenKruise 在其文档 [OpenKruise v1.2：新增 PersistentPodState 实现有状态 Pod 拓扑固定与 IP 复用](https://openkruise.io/zh/blog/openkruise-1.2/) 中说实现了 IP 预留的功能，这里看下是怎么实现的。其实实现这个功能不麻烦，很早以前我们团队也自己实现了这个功能，当时也是把 ip 放在了磁盘上，不过我那个时候对网络不了解，现在通过这些细小的知识点一点一点积累网路知识。
 

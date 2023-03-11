@@ -7,6 +7,12 @@ header-img-credit: false
 tags:
     - 网络
 ---
+- [基础知识 MTU vs MSS](#基础知识-mtu-vs-mss)
+- [通过 netlink 创建网卡](#通过-netlink-创建网卡)
+- [配置 veth 设备](#配置-veth-设备)
+	- [NetNS 接口的实现细节](#netns-接口的实现细节)
+	- [生成 veth 设备，并配置 namespace](#生成-veth-设备并配置-namespace)
+- [参考](#参考)
 
 ### 基础知识 MTU vs MSS
 MTU(Maximum Transmission Unit，最大传输单元)，是数据链路层的概念，限制了数据链路层上可以传输的数据包的大小，也因此限制了上层（网络层）的数据包大小，MTU 这个大小包含了IP header 以及 TCP header，MTU一般由硬件规定，如以太网的MTU为1500字节。当IP报文的大小超过MUT时，IP报文会被分片，并在对端被重组。如果配置了不能分片，则超过MTU大小的报文会被丢弃。默认情况下，我们将网卡的MTU设置为1500即可，但是如果是 overlay 网络，则需要考虑 overlay 封装的开销，需要在1500bytes的基础上减去开销，比如vxlan的mtu设置为 1450 bytes。

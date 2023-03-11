@@ -8,6 +8,16 @@ tags:
     - K8s
     - 运维
 ---
+- [在 helm install 中指定 namespace](#在-helm-install-中指定-namespace)
+- [在 helm chart 中使用 Release.namespace](#在-helm-chart-中使用-releasenamespace)
+- [使用 appVersion 作为应用版本](#使用-appversion-作为应用版本)
+- [使用 chart 来管理依赖](#使用-chart-来管理依赖)
+  - [自动管理](#自动管理)
+  - [手动管理](#手动管理)
+- [使用 hook 来解决前置依赖或者后置检查](#使用-hook-来解决前置依赖或者后置检查)
+- [使用 helm test 来对应用进行测试](#使用-helm-test-来对应用进行测试)
+- [将 crd 放在 crds 目录](#将-crd-放在-crds-目录)
+- [upgrade 时指定 --atomic 参数](#upgrade-时指定---atomic-参数)
 
 helm 在 K8s 中用的非常多了，最近也在关注这块，总结一些最佳实践。《Helm 学习指南-Kubernetes上的应用程序管理》这本书前前后后翻了很多次，也算是读完了。另外还买了一本《Harbor权威指南：容器镜像、Helm Chart等云原生制品的管理与实践》后面再看下，学习 helm 是想能掌握 K8s 的基本生态。
 

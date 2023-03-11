@@ -7,6 +7,17 @@ header-img-credit: false
 tags:
     - 运维
 ---
+- [前置条件](#前置条件)
+  - [关闭防火墙](#关闭防火墙)
+  - [开启 bridge-netfilter](#开启-bridge-netfilter)
+  - [关闭 swap](#关闭-swap)
+  - [配置 kubernetes 安装源](#配置-kubernetes-安装源)
+- [部署 kubernetes](#部署-kubernetes)
+  - [安装 binary](#安装-binary)
+  - [替换镜像源](#替换镜像源)
+  - [安装集群](#安装集群)
+  - [配置网络插件](#配置网络插件)
+- [参考](#参考)
 
 这里使用 kubeadm 部署下 kubernetes，并配置 flannel 网络模型为 `host-gw`。kubeadm 的官方文档为 [Creating a cluster with kubeadm](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/)，这个文档还没好好研究，这里重点不是 kubeadm 的使用，使用 kubeadm 部署 kubenetes 细节很多。本文提供的方法只是搭建测试集群，并不适用于生产环境的搭建。
 

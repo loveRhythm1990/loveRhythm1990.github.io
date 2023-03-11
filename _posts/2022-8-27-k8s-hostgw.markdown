@@ -7,6 +7,8 @@ header-img-credit: false
 tags:
     - 网络
 ---
+- [网络分析](#网络分析)
+- [iptables](#iptables)
 
 在《[使用 kubeadm 部署 Kubernetes](https://loverhythm1990.github.io/2022/08/26/kubeadm-k8s/)》中，我们使用 kubeadm 部署了一个 K8s 集群，并配置 flannel 的网络后端为 hostgw。这里稍微介绍下 hostgw 网络的工作模式。
 

@@ -7,6 +7,13 @@ header-img-credit: false
 tags:
     - 运维
 ---
+- [安装配置](#安装配置)
+  - [master 节点配置](#master-节点配置)
+  - [backup 节点配置](#backup-节点配置)
+- [观察配置](#观察配置)
+- [验证测试](#验证测试)
+- [其他](#其他)
+- [参考](#参考)
 
 当应用实例部署在多个节点的时候，可以通过 Keepalived 来实现高可用，Keepalived 实现高可用的方式是主备模式，也就是只有一个 master 在工作，其余的节点处在 backup 状态，master 节点挂掉时，备节点变成 master 节点继续提供服务。在配置高可用时，首先得有一个 vip，初始情况下， vip 配置在 master 节点的网卡上，master 节点故障后，会漂移到其他节点。
 

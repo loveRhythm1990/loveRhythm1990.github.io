@@ -7,6 +7,25 @@ header-img-credit: false
 tags:
     - Golang
 ---
+- [一、模型](#一模型)
+- [二、TCP 连接的建立](#二tcp-连接的建立)
+  - [1. 网络不可达或对方服务未启动](#1-网络不可达或对方服务未启动)
+  - [2、对方服务的listen backlog满](#2对方服务的listen-backlog满)
+  - [3、网络延时较大，Dial阻塞并超时](#3网络延时较大dial阻塞并超时)
+- [三、Socket 读写](#三socket-读写)
+  - [1. Socket 无数据](#1-socket-无数据)
+  - [2. Socket中有部分数据](#2-socket中有部分数据)
+  - [3、Socket 中有足够数据](#3socket-中有足够数据)
+  - [4、Socket 关闭](#4socket-关闭)
+  - [5、读取操纵超时](#5读取操纵超时)
+  - [6、成功写](#6成功写)
+  - [7、写阻塞](#7写阻塞)
+  - [8、写入部分数据](#8写入部分数据)
+  - [9、写入超时](#9写入超时)
+- [Goroutine safe](#goroutine-safe)
+- [四、Socket属性](#四socket属性)
+- [五、关闭连接](#五关闭连接)
+- [六、小结](#六小结)
 
 > 本文转载自：[Go语言TCP Socket编程](https://tonybai.com/2015/11/17/tcp-programming-in-golang/)，作者：Tony Bai
 
@@ -419,10 +438,10 @@ $go run server4.go
 
 和读相比，Write遇到的情形一样不少，我们也逐一看一下。
 
-### 1、成功写
+### 6、成功写
 前面例子着重于Read，client端在Write时并未判断Write的返回值。所谓“成功写”指的就是Write调用返回的n与预期要写入的数据长度相等，且error = nil。这是我们在调用Write时遇到的最常见的情形，这里不再举例了。
 
-### 2、写阻塞
+### 7、写阻塞
 TCP连接通信两端的OS都会为该连接保留数据缓冲，一端调用Write后，实际上数据是写入到OS的协议栈的数据缓冲的。TCP是全双工通信，因此每个方向都有独立的数据缓冲。当发送方将对方的接收缓冲区以及自身的发送缓冲区写满后，Write就会阻塞。我们来看一个例子：client5.go和server.go。
 ```go
 //go-tcpsock/read_write/client5.go
@@ -517,7 +536,7 @@ client端：
 .... ...
 ```
 
-### 3、写入部分数据
+### 8、写入部分数据
  Write操作存在写入部分数据的情况，比如上面例子中，当client端输出日志停留在“write 65536 bytes this time, 655360 bytes in total”时，我们杀掉server5，这时我们会看到client5输出以下日志：
 ```s
 ...
@@ -527,7 +546,7 @@ client端：
 ```
 显然Write并非在655360这个地方阻塞的，而是后续又写入24108后发生了阻塞，server端socket关闭后，我们看到Wrote返回er != nil且n = 24108，程序需要对这部分写入的24108字节做特定处理。
 
-### 4、写入超时
+### 9、写入超时
 如果非要给Write增加一个期限，那我们可以调用SetWriteDeadline方法。我们copy一份client5.go，形成client6.go，在client6.go的Write之前增加一行timeout设置代码：
 ```go
 conn.SetWriteDeadline(time.Now().Add(time.Microsecond * 10))

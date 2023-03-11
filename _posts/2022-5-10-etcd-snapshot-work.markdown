@@ -8,6 +8,9 @@ header-img-credit: false
 tags:
   - Etcd
 ---
+- [clientv3 snapshot 客户端实现](#clientv3-snapshot-客户端实现)
+- [snapshot 服务端实现](#snapshot-服务端实现)
+- [参考](#参考)
 
 Etcd 运维过程中，可以通过下面命令对 Etcd 中的数据进行保存。那运行这个命令的时候后端都发生了啥呢？本文尝试研究一下，本文基于的 Etcd 版本是 3.4.3。
 ```s
