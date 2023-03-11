@@ -1,0 +1,16 @@
+---
+layout:     post
+title:      "Goland 体验码"
+date:       2023-3-11 10:10:00
+author:     "decent"
+header-img-credit: false
+tags:
+    - 运维
+---
+
+从 jetbra 官方网站下载最新版，从 Russia 老哥那里下载一个 jetbra.zip 压缩包，解压之后，script 目录下面有一个 `install.sh` 脚本，执行一下。
+
+然后到其网站复制一下体验码，复制到 Goland 中，然后就可以体验使用 Goland 了。其网站为：aHR0cHM6Ly8zLmpldGJyYS5pbi8=
+
+或者：aHR0cHM6Ly9qZXRicmEuaW4vcw==
+
