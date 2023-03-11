@@ -5,7 +5,7 @@ date:       2020-2-25 15:55:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - 运维
+    - 能效
 ---
 
 家里有个 windows 台式机，安装了 vmware，通过 vmware 虚拟机搭集群测试时，是不能用 dhcp 的，每次虚拟机重启后，节点 ip 地址变化了，那 K8s 集群就废了。

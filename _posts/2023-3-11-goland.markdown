@@ -5,7 +5,7 @@ date:       2023-3-11 10:10:00
 author:     "decent"
 header-img-credit: false
 tags:
-    - 运维
+    - 能效
 ---
 
 从 jetbra 官方网站下载最新版，从 Russia 老哥那里下载一个 jetbra.zip 压缩包，解压之后，script 目录下面有一个 `install.sh` 脚本，执行一下。

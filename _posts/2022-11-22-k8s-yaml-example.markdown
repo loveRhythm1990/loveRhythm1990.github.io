@@ -5,7 +5,7 @@ date:       2022-11-22 10:10:00
 author:     "decent"
 header-img-credit: false
 tags:
-    - K8s
+    - 能效
 ---
 
 一些 K8s 资源 yaml 例子，用的时候直接粘贴复制，原地址：[https://k8s-examples.container-solutions.com/examples/Pod/Pod.html](https://k8s-examples.container-solutions.com/examples/Pod/Pod.html)

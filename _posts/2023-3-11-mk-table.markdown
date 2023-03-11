@@ -1,0 +1,27 @@
+---
+layout:     post
+title:      "vscode 使用实践"
+date:       2023-3-11 10:10:00
+author:     "decent"
+header-img-credit: false
+tags:
+    - 能效
+---
+
+- [生成 markdown 目录](#生成-markdown-目录)
+- [插入图片](#插入图片)
+- [mac快捷键](#mac快捷键)
+
+### 生成 markdown 目录
+在 vscode 中安装 `Markdown All in One` 插件。文章写完后，按下快捷键 `command + shift + p`，输入`Markdown All in One: Create Table of Contents` 会自动生成文章的目录。
+
+如果文章目录有更新，目录会自动更新。
+
+### 插入图片
+使用下面命令插入图片，所有的图片我都放在了根目录下的 `/pics` 文件夹下。
+
+`![java-javascript](/pics/somepic.png)`
+
+### mac快捷键
+* 搜索文件名：快捷键为 `command + p`
+* 全局搜索：`command + shift + f`
