@@ -9,6 +9,10 @@ tags:
     - TODO
 ---
 
+- [Mac as Proxy](#mac-as-proxy)
+- [自动化工具集](#自动化工具集)
+
+### Mac as Proxy
 在测试过程中，发现镜像在虚拟机中很难拉下来，但是在mac 上却能拉下来，通过下面命令在 mac 上拉镜像，并推送到虚拟机上，下面脚本中使用了 ansible，得提前配置免密登录。
 ```s
 #!/bin/sh
@@ -37,3 +41,6 @@ decent@mac% ~/Downloads/image.sh docker.io/istio/examples-bookinfo-details-v1:1.
 python3 -m pip install --user ansible
 ```
 如果上面安装的时候下载很慢，可以通过设置`https_proxy`的方式加速，当然你得先有proxy。
+
+### 自动化工具集
+总结常用的 shell 分析命令
