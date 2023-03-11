@@ -8,6 +8,12 @@ tags:
     - Istio
 ---
 
+- [安装](#安装)
+- [配置 ip 池](#配置-ip-池)
+- [配置服务，并测试](#配置服务并测试)
+  - [集群内访问](#集群内访问)
+  - [集群外访问](#集群外访问)
+- [参考](#参考)
 
 在部署测试 Istio 时，发现依赖 LoadBalance 类型的 Service。LoadBalance 类型的 Service 一般由公有云厂商分配`EXTERNAL-IP`，从而在集群外访问集群内的服务，如果是我们自己的测试集群，又依赖 LoadBalance 类型的服务，那怎么办呢？[metallb](https://github.com/metallb/metallb) 提供了一种解决方案，能够为集群内的服务分配 external-ip，并可以从集群外访问。其工作原理跟 [KeepAlived](https://loverhythm1990.github.io/2023/02/03/keepalived/) 非常类似，（[官方文档](https://metallb.universe.tf/concepts/layer2/#comparison-to-keepalived)中有解释其跟 keepalived 的区别），都是生成一个 vip，并响应这个 vip arp 请求。
 
