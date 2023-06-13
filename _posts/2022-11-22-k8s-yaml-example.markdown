@@ -8,7 +8,82 @@ tags:
     - 能效
 ---
 
-一些 K8s 资源 yaml 例子，用的时候直接粘贴复制，原地址：[https://k8s-examples.container-solutions.com/examples/Pod/Pod.html](https://k8s-examples.container-solutions.com/examples/Pod/Pod.html)
+一些 K8s 资源 yaml 例子，用的时候直接粘贴复制
+
+**K8s service示例： nginx service**
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+  labels:
+    app.kubernetes.io/name: proxy
+spec:
+  containers:
+  - name: nginx
+    image: nginx:stable
+    ports:
+      - containerPort: 80
+        name: http-web-svc
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-service
+spec:
+  selector:
+    app.kubernetes.io/name: proxy
+  ports:
+  - name: name-of-service-port
+    protocol: TCP
+    port: 80
+    targetPort: http-web-svc
+```
+
+**simple pod，能跑起来的最小化配置**
+
+```yml
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pods-simple-pod
+spec:
+  containers:
+    - command:
+        - sleep
+        - "3600"
+      image: busybox
+      name: pods-simple-container
+```
+
+**测试网络通不通的一个 job，简单的job, curl job**
+
+```yml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: curl-test
+  namespace: ack-cos
+spec:
+  completions: 1
+  parallelism: 1
+  template:
+    metadata:
+      creationTimestamp: null
+    spec:
+      containers:
+      - command:
+        - /bin/sh
+        - "-c"
+        - "curl www.baidu.com"
+        image: curlimages/curl:latest
+        imagePullPolicy: IfNotPresent
+        name: main
+      restartPolicy: OnFailure
+```
+
 
 **debug-network.yaml**
 
@@ -44,47 +119,6 @@ spec:
         - "3600"
       image: gcr.io/kubernetes-e2e-test-images/dnsutils:1.3
       name: dnsutils
-```
-
-**simple.yaml**
-
-```yml
----
-apiVersion: v1
-kind: Pod
-metadata:
-  name: pods-simple-pod
-spec:
-  containers:
-    - command:
-        - sleep
-        - "3600"
-      image: busybox
-      name: pods-simple-container
-```
-
-**spec.volumes.hostPath/**
-
-```yml
-apiVersion: v1
-kind: Pod
-metadata:
-  name: volumes-hostdir-pod
-spec:
-  containers:
-    - command:
-        - sleep
-        - "3600"
-      image: busybox
-      name: volumes-hostdir-container
-      volumeMounts:
-        - mountPath: /volumes-hostdir-mount-path
-          name: volumes-hostdir-volume
-  volumes:
-    - hostPath:
-        # directory location on host
-        path: /tmp
-      name: volumes-hostdir-volume
 ```
 
 **spec.initContainers/**
@@ -165,63 +199,6 @@ spec:
       image: busybox
 ```
 
-**spec.volumes.persistentVolumeClaim/**
-
-```yml
-apiVersion: v1
-kind: Pod
-metadata:
-  name: volume-pvc
-spec:
-  containers:
-    - name: frontend
-      image: nginx
-      volumeMounts:
-        - mountPath: /usr/share/nginx/html
-          name: volume-pvc
-  volumes:
-    - name: volume-pvc
-      persistentVolumeClaim:
-        claimName: persitent-volume-claim
-```
-
-**privileged-simple.yaml**
-
-```yml
-apiVersion: v1
-kind: Pod
-metadata:
-  name: privileged-simple-pod
-spec:
-  containers:
-    - command:
-        - sleep
-        - "3600"
-      image: busybox
-      name: privileged-simple-pod
-      securityContext:
-        privileged: true
-```
-
-**spec.containers.imagePullPolicy/**
-
-```yml
-# imagePullPolicies: IfNotPresent, Always
----
-apiVersion: v1
-kind: Pod
-metadata:
-  name: pods-image-pull-policy-pod
-spec:
-  containers:
-    - command:
-        - sleep
-        - "3600"
-      image: busybox
-      imagePullPolicy: IfNotPresent
-      name: pods-image-pull-policy-container
-```
-
 **spec.nodeSelector/**
 
 ```yml
@@ -253,43 +230,4 @@ spec:
   tolerations:
     - key: ""  # empty means match all taint keys
       operator: Exists
-```
-
-**NodePort Service**
-
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: echo-deployment
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: echo-server
-  template:
-    metadata:
-      labels:
-        app: echo-server
-    spec:
-      containers:
-        - name: echo-server
-          image: docker.io/agile6v/e2e-test-echo:latest
-          ports:
-            - name: http-port
-              containerPort: 80
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: echo-service
-spec:
-  type: NodePort
-  ports:
-    - name: http-port
-      port: 80
-      targetPort: http-port
-      protocol: TCP
-  selector:
-    app: echo-server
 ```
