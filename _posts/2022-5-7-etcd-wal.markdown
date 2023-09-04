@@ -7,6 +7,8 @@ header-img-credit: false
 tags:
   - Etcd
 ---
+
+**文章目录**
 - [EtcdServer 初始化对 wal 的处理](#etcdserver-初始化对-wal-的处理)
 	- [startNode 通过 wal.Create 新建 wal 文件](#startnode-通过-walcreate-新建-wal-文件)
 	- [restartNode 通过 wal.Open 读取比快照新的那部分 wal](#restartnode-通过-walopen-读取比快照新的那部分-wal)
