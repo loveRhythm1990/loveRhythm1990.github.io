@@ -8,6 +8,8 @@ tags:
     - K8s
     - 运维
 ---
+
+**文章目录**
 - [在 helm install 中指定 namespace](#在-helm-install-中指定-namespace)
 - [在 helm chart 中使用 Release.namespace](#在-helm-chart-中使用-releasenamespace)
 - [使用 appVersion 作为应用版本](#使用-appversion-作为应用版本)
