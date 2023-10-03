@@ -1,12 +1,14 @@
 ---
 layout:     post
-title:      "vscode 使用实践"
+title:      "vscode ide 使用实践"
 date:       2023-3-11 10:10:00
 author:     "decent"
 header-img-credit: false
 tags:
     - 能效
 ---
+
+**目录**
 
 - [生成 markdown 目录](#生成-markdown-目录)
 - [插入图片](#插入图片)
@@ -21,7 +23,7 @@ tags:
 ### 插入图片
 使用下面命令插入图片，所有的图片我都放在了根目录下的 `/pics` 文件夹下。
 
-`![java-javascript](/pics/somepic.png)`
+`![java-javascript](/pics/somepic.png){:height="60%" width="60%"}`
 
 ### mac快捷键
 * 搜索文件名：快捷键为 `command + p`

@@ -33,7 +33,7 @@ spec:
 在 prestop hook 设置为 `sleep 5` 情况下，一个 pod 删除的流程大概如下图，其中 `endpoint controller` `kube-proxy` `kubelet` 都是并发工作的，相互之间不存在依赖关系，只监听 apiserver 事件。
 
 当我们使用 kubectl delete 删除pod，或者使用 client-go 删除时，只是配置了一下这个 pod 的 deleteTimestamp，并配置了一个 grace period，我们假设为 30s。
-> 这里再补充点其他内容，发送 delete 请求的时候，对应资源的 controller informer 收到的是一个 update 时间，这个 update 事件就是给对应的资源配置了一个 deletionTimestamp 以及 deletionGracePeriodSeconds，（此时的 pod 状态是 terminating，还未删除），还未收到 delete 事件，后者在从数据库删除时才会有事件发出来。
+> 这里再补充点其他内容，发送 delete 请求的时候，对应资源的 controller informer 收到的是一个 update 事件，这个 update 事件就是给对应的资源配置了一个 deletionTimestamp 以及 deletionGracePeriodSeconds，（此时的 pod 状态是 terminating，还未删除），还未收到 delete 事件，后者在从数据库删除时才会有事件发出来。
 
 ![java-javascript](/img/in-post/all-in-one/2022-10-01-21-05-44.png){:height="80%" width="80%"}
 
