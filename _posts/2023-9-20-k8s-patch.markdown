@@ -11,13 +11,13 @@ tags:
 **目录**
 
 - [三种 patch 方式对比：json、merge、strategic](#三种-patch-方式对比jsonmergestrategic)
-  - [json vs merge](#json-vs-merge)
-  - [merge vs strategic](#merge-vs-strategic)
+	- [json vs merge](#json-vs-merge)
+	- [merge vs strategic](#merge-vs-strategic)
 - [通过 kubectl patch 修改资源](#通过-kubectl-patch-修改资源)
 - [K8s client 中使用 patch](#k8s-client-中使用-patch)
-  - [client-go 使用 patch](#client-go-使用-patch)
-  - [controller-runtime client 中使用 patch](#controller-runtime-client-中使用-patch)
-  - [使用 patch 时的一些问题](#使用-patch-时的一些问题)
+	- [client-go 使用 patch](#client-go-使用-patch)
+	- [controller-runtime client 中使用 patch](#controller-runtime-client-中使用-patch)
+	- [使用 patch 时的一些问题](#使用-patch-时的一些问题)
 - [参考文档](#参考文档)
 
 
@@ -152,19 +152,19 @@ func (ttlc *Controller) patchNodeWithAnnotation(node *v1.Node, annotationKey str
 	if err != nil {
 		return err
 	}
-    // 添加一个 annotation 到node中，使其成为新 node，并序列化
-    // FIXME: 这个地方最好还是 deepcopy一份，避免修改缓存中的数据
+	// 添加一个 annotation 到node中，使其成为新 node，并序列化
+ 	// FIXME: 这个地方最好还是 deepcopy一份，避免修改缓存中的数据
 	setIntAnnotation(node, annotationKey, value) 
 	newData, err := json.Marshal(node)
 	if err != nil {
 		return err
 	}
-    // 生成 patch
+	// 生成 patch
 	patchBytes, err := strategicpatch.CreateTwoWayMergePatch(oldData, newData, &v1.Node{})
 	if err != nil {
 		return err
 	}
-    // patch，指定类型为 types.StrategicMergePatchType
+	// patch，指定类型为 types.StrategicMergePatchType
 	_, err = ttlc.kubeClient.CoreV1().Nodes().Patch(context.TODO(), node.Name, types.StrategicMergePatchType, patchBytes, metav1.PatchOptions{})
 	if err != nil {
 		return err
