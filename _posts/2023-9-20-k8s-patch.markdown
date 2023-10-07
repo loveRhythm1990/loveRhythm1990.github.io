@@ -1,0 +1,212 @@
+---
+layout:     post
+title:      "通过 patch 修改 Kubernetes 中的资源"
+date:       2023-10-06 10:10:00
+author:     "decent"
+header-img-credit: false
+tags:
+    - K8s
+---
+
+**目录**
+
+- [三种 patch 方式对比：json、merge、strategic](#三种-patch-方式对比jsonmergestrategic)
+  - [json vs merge](#json-vs-merge)
+  - [merge vs strategic](#merge-vs-strategic)
+- [通过 kubectl patch 修改资源](#通过-kubectl-patch-修改资源)
+- [K8s client 中使用 patch](#k8s-client-中使用-patch)
+  - [client-go 使用 patch](#client-go-使用-patch)
+  - [controller-runtime client 中使用 patch](#controller-runtime-client-中使用-patch)
+  - [使用 patch 时的一些问题](#使用-patch-时的一些问题)
+- [参考文档](#参考文档)
+
+
+### 三种 patch 方式对比：json、merge、strategic
+kubectl 的 patch 命令支持三种 patch 类型，分别是 json/merge/strategic，默认是 strategic，主要对比下 json 与 merge、merge 与 strategic 的区别。
+```sh
+    --type='strategic':
+	The type of patch being provided; one of [json merge strategic]
+```
+
+#### json vs merge
+json 和 merge 的对比主要参考 [JSON Patch and JSON Merge Patch](https://erosb.github.io/post/json-patch-vs-merge-patch/)。json patch 需要在 patch 中指定操作 `op` 以及修改的 `path`。
+假设有如下 json 文档，
+```json
+{
+	"users" : [
+		{ "name" : "Alice" , "email" : "alice@example.org" },
+		{ "name" : "Bob" , "email" : "bob@example.org" }
+	]
+}
+```
+可以通过下面的 json patch 来修改，分别是替换和添加。
+```json
+[
+	{
+		"op" : "replace" ,
+		"path" : "/users/0/email" ,
+		"value" : "alice@wonderland.org"
+	},
+	{
+		"op" : "add" ,
+		"path" : "/users/-" ,
+		"value" : {
+			"name" : "Christine",
+			"email" : "christine@example.org"
+		}
+	}
+]
+```
+merge patch 语法比较简单，像是一个 diff 操作，仅仅显示跟原文档不一致的内容，假设有下面 json 文档。
+```json
+{
+	"a": "b",
+	"c": {
+		"d": "e",
+		"f": "g"
+	}
+}
+```
+merge patch可以写成下面样子，其中 `a` 要改成 `z`，`f` 要通过 `null` 关键字来实现删除，在 merge patch 中 `null` 是一个要表示删除的关键字。
+```json
+{
+	"a":"z",
+	"c": {
+		"f": null
+	}
+}
+```
+使用 merge patch 有如下问题：
+* 删除时通过关键字 `null` 来进行的，所以我们无法将一个 key 的 value 设置为 `null`。
+* 无法处理数组，处理数组时，只能提供全量的数组值。
+* merge patch 不会报错，可能会导致 json 格式错误。
+
+#### merge vs strategic
+merge 跟 strategic 的区别**主要在处理数组**，简单来讲，merge 的效果是用 patch 中的数组执行全量替换，而 strategic 可以根据 `patchMergeKey` 来进行添加或是替换元素，这个 `patchMergeKey` 是定义在数组元素中的，类似于数据库中一个记录的唯一 key。
+
+在下面 Containers 字段中存在 `patchStrategy:"merge"` 这个 tag，这个 tag 表示要将 Containers 列表合并，实际上是一种 strategic，而不是全量替换，如果没有这个 tag，就表示要进行全量替换，比如 `tolerations` 字段。 
+```go
+type PodSpec struct {
+  //...
+  Containers []Container `json:"containers" patchStrategy:"merge" patchMergeKey:"name" ...`
+  //...
+}
+```
+
+### 通过 kubectl patch 修改资源
+分别以修改 finalizer 和 anntation 为例看下具体操作和执行后的效果。假设已有 deployment，其 finalizer 如下，我们通过 kubectl patch 修改其 finalizer。
+```yml
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: "1"
+  creationTimestamp: "2023-10-07T12:24:41Z"
+  finalizers:
+  - lr90.io/test-finalizer
+  generation: 1
+```
+相关命令如下，通过 `--type=merge` 指定是 merge patch 操作，也就是 replace。
+```sh
+# 删除全部 finalizer 的方式：
+kubectl patch deployment nginx -p '{"metadata":{"finalizers":null}}' --type=merge
+# 全部替换 finalizer 的方式：
+kubectl patch deployment nginx -p '{"metadata":{"finalizers":["lr90.io/f2","lr90.io/f3"]}}' --type=merge
+```
+
+不加 `--type=merge` 选项，使用默认的 strategic patch。
+```sh
+kubectl patch deployment nginx -p '{"metadata":{"finalizers":["lr90.io/f4"]}}'
+```
+可以看到执行的是追加操作。
+```yml
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: "1"
+  creationTimestamp: "2023-10-07T12:24:41Z"
+  finalizers:
+  - lr90.io/f4
+  - lr90.io/f2
+  - lr90.io/f3
+  generation: 1
+```
+
+更新 annotation，`merge patch`和`strategic merge patch`行为是一样的都是添加(或者修改)。
+```sh
+# 使用 merge patch
+kubectl patch deployment nginx -p '{"metadata":{"annotations":{"lr90.io/k1":"v1"}}}' --type=merge
+# 使用默认的 strategic merge patch
+kubectl patch deployment nginx -p '{"metadata":{"annotations":{"lr90.io/k2":"v2"}}}'
+# 删除全部 annotation, 将 annotations 这个 key 设置为 null
+kubectl patch deployment nginx -p '{"metadata":{"annotations":null}}'
+# 删除 annotation 的一个 key
+kubectl patch deployment nginx -p '{"metadata":{"annotations":{"lr90.io/k2":null}}}'
+```
+
+### K8s client 中使用 patch
+介绍在 K8s client 中使用 patch 的方式，不过目前还没有总结出一些特别好的实践。
+#### client-go 使用 patch
+在 Kubernetes 源代码中，使用较多的是 `CreateTwoWayMergePatch` 这个方法，这个方法生成的 patch 可以用在 `strategic patch`中，也就是说会参考结构体字段中的`patchMergeKey` tag，以修改 node 的 annotation 为例代码如下。
+```go
+//import "k8s.io/apimachinery/pkg/util/strategicpatch"
+func (ttlc *Controller) patchNodeWithAnnotation(node *v1.Node, annotationKey string, value int) error {
+    oldData, err := json.Marshal(node) // 旧 node 的 json 格式
+	if err != nil {
+		return err
+	}
+    // 添加一个 annotation 到node中，使其成为新 node，并序列化
+    // FIXME: 这个地方最好还是 deepcopy一份，避免修改缓存中的数据
+	setIntAnnotation(node, annotationKey, value) 
+	newData, err := json.Marshal(node)
+	if err != nil {
+		return err
+	}
+    // 生成 patch
+	patchBytes, err := strategicpatch.CreateTwoWayMergePatch(oldData, newData, &v1.Node{})
+	if err != nil {
+		return err
+	}
+    // patch，指定类型为 types.StrategicMergePatchType
+	_, err = ttlc.kubeClient.CoreV1().Nodes().Patch(context.TODO(), node.Name, types.StrategicMergePatchType, patchBytes, metav1.PatchOptions{})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+```
+#### controller-runtime client 中使用 patch
+以添加 finalizer 为例，代码如下，注意下面代码中因为`MergeFromWithOptimisticLock`这个 option，所以可能会 conflict，并且使用了 retry.RetryOnConflict 进行重试，应该是一个比较好的实践。
+```go
+// import (
+//     "k8s.io/client-go/util/retry"
+// 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+// )
+
+func (m *defaultFinalizerManager) AddFinalizers(ctx context.Context, obj APIObject, finalizers ...string) error {
+	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+		if err := m.kubeClient.Get(ctx, util.NamespacedName(obj), obj); err != nil {
+			return err
+		}
+
+		oldObj := obj.DeepCopyObject().(client.Object)
+		needsUpdate := false
+		for _, finalizer := range finalizers {
+			if !HasFinalizer(obj, finalizer) {
+				controllerutil.AddFinalizer(obj, finalizer)
+				needsUpdate = true
+			}
+		}
+		if !needsUpdate {
+			return nil
+		}
+		return m.kubeClient.Patch(ctx, obj, client.MergeFromWithOptions(oldObj, client.MergeFromWithOptimisticLock{}))
+	})
+}
+```
+
+#### 使用 patch 时的一些问题
+* 使用 patch 修改资源时也会增加 resourceVersion，即使是修改 status
+* 使用 patch 修改资源时不会产生 409 conflict；也就是按照下面事件处理资源不会发生 conflict 错误：1）a持有资源并缓存在变量；2）b拿到资源并进行修改，此时增加了 resourceVersion；3）a使用 patch 修改缓存在变量中的资源。不过如果设置了`client.MergeFromWithOptimisticLock`选项会冲突。
+* 使用 patch 修改资源可能会产生覆盖操作，比如在上面一条中，a用户可能会覆盖b用户的数据，因为是不会检查乐观锁的。所以修改 list 时最好是带上 `MergeFromWithOptimisticLock`选项。
+
+### 参考文档
+[K8s 文档：Update API Objects in Place Using kubectl patch](https://kubernetes.io/docs/tasks/manage-kubernetes-objects/update-api-object-kubectl-patch/)
