@@ -145,6 +145,73 @@ spec:
       name: dnsutils
 ```
 
+**对容器进行 iperf 网络测试**
+服务端
+```yml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: iperf-server-deployment
+  labels:
+    app: iperf-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: iperf-server
+  template:
+    metadata:
+      labels:
+        app: iperf-server
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: serverhost-name
+      containers:
+      - name: iperf3-server
+        image: taoyou/iperf3-alpine:latest
+        args: ['-s']
+        ports:
+        - containerPort: 5001
+          name: server
+      terminationGracePeriodSeconds: 0
+
+```
+客户端
+```yml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: iperf-client-deployment
+  labels:
+    app: iperf-client
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: iperf-client
+  template:
+    metadata:
+      labels:
+        app: iperf-client
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: client-host
+      containers:
+      - name: iperf3-client
+        image: taoyou/iperf3-alpine:latest
+        command:
+          - sleep
+          - "7200"
+
+```
+命令：
+```sh
+# -c 指定主机名
+# -p 指定主机端口
+# -i 打印结果间隔
+# -t 测试持续时间（秒数）
+iperf3 -c 10.0.167.59 -p 5201 -i 1 -t 240
+```
 **spec.initContainers/**
 
 ```yml

@@ -12,10 +12,10 @@ tags:
 - [前言](#前言)
 - [整体架构概述](#整体架构概述)
 - [详细设计](#详细设计)
-  - [provider 层设计](#provider-层设计)
-  - [资源模型抽象 model](#资源模型抽象-model)
-  - [controller 实现](#controller-实现)
-  - [context 上下文](#context-上下文)
+	- [provider 层设计](#provider-层设计)
+	- [资源模型抽象 model](#资源模型抽象-model)
+	- [controller 实现](#controller-实现)
+	- [context 上下文](#context-上下文)
 - [总结](#总结)
 
 ### 前言
@@ -63,7 +63,7 @@ SLB 的配置是有很多属性的，对于特性属性的修改，供应商提�
 #### 资源模型抽象 model
 每个资源都有自己的模型，slb 的模型如下，可以看到模型基本上就是配置项的集合，每个配置项一个字段。在控制器的实现中，每个资源的 model 分为 localModel 以及 remoteModel，其中 localModel 是 K8s 集群的配置，对于 LB 来说，就是 LoadBalancer service 的配置，localModel 是一种 spec；remoteModel 是供应商那边的配置，甚至可能没有配置，如果还没有创建的话，是一种 status。
 
-这里其实也是借鉴了 K8s 中 spec 以及 status 的思想，来将 spec apply 到供应商那里。构建 localModel 和 remoteModel 都是在控制器实现的，localModel 是通过 service 资源以及 service的
+这里其实也是借鉴了 K8s 中 spec 以及 status 的思想，来将 spec apply 到供应商那里。构建 localModel 和 remoteModel 都是在控制器实现的，localModel 是通过 service 资源以及 service 的 annotation 生成的，（阿里云很多自定义配置都是通过 annotation 来完成的，参考[通过Annotation配置传统型负载均衡CLB](https://help.aliyun.com/zh/ack/ack-managed-and-ack-dedicated/user-guide/add-annotations-to-the-yaml-file-of-a-service-to-configure-clb-instances)）。
 
 ```go
 // LoadBalancer represents a AlibabaCloud LoadBalancer.
