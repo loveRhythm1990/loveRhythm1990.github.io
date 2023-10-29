@@ -8,6 +8,24 @@ tags:
     - 运维
 ---
 
+**目录**
+- [求和、求平均值](#求和求平均值)
+- [grep 显示前后命令](#grep-显示前后命令)
+- [循环读取文件的内容](#循环读取文件的内容)
+- [查看磁盘读写io](#查看磁盘读写io)
+- [nc 网络测试命令](#nc-网络测试命令)
+- [变量的默认值](#变量的默认值)
+- [安装包管理](#安装包管理)
+- [sed 命令](#sed-命令)
+- [ansible 基本用法](#ansible-基本用法)
+- [nslookup 测试域名解析](#nslookup-测试域名解析)
+- [ssh 配置免密登录](#ssh-配置免密登录)
+- [使用 tc 模拟网络丢包和时延](#使用-tc-模拟网络丢包和时延)
+- [vi 按行编辑](#vi-按行编辑)
+- [查看文件被哪个进程占用](#查看文件被哪个进程占用)
+- [set -euxo pipefail](#set--euxo-pipefail)
+- [参考](#参考)
+
 工作中经常涉及一些运维操作，一些shell命令用过了就会忘，以后有shell命令都会放在这里。
 
 ###### 求和、求平均值
@@ -155,6 +173,12 @@ sed -i '/000/s/^/#/' /tmp/foo
 * `s` 对匹配的行进行替换。
 * `^` 表示在行的开始，`#` 表示要插入的字符
 
+**替换匹配正则表达式的行**
+```s
+sed -E -i s/"^(  version: .*)"/"  version: ${newVersion}"/ ${resourcePath}/"${clusterName}".yaml
+```
+sed 的分隔符可以替换为其他字符。
+
 参考[sed-功能强大的流式文本编辑器](https://wangchujiang.com/linux-command/c/sed.html)
 
 
@@ -164,7 +188,7 @@ sed -i '/000/s/^/#/' /tmp/foo
 [all]
 11.37.51.75
 ```
-需要查看每个节点的版本内核，命令如下：
+需要查看每个节点的版本内核，命令如下：
 ```s
 ansible all -i ./hosts -m command -a "uname -a"
 # 有时候 command 模块感觉不是很好用，可以用 shell 模块
@@ -223,6 +247,14 @@ $ fuser -v text.txt
 ```
 参考[Find the Process That is Using a File in Linux](https://www.baeldung.com/linux/find-process-file-is-busy)
 
+
+###### set -euxo pipefail
+* -e: 命令出错时，退出整个脚本
+* -x: 将执行的命令在控制台打印，多用于调试
+* -u: 使用未使用的变量时将出错，也就是变量必须先定义后使用
+* -o pipefail: 在使用 pipeline 时，如果一个命令失败了，这个失败的命令的退出码将作为整个 pipeline 的退出码，如使用 `grep some-string /non/existent/file | sort` 命令时，sort 命令不会出错，但是如果 grep 命令出错，整个命令的错误码是 grep 命令的错误码。
+
+参考[set -e, -u, -x, -o pipefail](https://gist.github.com/mohanpedala/1e2ff5661761d3abd0385e8223e16425)
 
 研究下 strace
 
