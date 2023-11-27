@@ -9,28 +9,28 @@ tags:
 ---
 
 **目录** 
-- [一般工作原理](#一般工作原理)
-	- [队列声明](#队列声明)
-	- [队列初始化](#队列初始化)
-	- [往队列里丢事件](#往队列里丢事件)
-	- [启动worker](#启动worker)
-- [限速器](#限速器)
+- [一般工作过程](#一般工作过程)
+	- [1.队列声明](#1队列声明)
+	- [2.队列初始化](#2队列初始化)
+	- [3.往队列里丢事件](#3往队列里丢事件)
+	- [4.启动worker](#4启动worker)
+- [限速器(加入队列时限速)](#限速器加入队列时限速)
 	- [ItemExponentialFailureRateLimiter](#itemexponentialfailureratelimiter)
 	- [BucketRateLimiter](#bucketratelimiter)
-- [限速队列](#限速队列)
+- [限速队列(延时队列+限速器)](#限速队列延时队列限速器)
 
 
-K8s Controller的一般工作原理是监听资源的变化，将事件放到本地队列里，然后对此队列进行同步。以 [sig-storage-lib-external-provisioner](https://github.com/kubernetes-sigs/sig-storage-lib-external-provisioner) 项目为例，简单分析一个 K8s Controller 的工作原理。
+K8s Controller 的一般工作原理是监听资源的变化，将事件放到本地队列里，然后对此队列进行同步。以 [sig-storage-lib-external-provisioner](https://github.com/kubernetes-sigs/sig-storage-lib-external-provisioner) 项目为例，简单分析一个 K8s Controller 的工作原理。
 
-##### 一般工作原理
+##### 一般工作过程
 一般有下面步骤，算是 K8s controller 的编程模式，这里只关注队列的一些操作，对于 informer 这里不会介绍，会在其他文章里总结一下。
-###### 队列声明
+###### 1.队列声明
 使用`RateLimitingInterface`声明一个队列，这个接口内嵌了`DelayingInterface`，而后者又内嵌了队列包中的`Interface`接口。概括地讲，`Interface`是一个队列基本队列操作的实现，包括添加、获取、去重（防止多个worker同时处理一个元素）等，可以参考[K8s队列之基本队列实现](https://loverhythm1990.github.io/2020/03/21/base-queue/)。`DelayingInterface`添加一个延时添加元素的方法`AddAfter(item interface{}, duration time.Duration)`，在一个元素处理失败时，可以通过这个方法，对这个元素进行退避。`RateLimitingInterface`接口主要是通过限速器定义退避的时间。
 ```go
 claimQueue  workqueue.RateLimitingInterface
 ```
 
-###### 队列初始化
+###### 2.队列初始化
 这里先定义了一个`rateLimiter`限速器，`ExponentialFailureRateLimiter`是一个指数退避限速器，`BucketRateLimiter`是一个令牌桶限速器。`MaxOfRateLimiter`限速器是一个组合限速器（由多个限速器组成），取这多个限速器的最长延时时间作为返回值，也就是取最坏的等待时长。
 
 ```go
@@ -43,7 +43,7 @@ rateLimiter = workqueue.NewMaxOfRateLimiter(
 )
 controller.claimQueue = workqueue.NewNamedRateLimitingQueue(rateLimiter, "claims")
 ```
-###### 往队列里丢事件
+###### 3.往队列里丢事件
 通过事件处理函数，在丢进队列之前，可以先做一些过滤。
 ```go
 claimHandler := cache.ResourceEventHandlerFuncs{
@@ -65,7 +65,7 @@ func (ctrl *ProvisionController) enqueueClaim(obj interface{}) {
 	ctrl.claimQueue.Add(uid) // 调用Add方法添加到队列中
 }
 ```
-###### 启动worker
+###### 4.启动worker
 先指定worker的线程数，一般为1，有几个worker就启动几个goroutine。每个goroutine都试图从队列中取出元素，并调用`syncClaimHandler`对元素进行处理
 ```go
 // run是控制器的主程序，也就是选主成功之后运行的程序，在这个程序结束时，关闭队列
@@ -96,7 +96,8 @@ func (ctrl *ProvisionController) processNextClaimWorkItem(ctx context.Context) b
 			timeout, cancel := context.WithTimeout(ctx, ctrl.provisionTimeout)
 			defer cancel()
 			ctx = timeout
-        }
+        	}
+
 		// obj元素不管处理失败还是成功，都要调用Done方法标记处理完成，Done将元素从队列的processing集合中
 		// 移除，并且检查dirty集合，如果dirty集合有此元素，重新添加到queue中。
 		defer ctrl.claimQueue.Done(obj)
@@ -128,7 +129,7 @@ func (ctrl *ProvisionController) processNextClaimWorkItem(ctx context.Context) b
 2. 如果处理失败，则要通过 `claimQueue.AddRateLimited(obj)` 重新将元素加入队列，可能要触发限速。
 3. `Forget(obj)` 只是清除限速计数，下次限速从 0 开始。
 
-##### 限速器
+##### 限速器(加入队列时限速)
 先关注`ItemExponentialFailureRateLimiter`，以及`BucketRateLimiter`。`MaxOfRateLimiter`限速器就是这两个限速器的组合。限速器接口定义如下：
 ```go
 type RateLimiter interface {
@@ -208,7 +209,7 @@ func (r *BucketRateLimiter) NumRequeues(item interface{}) int { return 0 }
 func (r *BucketRateLimiter) Forget(item interface{}) {}
 ```
 
-##### 限速队列
+##### 限速队列(延时队列+限速器)
 文中一开始提到了`RateLimitingInterface`队列接口，其定义如下，是一个带限速的队列。
 ```go
 type RateLimitingInterface interface {
