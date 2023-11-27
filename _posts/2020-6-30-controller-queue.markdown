@@ -8,10 +8,22 @@ tags:
     - 设计模式
 ---
 
-K8s Controller的一般工作原理是监听资源的变化，将事件放到本地队列里，然后对此队列进行同步。以[sig-storage-lib-external-provisioner](https://github.com/kubernetes-sigs/sig-storage-lib-external-provisioner)为例，简单分析一个K8s Controller的工作原理。
+**目录** 
+- [一般工作原理](#一般工作原理)
+	- [队列声明](#队列声明)
+	- [队列初始化](#队列初始化)
+	- [往队列里丢事件](#往队列里丢事件)
+	- [启动worker](#启动worker)
+- [限速器](#限速器)
+	- [ItemExponentialFailureRateLimiter](#itemexponentialfailureratelimiter)
+	- [BucketRateLimiter](#bucketratelimiter)
+- [限速队列](#限速队列)
+
+
+K8s Controller的一般工作原理是监听资源的变化，将事件放到本地队列里，然后对此队列进行同步。以 [sig-storage-lib-external-provisioner](https://github.com/kubernetes-sigs/sig-storage-lib-external-provisioner) 项目为例，简单分析一个 K8s Controller 的工作原理。
 
 ##### 一般工作原理
-一般有下面步骤，算是K8s controller的编程模式，这里只关注队列的一些操作，对于informer这里不会介绍，会在其他文章里总结一下。
+一般有下面步骤，算是 K8s controller 的编程模式，这里只关注队列的一些操作，对于 informer 这里不会介绍，会在其他文章里总结一下。
 ###### 队列声明
 使用`RateLimitingInterface`声明一个队列，这个接口内嵌了`DelayingInterface`，而后者又内嵌了队列包中的`Interface`接口。概括地讲，`Interface`是一个队列基本队列操作的实现，包括添加、获取、去重（防止多个worker同时处理一个元素）等，可以参考[K8s队列之基本队列实现](https://loverhythm1990.github.io/2020/03/21/base-queue/)。`DelayingInterface`添加一个延时添加元素的方法`AddAfter(item interface{}, duration time.Duration)`，在一个元素处理失败时，可以通过这个方法，对这个元素进行退避。`RateLimitingInterface`接口主要是通过限速器定义退避的时间。
 ```go
@@ -85,8 +97,8 @@ func (ctrl *ProvisionController) processNextClaimWorkItem(ctx context.Context) b
 			defer cancel()
 			ctx = timeout
         }
-        // obj元素不管处理失败还是成功，都要调用Done方法标记处理完成，Done将元素从队列的processing集合中
-        // 移除，并且检查dirty集合，如果dirty集合有此元素，重新添加到queue中。
+		// obj元素不管处理失败还是成功，都要调用Done方法标记处理完成，Done将元素从队列的processing集合中
+		// 移除，并且检查dirty集合，如果dirty集合有此元素，重新添加到queue中。
 		defer ctrl.claimQueue.Done(obj)
 		var key string
 		var ok bool
@@ -111,6 +123,10 @@ func (ctrl *ProvisionController) processNextClaimWorkItem(ctx context.Context) b
 	return true
 }
 ```
+在上述同步方法中，有几处需要注意一下，
+1. 不管处理元素失败还是成功，都要调用 `Done(obj)` 表示元素处理完成。
+2. 如果处理失败，则要通过 `claimQueue.AddRateLimited(obj)` 重新将元素加入队列，可能要触发限速。
+3. `Forget(obj)` 只是清除限速计数，下次限速从 0 开始。
 
 ##### 限速器
 先关注`ItemExponentialFailureRateLimiter`，以及`BucketRateLimiter`。`MaxOfRateLimiter`限速器就是这两个限速器的组合。限速器接口定义如下：
@@ -220,7 +236,7 @@ type rateLimitingType struct {
 
 // AddRateLimited AddAfter's the item based on the time when the rate limiter says it's ok
 func (q *rateLimitingType) AddRateLimited(item interface{}) {
-    // 首先通过限速器获得时间，然后隔多少时间之后再加入
+    	// 首先通过限速器获得时间，然后隔多少时间之后再加入
 	q.DelayingInterface.AddAfter(item, q.rateLimiter.When(item))
 }
 
