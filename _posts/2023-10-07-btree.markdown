@@ -10,7 +10,7 @@ tags:
 
 **目录**
 - [B-tree 的定义](#b-tree-的定义)
-- [使用](#使用)
+- [开箱即用的 btree 库](#开箱即用的-btree-库)
 
 ### B-tree 的定义
 参考维基百科《[B-tree](https://en.wikipedia.org/wiki/B-tree)》的定义。一个度（order、degree）为 m 的 B-tree，其特点为：
@@ -20,10 +20,10 @@ tags:
 4. 所有的叶子节点都在同一层。
 5. 一个非叶子节点，如果有 k 个 children，则有 k-1 个 keys。
 
-![java-javascript](/pics/btree.png){:height="60%" width="60%"}
+![java-javascript](/pics/B-tree.svg){:height="40%" width="40%"}
 B-tree中，所有的数据分布在所有节点中（这个是与 B+ 树的区别之一）。
 
-### 使用
+### 开箱即用的 btree 库
 [btree](https://github.com/google/btree) 是 google 实现的 btree，开箱即用。
 下面的程序中，定义了一个 32 度的 B-tree，其元素类型是 `*bItem`，并且在通过 `NewG` 定义 B-tree 时，传入了一个 less 函数用来对元素进行排序。
 
@@ -58,7 +58,7 @@ google 这个库提供的 api 有如下，我们可以直接使用：
 * DeleteMax：删除并返回最大值，不存在则返回 true。
 * AscendRange(greaterOrEqual, lessThan T, iterator ItemIteratorG\[T\])：升序遍历 `[greapterOrEqual, lessThan)` 区间内的值。
 * AscendLessThan(pivot T, iterator ItemIteratorG\[T\])：升序遍历区间 `[first, privot)`区间内的值。
-* AscendGreaterOrEqual(pivot T, iterator ItemIteratorG\[T|])：升序遍历区间 `[pivot, last]` 内的值，这个是个闭区间。
+* AscendGreaterOrEqual(pivot T, iterator ItemIteratorG\[T\])：升序遍历区间 `[pivot, last]` 内的值，这个是个闭区间。
 * Ascend：升序遍历所有值。
 * DescendRange、DescendLessOrEqual、DescendGreaterThan、Descend：相应的降序遍历方法。
 * Get/Min/Max/Has/Len：一些工具方法。
