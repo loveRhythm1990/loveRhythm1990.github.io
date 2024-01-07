@@ -1,0 +1,74 @@
+---
+layout:     post
+title:      "B-tree 的定义及使用"
+date:       2023-10-07 10:10:00
+author:     "decent"
+header-img-credit: false
+tags:
+    - 数据结构/算法
+---
+
+**目录**
+- [B-tree 的定义](#b-tree-的定义)
+- [使用](#使用)
+
+### B-tree 的定义
+参考维基百科《[B-tree](https://en.wikipedia.org/wiki/B-tree)》的定义。一个度（order、degree）为 m 的 B-tree，其特点为：
+1. 每个节点最多有 m 个 children。
+2. 每个内部节点至少有 ⌈m/2⌉ 个 children（rounded up）。
+3. root 节点至少有两个 children，除非是个叶子节点。
+4. 所有的叶子节点都在同一层。
+5. 一个非叶子节点，如果有 k 个 children，则有 k-1 个 keys。
+
+![java-javascript](/pics/btree.png){:height="60%" width="60%"}
+B-tree中，所有的数据分布在所有节点中（这个是与 B+ 树的区别之一）。
+
+### 使用
+[btree](https://github.com/google/btree) 是 google 实现的 btree，开箱即用。
+下面的程序中，定义了一个 32 度的 B-tree，其元素类型是 `*bItem`，并且在通过 `NewG` 定义 B-tree 时，传入了一个 less 函数用来对元素进行排序。
+
+```go
+type bItem struct {
+	value int64
+}
+
+func main() {
+	tree := btree.NewG[*bItem](32, func(a, b *bItem) bool {
+		return a.value < b.value
+	})
+
+	f1 := bItem{value: 1}
+	f2 := bItem{value: 4}
+	f3 := bItem{value: 7}
+
+	tree.ReplaceOrInsert(&f1)
+	tree.ReplaceOrInsert(&f2)
+	tree.ReplaceOrInsert(&f3)
+
+	_, _ := tree.AscendGreaterOrEqual(&bItem{value: 2}, func(item *bItem) bool {
+		fmt.Println(item.value)
+		return true
+	})
+}
+```
+google 这个库提供的 api 有如下，我们可以直接使用：
+* ReplaceOrInsert：替换或者插入元素，如果元素已经存在，而第二个返回值为 true。
+* Delete：删除并返回一个元素，如果元素不存在，两个返回值分别为 zeroValue，以及 false。
+* DeleteMin：删除并返回最小值，不存在则返回 false。
+* DeleteMax：删除并返回最大值，不存在则返回 true。
+* AscendRange(greaterOrEqual, lessThan T, iterator ItemIteratorG\[T\])：升序遍历 `[greapterOrEqual, lessThan)` 区间内的值。
+* AscendLessThan(pivot T, iterator ItemIteratorG\[T\])：升序遍历区间 `[first, privot)`区间内的值。
+* AscendGreaterOrEqual(pivot T, iterator ItemIteratorG\[T|])：升序遍历区间 `[pivot, last]` 内的值，这个是个闭区间。
+* Ascend：升序遍历所有值。
+* DescendRange、DescendLessOrEqual、DescendGreaterThan、Descend：相应的降序遍历方法。
+* Get/Min/Max/Has/Len：一些工具方法。
+
+
+参考：
+
+[btree的使用](https://zyy.rs/post/btree-usage/)
+
+[Let's Build a Simple Database-7](https://cstack.github.io/db_tutorial/parts/part7.html)
+
+
+
