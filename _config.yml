@@ -13,8 +13,7 @@ future: true
 
 # SNS settings
 RSS: false
-#weibo_username:     1807882243
-weibo_username:     _
+weibo_username:     1807882243
 github_username:    loveRhythm1990
 facebook_username:  _
 #linkedin_username:  firstname-lastname-idxxxx
