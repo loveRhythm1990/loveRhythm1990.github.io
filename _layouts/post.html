@@ -52,9 +52,7 @@ layout: default
                 </ul>
                 <hr style="visibility: hidden;">
 
-                <!-- Valine 评论框 start -->
-                <div class="comment"></div>
-                <!-- Valine 评论框 end -->
+                <div id="gitalk-container"></div>
             </div>  
 
     <!-- Side Catalog Container -->
@@ -95,7 +93,6 @@ layout: default
   {% include mathjax_support.html %}
 {% endif %}
 
-<div id="gitalk-container"></div>
 <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
 <script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
 <script src="/js/md5.min.js"></script>
@@ -147,7 +144,7 @@ layout: default
         }
     }
     #gitalk-container {
-        width: 940px;
+        width: 1000px;
         margin: 0 auto;
     }
 </style>
