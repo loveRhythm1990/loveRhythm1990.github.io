@@ -7,7 +7,7 @@ header-img-credit: false
 tags:
     - Controller
 ---
-
+**目录**
 - [前言](#前言)
 - [控制器初始化](#控制器初始化)
 - [Sync 入口: UpdateStatefulset 方法](#sync-入口-updatestatefulset-方法)
