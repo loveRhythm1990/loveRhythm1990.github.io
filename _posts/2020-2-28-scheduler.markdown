@@ -8,10 +8,16 @@ tags:
     - K8s
     - Scheduler
 ---
+**目录**
+- [初始化 Scheduler](#初始化-scheduler)
+- [scheduleOne](#scheduleone)
+- [schedule](#schedule)
+- [priority 过程](#priority-过程)
+
 
 k8s 1.9 scheduler概述，因为之前工作中是基于1.9版本的，还没有引入scheduler framework。
 
-### 初始化scheduler
+### 初始化 Scheduler
 初始化scheduler主要涉及两个结构体: `SchedulerServer`与`Scheduler`，也就是构造这个两个结构体，然后调用`run`方法。初始化SchedulerServer的代码在`plugin/cmd/kube-scheduler/app/server.go`
 
 初始化的SchedulerServer默认有两个参数，即结构体的SchedulerName被设置为`default-scheduler`，AlgorithmSource被设置为`Provider:DefaultProvider`，policy被设置为null，
@@ -239,7 +245,7 @@ func (g *genericScheduler) Schedule(pod *v1.Pod, nodeLister algorithm.NodeLister
 	return g.selectHost(priorityList)
 }
 ```
-### priority过程
+### priority 过程
 这个过程**并行**的运行priority函数，每个priority返回0-10之间的数，并且每个priority是有权重的。
 要想看一下这个Priority过程，我们得看一下Priority的构造过程，这个函数的参数为`[]algorithm.PriorityConfig`，即一个PriorityConfig的Slice，其定义如下：
 ```go

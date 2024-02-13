@@ -21,9 +21,9 @@ tags:
 
 
 ## 概述
-项目 [scheduler-plugins](https://github.com/kubernetes-sigs/scheduler-plugins) 整合了一些第三方调度插件，部分插件已经经历过了线上开发环境的实践，其他插件也可以为我们扩展调度器提供一些思路。
+项目 [scheduler-plugins](https://github.com/kubernetes-sigs/scheduler-plugins) 整合了一些第三方调度插件，部分插件已经经历过了线上环境的实践，其他插件也可以为我们扩展调度器提供一些思路。
 
-部署使用 scheduler-plugins 时需要其与现有 Kubernetes 的兼容性，需要选择对应版本的镜像（兼容列表可在 github 主页看到）。同时，scheduler-plugins 是基于默认 default-scheduler 编译的，default-scheduler 所具有的调度插件 scheduler-plugins 也都是有的。
+部署 scheduler-plugins 时需要考虑其与现有 Kubernetes 集群的兼容性，需要选择对应版本的镜像（兼容列表可在 github 主页看到）。同时，scheduler-plugins 是基于默认 default-scheduler 编译的，default-scheduler 所具有的调度插件 scheduler-plugins 也都是有的。
 
 ## 部署安装
 scheduler-plugins 的工作方式有两种：1）作为集群的第二个调度器（也就是集群中存在两个调度器）；2）作为集群中唯一的调度器。
@@ -58,7 +58,7 @@ spec:
 ### Capacity Scheduler
 Capacity Scheduler 主要是参考 Yarn 中的资源调度器，用来解决 ResourceQuota 实现资源配额的不足，比如：某一个 namespace 闲置的资源，另一个 namespace 用不到。Capacity Scheduler 引入了资源下线 Min 以及资源上限 Max 的概念，具有一定弹性。
 
-[阿里云文档](https://help.aliyun.com/zh/ack/ack-managed-and-ack-dedicated/user-guide/use-capacity-scheduling)对 Capacity Scheduelr 做了详细描述，其模型如下图。
+[阿里云文档](https://help.aliyun.com/zh/ack/ack-managed-and-ack-dedicated/user-guide/use-capacity-scheduling) 对 Capacity Scheduelr 做了详细描述，其模型如下图。
 
 ![java-javascript](/pics/capacity-scheduler.png){:height="60%" width="60%"}
 
@@ -66,10 +66,10 @@ Capacity Scheduler 主要是参考 Yarn 中的资源调度器，用来解决 Res
 * 同一个弹性配额中的 Min ≤ Max。
 * 子级弹性配额的 Min 之和 ≤ 父级的 Min。
 * Root 节点的 Min = Max ≤ 集群总资源。
-* Namespace 只与弹性配额的叶子节点有一对多的对应关系，且同一个Namespace 只能归属于一个叶子节点。
+* Namespace 只与弹性配额的叶子节点有一对多的对应关系，且同一个 Namespace 只能归属于一个叶子节点。
 
 ### Coschedulering
-批调度器，一次调度一批 pod，[Github 也用例子](https://github.com/kubernetes-sigs/scheduler-plugins/blob/master/pkg/coscheduling/README.md)，也比较容易理解。这里一个例子如下：
+批调度器，一次调度一批 pod，[Github 有例子](https://github.com/kubernetes-sigs/scheduler-plugins/blob/master/pkg/coscheduling/README.md)，也比较容易理解，如下：
 ```yaml
 apiVersion: scheduling.x-k8s.io/v1alpha1
 kind: PodGroup
@@ -105,10 +105,10 @@ spec:
             cpu: 3000m
             memory: 500Mi
 ```
-上面配置了一个 PodGroup，其**最少同时调度实例数**是 3，那么至少将有 3 个 pod 被同时调度。并且 ReplicaSet 是通过 label `scheduling.x-k8s.io/pod-group` 与 PodGroup 关联的。
+上面配置了一个 PodGroup，其**最少同时调度实例数**是 3，那么至少将有 3 个 pod 被同时调度。并且 ReplicaSet 是通过 label `scheduling.x-k8s.io/pod-group` 与 PodGroup 关联的，其 value 就是 PodGroup 的名字。
 
 ### Node Resources
-Node Resources 的文档在[这里](https://github.com/kubernetes-sigs/scheduler-plugins/blob/master/pkg/noderesources/README.md)，看上去支持：
+Node Resources 的文档在[这里](https://github.com/kubernetes-sigs/scheduler-plugins/blob/master/pkg/noderesources/README.md)，支持：
 1. 调度到可用资源最少的节点上。
 2. 调度到可用资源最多的节点上。
 3. 支持给资源配置权重。

@@ -9,9 +9,14 @@ tags:
     - Scheduler
 ---
 
+**目录**
+- [Cache State Machine](#cache-state-machine)
+- [schedulerCache 结构体及其 Cache 接口实现](#schedulercache-结构体及其-cache-接口实现)
+- [清空 Assume 过期的 Pod](#清空-assume-过期的-pod)
+
 K8s调度器的SchedulerCache是其工作的核心，用来缓存所有已经调度过的pod，这些pod按照Node来进行划分，每个Node包含一个NodeInfo，包含一个该节点上的所有的pod。本文基于K8s1.14分析下SchedulerCache涉及到的一些东西。
 
-#### cache的State Machine
+#### Cache State Machine
 下面这个图是scheduler在`internal/cache/interface.go`文件中给出的，将pod的状态分为`Initial`,`Assumed`,`Added`,`Expired`,`Deleted`等。其中`Initial`,`Expired`,`Deleted`状态的pod是不会存在在cache中的。对于pod的状态有一些假设：
 - 不会有pod被assume两次
 - 一个pod可以被添加到cache中，但是此pod不经过调度器，这种情况下，会有Add操作，但是没有Assume操作。
@@ -22,7 +27,7 @@ K8s调度器的SchedulerCache是其工作的核心，用来缓存所有已经调
 
 ![java-javascript](/img/in-post/schedulercache/statemachine.jpg)
 
-#### schedulerCache结构体及其Cache接口实现
+#### schedulerCache 结构体及其 Cache 接口实现
 Cache接口的定义也在`interface.go`文件中，该接口的实现就是`schedulerCache`结构体，该结构体如下：
 ```go
 type schedulerCache struct {
@@ -200,7 +205,7 @@ func (cache *schedulerCache) IsAssumedPod(pod *v1.Pod) (bool, error) {
 }
 ```
 
-#### 清空Assume过期的Pod
+#### 清空 Assume 过期的 Pod
 在初始化SchedulerCache的时候，还启动了一个单独的goroutine，来执行AssumedPod的清理工作，整个goroutine的代码如下：
 ```go
 func (cache *schedulerCache) run() {

@@ -9,6 +9,28 @@ tags:
     - Scheduler
 ---
 
+**目录**
+- [概述](#概述)
+- [扩展点](#扩展点)
+	- [队列排序（Queue sort）](#队列排序queue-sort)
+	- [预过滤（Pre-filter）](#预过滤pre-filter)
+	- [过滤 （Filter）](#过滤-filter)
+	- [Post-filter](#post-filter)
+	- [计分（Scoring）](#计分scoring)
+	- [Normalize scoring](#normalize-scoring)
+	- [预留(Reserve)](#预留reserve)
+	- [Permit](#permit)
+	- [Approving a Pod binding](#approving-a-pod-binding)
+	- [Pre-bind](#pre-bind)
+	- [Bind](#bind)
+	- [Post-bind](#post-bind)
+	- [Unreserve](#unreserve)
+- [Plugin API](#plugin-api)
+- [Plugin Configuration](#plugin-configuration)
+- [scheduler方法](#scheduler方法)
+
+
+### 概述
 Scheduling Framework定义了一些扩展点，让scheduler更容易定制化。k8s最新版本1.18 release中，已经使用了Scheduler Framework的形式，本文对着文档翻一下K8s的源代码。
 
 Pod在调度框架中的调度过程被分为两个阶段：`Scheduling Cycle`以及`Binding Cycle`，Scheduling cycles是串行执行的，bind cycles是并行执行的。
@@ -46,7 +68,7 @@ type Plugins struct {
 	Unreserve *PluginSet
 }
 ```
-##### 队列排序（Queue sort）
+#### 队列排序（Queue sort）
 这些插件用来对调度队列中的pod进行排序，队列排序插件主要提供一个`Less(pod1, pod2)`函数，比较好理解，就是比较一下两个pod，并给出个顺序，只有调度时，只能有一个队列排序插件可以启用。
 
 K8s默认的队列排序为`const Name = "PrioritySort"`，其是根据pod优先级对Pod排序的
@@ -61,7 +83,7 @@ K8s队列的实现为`PriorityQueue`，代码路径`pkg/scheduler/internal/queue
 
 在scheduler的`scheduleOne`方法中，每次调用`sched.NextPod`方法取一个Pod进行调度时，就是从`PriorityQueue`的ActiveQ中取一个Pod，此外PriorityQueue还有多个SubQueue，会专门研究一下。
 
-##### 预过滤（Pre-filter）
+#### 预过滤（Pre-filter）
 预过滤插件用来预先处理pod的一些信息，或者检查集群或者pod是否满足特定的条件，如果预过滤插件返回错误，那么调度过程会终止。
 
 以noderesources `Fit`插件为例，这个在`PreFilter`阶段会计算每个Pod的资源请求，计算好之后，写到`CycleState`缓存中。计算算好的资源请求，会在`Filter`阶段消费。
@@ -73,26 +95,26 @@ func (f *Fit) PreFilter(ctx context.Context, cycleState *framework.CycleState, p
 ```
 写到这里，想到一个问题，对于没有设置Request以及Limit的Pod，也就是BestEffort的Pod，总是能调度成功，是不是在调度时，就认为这些Pod的资源请求为0？看了一下，果然是的，`computePodResourceRequest`就是累加了`container.Resources.Requests`，对于BestEffort类型的Pod，这些值都是0，可以通过kubectl get pod验证一下
 
-##### 过滤 （Filter）
+#### 过滤 （Filter）
 Filter插件用来过滤不能运行此pod的node，对于每个node，调度器会按照预先设置的循序调用每个filter plugins，如果任何一个filter插件返回这个节点不可用，那么剩下的插件就不会被执行了。在这个阶段**node的评估过程可以是并行的**。这个过程跟1.9版本的`Predicate`一致，不多说。
 
-##### Post-filter
+#### Post-filter
 这是一个信息扩展点（information extension point），插件会在一系列通过filter插件的node上调用，插件可以用此扩展点来更新内部状态或者打印日志或者一些metric信息。
 
 另外，希望执行`pre-scoring`工作的插件也可以在此执行，毕竟这个扩展点在`Scoring`之前。
 
-##### 计分（Scoring）
+#### 计分（Scoring）
 用来给通过了filter插件的node打分，调度器会为每个node依次调用scoring插件。每个插件会给出一个介于最大值和最小值之间的分数。经过下面的`normalize scoring`阶段之后，调度器会根据每个插件的权重，以及打出的分数来和平所有scoring插件的分数。
 
-##### Normalize scoring
+#### Normalize scoring
 归一化。
 
-##### 预留(Reserve)
+#### 预留(Reserve)
 用来预留一些资源，这个是在Scheduler调用`Assume`之后调用的，`Assume`是将Pod加入到SchedulerCache中，这里是执行一些其他资源的预留，其实`Assume`将Pod加入SchedulerCache也是一种资源预留，以`volume_binding`插件为例，这个插件要在Assume Pod之后，进行Assume Volume，调用的方法为`AssumePodVolumes`，该方法做两件事：
 * 将延迟binding的pvc，将这Filter阶段找到的静态pv加入到pv cache中，到了这一步，已经找好pre-binding的pvc了（否则Filter阶段就过不了）
 * 对于需要动态provision的pvc，设置pvc的annotation `volume.kubernetes.io/selected-node`，表示调度到的目标节点。
 
-##### Permit
+#### Permit
 Permit插件用来禁止或者延迟bind某个pod，Permit插件可以做这些事：
 1. approve，如果所有的permit插件approve一个pod，那么这个pod开始执行binding
 2. deny，如果任何一个permit否定了一个pod，那么这个pod会被重新放入到调度队列，这回导致执行下面的`Unreserve`插件。
@@ -133,19 +155,19 @@ type framework struct {
 }
 ```
 
-###### Approving a Pod binding
+#### Approving a Pod binding
 尽管所有的插件都可以访问cache中的`waiting`状态的pod，并且approve他们，我们期望只有permit 插件能做这件事情，一旦pod被approved，他会被送到pre-bind phase。
 
-##### Pre-bind
+#### Pre-bind
 pre-bind插件用来执行一些需要在bind之前做的操作。比如，一个pre-bind插件可以provision一个网络存储，并将其mount到目标节点，完成之后，才允许pod在那个节点执行。Pre-bind失败同样会返回调度队列。
 
-##### Bind
+#### Bind
 用来将pod bind到node。在所有pre-bind执行完之前，bind插件是不会执行的，每个bind插件会按照预先设置的顺序执行，一个bind插件会选择是否处理给定的pod，如果一个bind插件选择执行一个pod，那么剩下的插件将会忽略，**也就是只有一个bind插件可以执行**
 
-##### Post-bind
+#### Post-bind
 信息扩展点，Post-bind插件在pod成功bind之后执行（bind不是异步的吗？怎么知道成功不成功），这个是bind cycle的末尾，可以用来清理一些资源。
 
-##### Unreserve
+#### Unreserve
 如果Pod被reserve了，并且后来被reject了，那么会触发unreserve插件，Unreserve插件会清除reserve pod相关的一些状态。**用此扩展点的插件一般也使用reserve插件，一般成对出现**
 
 ### Plugin API
