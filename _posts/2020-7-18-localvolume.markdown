@@ -8,9 +8,17 @@ tags:
     - 存储
 ---
 
+**目录**
+- [main 函数](#main-函数)
+- [Local Controller 主流程](#local-controller-主流程)
+	- [生成 pv 缓存](#生成-pv-缓存)
+	- [发现 pv](#发现-pv)
+	- [删除 pv](#删除-pv)
+
+
 [local volume provisioner](https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner)，一个提供本地存储的组件，主要是不用管理员手动创建pv 了，可以根据目录自动发现并创建 pv，梳理一下其工作过程。
 
-#### main 函数
+## main 函数
 main 函数做的工作不多，就是启动 controller，并注册了一些 prometheus 监控项。
 ```go
 go controller.StartLocalController(client, procTable, &common.UserConfig{
@@ -23,7 +31,7 @@ prometheus.MustRegister([]prometheus.Collector{
 }...)
 ```
 
-#### Local Controller 主流程
+## Local Controller 主流程
 `StartLocalController`主要做两件事：pv的发现和删除。此外，还维护了一份 pv 的缓存，以及通过一个 job 来辅助删除 pod。先列出整个流程，然后逐步分析
 ```go
 func StartLocalController(client *kubernetes.Clientset, ptable deleter.ProcTable, config *common.UserConfig) {
@@ -52,7 +60,7 @@ func StartLocalController(client *kubernetes.Clientset, ptable deleter.ProcTable
 ```
 流程简单清晰，现在逐步看一下。
 
-##### 生成 pv 缓存
+### 生成 pv 缓存
 这个本质上没什么好说的，就是通过 informer 机制来同步缓存。这部分逻辑如下。
 ```go
 func NewPopulator(config *common.RuntimeConfig) *Populator {
@@ -90,7 +98,7 @@ func NewPopulator(config *common.RuntimeConfig) *Populator {
 ```
 pv 缓存的构建过程就这样结束了。
 
-##### 发现 pv
+### 发现 pv
 发现过程分两步，先构建一个discoverer，再调用 discoverer 的`DiscoverLocalVolumes`方法。下面重点看一下后者
 ```go
 func (d *Discoverer) discoverVolumesAtPath(class string, config common.MountConfig) {
@@ -156,7 +164,7 @@ func (d *Discoverer) discoverVolumesAtPath(class string, config common.MountConf
 }
 ```
 
-##### 删除 pv
+### 删除 pv
 删除pv的过程可能要麻烦一点。首先是从pv缓存中枚举pv，只删除phase状态为Released的pv，其他状态的pv不处理，并且在storageclass的回收策略为Delete的时候才删除。
 
 这里有个疑问，当sc回收策略为delete时，pv是被谁删的？
@@ -229,5 +237,3 @@ type ProcTableImpl struct {
 3. 开始删除时，标记为running。
 4. 删除结束，标记为失败或者成功。
 5. discover在创建pv时，如果正在执行删除，则不创建，（实际情况可能更复杂一点）
-
-先到这吧，有问题再补充

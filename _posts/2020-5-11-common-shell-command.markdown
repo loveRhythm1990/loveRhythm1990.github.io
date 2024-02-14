@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "常用 shell 运维命令"
+title:      "shell 运维命令集合"
 date:       2020-05-11 18:38:00
 author:     "weak old dog"
 header-img-credit: false
@@ -24,6 +24,7 @@ tags:
 - [vi 复制与删除](#vi-复制与删除)
 - [查看文件被哪个进程占用](#查看文件被哪个进程占用)
 - [set -euxo pipefail](#set--euxo-pipefail)
+- [Mac as Proxy](#mac-as-proxy)
 - [参考](#参考)
 
 工作中经常涉及一些运维操作，一些shell命令用过了就会忘，以后有shell命令都会放在这里。
@@ -261,6 +262,36 @@ $ fuser -v text.txt
 参考[set -e, -u, -x, -o pipefail](https://gist.github.com/mohanpedala/1e2ff5661761d3abd0385e8223e16425)
 
 研究下 strace
+
+###### Mac as Proxy
+在测试过程中，发现镜像在虚拟机中很难拉下来，但是在mac 上却能拉下来，通过下面命令在 mac 上拉镜像，并推送到虚拟机上，下面脚本中使用了 ansible，得提前配置免密登录。
+```s
+#!/bin/sh
+set -x
+
+docker pull $1
+docker save $1 -o "tmp.tar"
+
+ansible vms -i ./hosts -m copy -a "src=./tmp.tar dest=/tmp/tmp.tar"
+ansible vms -i ./hosts -m command -a "docker load -i /tmp/tmp.tar"
+```
+其中当前目录的 `hosts` 配置文件为，有个 vms 分组和三个虚拟机 ip。
+```s
+[vms]
+192.168.31.201
+192.168.31.202
+192.168.31.203
+```
+脚本的使用方式如下，第一个参数即为要下载的镜像。
+```s
+decent@mac% ~/Downloads/image.sh docker.io/istio/examples-bookinfo-details-v1:1.16.2
+```
+
+在 mac 中 安装 ansible 方式参考[官方文档](https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html):
+```s
+python3 -m pip install --user ansible
+```
+如果上面安装的时候下载很慢，可以通过设置`https_proxy`的方式加速，当然你得先有proxy。
 
 ###### 参考
 [AWK 简明教程](https://coolshell.cn/articles/9070.html)

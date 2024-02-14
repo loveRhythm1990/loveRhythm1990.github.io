@@ -8,12 +8,25 @@ tags:
     - K8s
 ---
 
+**目录**
+
+- [主体流程](#主体流程)
+	- [声明](#声明)
+	- [初始化及启动](#初始化及启动)
+	- [等待同步及启动 worker goroutine](#等待同步及启动-worker-goroutine)
+- [Reflector 工作原理](#reflector-工作原理)
+	- [DeltaFIFO 队列](#deltafifo-队列)
+	- [controller](#controller)
+	- [reflector 运行框架](#reflector-运行框架)
+
+
+
 之前在《[关于k8s informer的基本概念与原理](https://loverhythm1990.github.io/2020/02/25/informer-basic-scheduler/)》中介绍过informer的一些东西，但是没怎么讲清楚，这里再梳理一下知识点。还是以项目 [sig-storage-lib-external-provisioner](https://github.com/kubernetes-sigs/sig-storage-lib-external-provisioner) 为例，这些项目逻辑比较简单，相对容易分析。
 
-##### 主体流程
+### 主体流程
 这里主要是说从声明一个 informer，到启动这个 informer 的过程，这个应该都比较熟悉了。这里再复习一下相关的数据结构，以及它们之间的相互关系。
 
-###### 声明
+#### 声明
 provisioner 项目主要对 pvc 以及 pv 感兴趣，所以声明了如下 pvc 以及 pv Informer，另外这里把存放 pvc 以及 pv 的本地 cache 也暴露出来了。
 ```go
 claimInformer  cache.SharedIndexInformer
@@ -56,7 +69,7 @@ type SharedInformer interface {
 pvLister := informer.Core().V1().PersistentVolumeClaims().Lister()
 ```
 
-###### 初始化及启动
+#### 初始化及启动
 初始化的过程是，通过`SharedInformerFactory`生成特定资源的 informer，然后调用这个 informer 的 Run 方法，或者直接调用`SharedInformerFactory`的`Start(stopCh <-chan struct{})`方法，但是这里的 informer 可能由其他的 informerFactory 生成（在用户定制化 informer 的情况下），所以这里调用了特定资源的`Run`方法。
  ```go
 informer := informers.NewSharedInformerFactory(client, controller.resyncPeriod)
@@ -98,7 +111,7 @@ func NewSharedInformerFactoryWithOptions(client kubernetes.Interface, defaultRes
 }
 ```
 
-###### 等待同步及启动 worker goroutine
+#### 等待同步及启动 worker goroutine
  `WaitForCacheSync`是每个 informerFactory 以及 informer 启动后都要做的事，根据注释，其含义是等待本地 cache 至少进行一次`FULL LIST`操作。
 
  ```go
@@ -120,7 +133,7 @@ func (f *DeltaFIFO) HasSynced() bool {
 ```
 另一个问题是，为什么启动 Controller 之前要先等待缓存同步，一个比较容易想到的原因是，本地 cache 作为 etcd 的缓存，应该跟 etcd 保持一致，如果没有等到 cache同步，List 的结果或者 Get 结果有可能现象不一致，比如 etcd 有，但是本地没有。这个可以参考下[A deep dive into Kubernetes controllers](https://engineering.bitnami.com/articles/a-deep-dive-into-kubernetes-controllers.html)，这个文章我还没看，有可能有出入。
 
-##### Reflector 工作原理
+### Reflector 工作原理
 在上一小节中，启动informer用的是`claimInformer.Run`方法，这个方法创建一个 informer 机制中的`controller`，并在运行此 controller 的时候创建一个`reflector`并运行。`Run`方法如下：
 ```go
 func (s *sharedIndexInformer) Run(stopCh <-chan struct{}) {
@@ -169,7 +182,7 @@ func (s *sharedIndexInformer) Run(stopCh <-chan struct{}) {
 	s.controller.Run(stopCh)
 }
 ```
-###### DeltaFIFO 队列
+#### DeltaFIFO 队列
 `DeltaFIFO`首先是一个 FIFO 队列，其主要字段是 `items` 和 `queue`，其定义如下：
 * `items`: 是一个 map 结构，其 key 为特定 object 的 Key，value 为这个 object 的事件列表，特定 object 的事件列表 `Deltas` 是一个 Slice，是有序的。但是 items 因为是一个 map 结构，所以是无序的。items 的定义可以参考 `default/pod1: update/update/delete`，表示 default namespace 的 pod1 有三个事件，分别为 update、update、delete。
 * `queue`: 是一个 slice 结构，queue 存在的意义主要是 items 是无序的，为了维护不同 object 事件发生的先后循序，使用了一个 slice 结构。另外需要注意的是，`queue` 字段中不包含重复的元素，在 append 这个Slice的时候，先检查`items`是否有该元素（遍历 queue 检查），如果没有再进行 append，也就是下面注释中说的，`items`与`queue`是1：1映射的，他们的元素个数总是相等的。
@@ -210,7 +223,7 @@ type Delta struct {
 type Deltas []Delta
 ```
 
-###### controller
+#### controller
 controller 不介绍了，比较容易理解，就是启动 reflector，并消费 DeltaFIFO 的资源，一方面触发 EventHandler，另一方面放到本地cache中。
 
 这里可以说一下Pop消费Delta的方式，因为DeltaFIFO中一个资源可以有多个事件，这个事件列表放在`items map[string]Deltas`中，每次调用Pop弹出元素的时候，每次弹出的都是一个事件列表，然后在`(s *sharedIndexInformer) HandleDeltas(obj interface{}) error`方法中，对每个事件都进行一次分发。下面是 HandleDeltas代码，可以看出其有两个任务：1）更新或者删除本地 cache，2）分发事件。
@@ -249,7 +262,7 @@ func (s *sharedIndexInformer) HandleDeltas(obj interface{}) error {
 }
 ```
 
-###### reflector 运行框架
+#### reflector 运行框架
 在看`reflector`工作原理之前，先看一下`reflector`的一些参数配置。其创建代码在`controller`的Run方法中，
 ```go
 func (c *controller) Run(stopCh <-chan struct{}) {
@@ -356,10 +369,6 @@ const (
 	Added   DeltaType = "Added"
 	Updated DeltaType = "Updated"
 	Deleted DeltaType = "Deleted"
-	// The other types are obvious. You'll get Sync deltas when:
-	//  * A watch expires/errors out and a new list/watch cycle is started.
-	//  * You've turned on periodic syncs.
-	// (Anything that trigger's DeltaFIFO's Replace() method.)
 	Sync DeltaType = "Sync"
 )
 ```
@@ -497,7 +506,6 @@ func (r *Reflector) ListAndWatch(stopCh <-chan struct{}) error {
 
 	// 这个是watch的循环，只有出错了才返回，返回之后listwatch要重新调用。
 	for {
-		// give the stopCh a chance to stop the loop, even in case of continue statements further down on errors
 		select {
 		case <-stopCh:
 			return nil
@@ -507,24 +515,15 @@ func (r *Reflector) ListAndWatch(stopCh <-chan struct{}) error {
 		timeoutSeconds := int64(minWatchTimeout.Seconds() * (rand.Float64() + 1.0))
 		options = metav1.ListOptions{
 			ResourceVersion: resourceVersion,
-			// We want to avoid situations of hanging watchers. Stop any wachers that do not
-			// receive any events within the timeout window.
 			TimeoutSeconds: &timeoutSeconds,
-			// To reduce load on kube-apiserver on watch restarts, you may enable watch bookmarks.
-			// Reflector doesn't assume bookmarks are returned at all (if the server do not support
-			// watch bookmarks, it will ignore this field).
 			AllowWatchBookmarks: true,
 		}
 
 		// start the clock before sending the request, since some proxies won't flush headers until after the first watch event is sent
-        start := r.clock.Now()
+                start := r.clock.Now()
 		// 调用listerWatcher的Watch方法
 		w, err := r.listerWatcher.Watch(options)
 		if err != nil {
-			// If this is "connection refused" error, it means that most likely apiserver is not responsive.
-			// It doesn't make sense to re-list all objects because most likely we will be able to restart
-			// watch where we ended.
-			// If that's the case wait and resend watch request.
 			if utilnet.IsConnectionRefused(err) {
 				time.Sleep(time.Second)
 				continue
@@ -537,9 +536,6 @@ func (r *Reflector) ListAndWatch(stopCh <-chan struct{}) error {
 			if err != errorStopRequested {
 				switch {
 				case isExpiredError(err):
-					// Don't set LastSyncResourceVersionUnavailable - LIST call with ResourceVersion=RV already
-					// has a semantic that it returns data at least as fresh as provided RV.
-					// So first try to LIST with setting RV to resource version of last observed object.
 					klog.V(4).Infof("%s: watch of %v closed with: %v", r.name, r.expectedTypeName, err)
 				default:
 					klog.Warningf("%s: watch of %v ended with: %v", r.name, r.expectedTypeName, err)

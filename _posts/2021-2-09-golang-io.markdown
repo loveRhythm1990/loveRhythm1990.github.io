@@ -8,9 +8,23 @@ tags:
     - Golang
 ---
 
+**目录**
+
+- [Reader/Writer 接口](#readerwriter-接口)
+- [读写磁盘文件](#读写磁盘文件)
+- [哈希相关](#哈希相关)
+- [检查文件是否存在](#检查文件是否存在)
+- [文件的硬链接](#文件的硬链接)
+- [创建临时文件](#创建临时文件)
+- [json 编解码](#json-编解码)
+- [列举目录下的所有文件](#列举目录下的所有文件)
+- [遍历目录](#遍历目录)
+
+
+
 记录一些工具方法，避免每次都 google，当然最好是能直接看文档
 
-##### Reader/Writer 接口
+### Reader/Writer 接口
 这两个接口是 Golang 读写操作中，最重要的两个接口，`Reader` 接口和 `Writer` 接口声明一致，参数都有一个缓冲区 buffer，返回值为数字 `n`，以及一个错误。
 ```go
 type Reader interface {
@@ -26,7 +40,7 @@ type Writer interface {
 `Writer` 接口将参数缓冲区的数据写到底层数据流，返回写入的字节数 `n` 和遇到的错误，如果 `n` 小于 `len(p)`，是一定有错误的。`Reader` `Writer` 接口的数据流向如下。(针对接口的实现者而言，数据流向是这样)
 ![](/img/in-post/all-in-one/2022-03-30-21-05-33.png){:height="80%" width="80%"}
 
-##### 读写磁盘文件
+### 读写磁盘文件
 `WriteFile` 和 `ReadFile` 在读写完成后，会自动把文件 close 掉。`WriteFile` 会覆盖文件内容。（追加可以在打开文件时，使用 `os.O_APPEND` 标志）
 ```go
 err := ioutil.WriteFile("test.txt", []byte("Hi\n"), 0666)
@@ -70,7 +84,7 @@ if err != nil {
 ```
 另外需要关注一些，如果对一个文件连续调用 `ReadFull`，每次读的时候，偏移都会增加，也就是会接着上次读的内容的继续读下去，不会读重复的内容，每次调用 `ReadFull` 返回的都不是相同的内容。
 
-##### 哈希相关
+### 哈希相关
 哈希可以用在校验文件、数据块中，生成 hash 有两种方式：1）输入数据，返回哈希值。2）返回一个 writer，往 writer 里写数据。
 ```go
 package main
@@ -112,7 +126,7 @@ hash.Write(data)
 return hash.Sum32()
 ```
 
-##### 检查文件是否存在
+### 检查文件是否存在
 这个是代码中比较常用的方法，通过 os.Stat 可以检查文件是否存在。
 ```go
 fileInfo, err := os.Stat("test.txt")
@@ -124,7 +138,7 @@ if err != nil {
 ```
 另外还有个 `os.Lstat` 方法，这个方法使用方式跟 `os.Stat` 一致，区别是如果文件是个软连接，`Lstat` 返回软连接的 `FileInfo`，并不会跟随软连接。
 
-##### 文件的硬链接
+### 文件的硬链接
 硬链接跟原来的文件指向同一个 inode，指向同一个 inode 的文件的文件名之间没有区别，看不出是一个硬链接。
 使用 `find ./ -inum 1234` 命令，可以查看 inode 为 1234 的所有文件名。另外，在linux里，目录是不能创建硬链接的
 ```go
@@ -140,7 +154,7 @@ if err != nil {
 }
 ```
 
-##### 创建临时文件
+### 创建临时文件
 写 UT 的时候，经常需要创建临时文件
 ```go
 // 在系统临时文件夹中创建一个临时文件夹
@@ -164,7 +178,7 @@ defer func() {
 // ... 做一些操作 ...
 ```
 
-##### json 编解码
+### json 编解码
 将一些元数据序列化后写入文件
 ```go
 f, err := os.Create("file.txt")
@@ -192,7 +206,7 @@ if err != nil {
 }
 ```
 
-##### 列举目录下的所有文件
+### 列举目录下的所有文件
 有两种方式一种是，返回目录下所有文件的 `os.FileInfo`，另一种方式是返回一个名字列表，也是 `[]string`，这两种方式都是按照文件名字排好序的。
 ```go
 // 返回 []os.FileInfo
@@ -219,7 +233,7 @@ files, err := dir.Readdirnames(-1)
 ```
 调用 Readdirnames 需要注意，如果提供的 path 不是一个文件夹，而是一个目录，则会报错：`fdopendir /Users/decent/test.txt: not a directory`
 
-##### 遍历目录
+### 遍历目录
 首先定义一个 `filepath.WalkFunc`，然后调用 `filepath.Walk`，前者的签名为：
 ```go
 type WalkFunc func(path string, info os.FileInfo, err error) error
@@ -301,5 +315,6 @@ filepath.Walk("/Users/jc/go/src/tp", walkFn)
 ```
 
 
-#### 参考：
+参考：
+
 [译 Go文件操作大全](https://colobu.com/2016/10/12/go-file-operations/)

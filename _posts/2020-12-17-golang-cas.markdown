@@ -8,6 +8,14 @@ tags:
     - 数据结构/算法
 ---
 
+**目录**
+
+- [Golang 中的 CAS 操作](#golang-中的-cas-操作)
+- [实现无锁队列](#实现无锁队列)
+	- [相关数据结构](#相关数据结构)
+	- [算法实现](#算法实现)
+- [参考](#参考)
+
  在并发编程中，为防止多个 goroutine 同时修改一个对象，我们一般是事先设置一把锁 `sync.Mutex`，要想修改对象，需要提前获取这把锁，拿不到锁就需要阻塞，直到其他 goroutine 释放锁。相对于 `sync.Mutex`（排它锁、不可重入锁），CAS(compare-and-swap)操作是一种乐观锁机制，goroutine 在修改对象时，不需要获得锁，只要满足了一定条件就能修改。在 [Wikipedir: Compare-and-swap](https://en.wikipedia.org/wiki/Compare-and-swap)中，CAS 操作的伪代码为：
 ```go
 function cas(p: pointer to int, old: int, new: int) is
