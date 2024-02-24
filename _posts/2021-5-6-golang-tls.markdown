@@ -8,7 +8,16 @@ tags:
     - Golang
 ---
 
-#### 基本概念
+**目录**
+- [基本概念](#基本概念)
+- [使用 cfssl 生成证书](#使用-cfssl-生成证书)
+- [Golang TLS编程](#golang-tls编程)
+	- [server端](#server端)
+	- [client端](#client端)
+- [参考](#参考)
+
+
+### 基本概念
 TLS编程涉及到一些概念，比如非对称加密、私钥、公钥、CA等，需要先理清这些概念，才能把流程打通，说句题外话，之前工作的时候这部分概念理清过，也实现了TLS编程，但是文档写在公司内网了，后来也忘记了，到现在，又花了一些时间才搞清楚。
 
 首先是`非对称加密`，涉及到公钥和私钥，公钥是随意公布的，公钥加密的内容只有私钥才能解密，私钥加密的东西只有公钥才能解密，一般私钥保存在服务端，是严格保密的，客户端使用公钥加密内容后，发送给服务端，然后服务端使用私钥进行解密。
@@ -97,7 +106,7 @@ openssl x509  -noout -text -in ./server.crt
 sudo security add-trusted-cert -d -r trustRoot -k "/Library/Keychains/System.keychain" ca.crt
 ```
 
-#### 使用 cfssl 生成证书
+### 使用 cfssl 生成证书
 《[jimmysong.io 创建 TLS 证书和秘钥](https://jimmysong.io/kubernetes-handbook/practice/create-tls-and-secret-key.html)》介绍了使用它 cfssl 生成证书的方式，在文章介绍的方式中，生成 ca 私钥和证书之后，使用 csr 配置就可以生成一个服务器的证书和私钥，比如在生成 admin 证书时，假设有如下 `admin-csr.json` 配置。
 ```json
 {
@@ -128,7 +137,7 @@ kube-apiserver 预定义了一些 RBAC 使用的 RoleBindings，如 `cluster-adm
 > 关于CSR中的 CN 和 O。`CN`：Common Name，kube-apiserver 从证书中提取该字段作为请求的用户名 (User Name)；浏览器使用该字段验证网站是否合法；`O`：Organization，kube-apiserver 从证书中提取该字段作为请求用户所属的组 (Group)；
 
 
-#### Golang TLS编程
+### Golang TLS编程
 现在证书都有了，现在开始TLS编程。另外需要说明一下，我在mac上做实验时，生成证书的方式是参考[How to Create Your Own SSL Certificate Authority for Local HTTPS Development](https://deliciousbrains.com/ssl-certificate-authority-for-local-https-development/)，k8s的文档行不通。即步骤如下：
 ```s
 # 生成ca密钥
@@ -158,7 +167,7 @@ subjectAltName = @alt_names
 DNS.1 = localhost
 ```
 
-##### server端
+#### server端
 在`http.Server`结构中配置`TLSConfig`之后，就不需要在`ListenAndServeTLS`中，指定密钥和证书了。
 ```go
 package main
@@ -198,7 +207,7 @@ func main()  {
 }
 ```
 
-##### client端
+#### client端
 在client端，我们可以选择不验证服务端的证书，这个时候需要指定`InsecureSkipVerify: true`，或者我们提供自签名的证书，来验证服务端证书的有效性
 ```go
 package main
@@ -300,7 +309,7 @@ func createServerConfig(ca, crt, key string) (*tls.Config, error) {
 
 关于K8s对于客户端的认证，可以参考：[Kubernetes 中的用户与身份认证授权](https://jimmysong.io/kubernetes-handbook/guide/authentication.html)
 
-#### 参考
+### 参考
 [jimmysong.io 创建 TLS 证书和秘钥](https://jimmysong.io/kubernetes-handbook/practice/create-tls-and-secret-key.html)
 
 [根据kubelet.kubeconfig文件解析到证书](https://blog.csdn.net/yanghuadong_1992/article/details/113794778)

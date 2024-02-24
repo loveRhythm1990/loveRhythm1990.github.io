@@ -23,7 +23,9 @@ tags:
 ### 插入图片
 使用下面命令插入图片，所有的图片我都放在了根目录下的 `/pics` 文件夹下。
 
-`![java-javascript](/pics/somepic.png){:height="60%" width="60%"}`
+```sh
+![java-javascript](/pics/somepic.png){:height="60%" width="60%"}
+```
 
 ### mac快捷键
 * 搜索文件名：快捷键为 `command + p`
