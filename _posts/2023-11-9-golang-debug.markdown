@@ -71,6 +71,8 @@ curl http://127.0.0.1:8080/debug/pprof/trace -o trace.out
 
 ![java-javascript](/pics/gotrace.png) 
 
+对于 trace 《[通过实例理解Go Execution Tracer](https://tonybai.com/2021/06/28/understand-go-execution-tracer-by-example/)》有比较清晰的说明。
+
 ## GOMEMLIMIT 环境变量
 [GOMEMLIMIT](https://pkg.go.dev/runtime/debug#SetMemoryLimit) 环境变量设置 go 运行时内存使用上限，debug 包里面的 `runtime/debug.SetMemoryLimit` 可以动态的配置这个值。配置了这个值以后，在内存快达到此上限后会触发 GC，即使设置环境变量 `GOGC=off`，这个配置的默认值是 `math.MaxInt64`。通过配置这个内存上限，使内存达到上限时发生 GC，[能缓解程序 OOM 的问题](https://docs.pingcap.com/zh/tidb/stable/configure-memory-usage/#%E8%AE%BE%E7%BD%AE%E7%8E%AF%E5%A2%83%E5%8F%98%E9%87%8F-gomemlimit-%E7%BC%93%E8%A7%A3-oom-%E9%97%AE%E9%A2%98)。
 
@@ -97,6 +99,8 @@ func main() {
 ```
 
 ## 参考
+
+《[瞬间高并发，goroutine执行结束后的资源占用问题](https://mp.weixin.qq.com/s/iBo-j4990paKb3Pb7Xk-2w)》 提出了一个现象，就是流量洪峰过后，Go 的一些运行时内存并不会释放，比如 G 结构体，导致 cpu 和 内存并不会回落到洪峰前的水位。
 
 [GOMEMLIMIT is a game changer for high-memory applications](https://weaviate.io/blog/gomemlimit-a-game-changer-for-high-memory-applications)
 
