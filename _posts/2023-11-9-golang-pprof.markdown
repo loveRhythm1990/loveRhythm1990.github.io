@@ -11,18 +11,17 @@ tags:
 **目录**
 - [通过 pprof 与 trace 进行性能分析](#通过-pprof-与-trace-进行性能分析)
   - [profile 采集与分析](#profile-采集与分析)
-  - [trace 采集与分析](#trace-采集与分析)
   - [在 gin 中使用 pprof](#在-gin-中使用-pprof)
+  - [trace 采集与分析](#trace-采集与分析)
 - [GOMEMLIMIT 环境变量](#gomemlimit-环境变量)
 - [automaxprocs 自动配置 GOMAXPROCS](#automaxprocs-自动配置-gomaxprocs)
 - [参考](#参考)
 
 ## 通过 pprof 与 trace 进行性能分析
-官方文档为[https://pkg.go.dev/net/http/pprof](https://pkg.go.dev/net/http/pprof)，不过比较简单。
+官方文档 [https://pkg.go.dev/net/http/pprof](https://pkg.go.dev/net/http/pprof)，以及官方一篇文章《[Profiling Go Programs](https://go.dev/blog/pprof)》。
 ### profile 采集与分析
-需要安装 graphviz，`brew install graphviz`，用于 web 展示。
-收集指标命令如下。
-```sh
+安装 graphviz，`brew install graphviz`，用于 web 展示。收集指标命令如下。
+```s
 curl http://localhost:6060/debug/pprof/profile\?seconds\=30 -o cpu_profile
 curl http://localhost:6060/debug/pprof/heap -o heap
 curl http://localhost:6060/debug/pprof/goroutine\?debug\=1 -o goroutinedebug1
@@ -30,27 +29,17 @@ curl http://localhost:6060/debug/pprof/goroutine\?debug\=1 -o goroutinedebug1
 收集指标时，可添加 seconds 参数，不同 profile 有不同的含义：1）对于`allocs`, `block`, `goroutine`, `heap`, `mutex`, `threadcreate`返回的是指定时间段的增量 profile。2）对于 `cpu (profile)`, `trace` 是指采集固定的时间段。具体参考 [Parameters](https://pkg.go.dev/net/http/pprof#hdr-Parameters)。
 
 `-http=:8081` 表示在本地启动一个 profile web 服务器。在本机`8081`端口可以查看 pprof 信息。只有指定 `-http` 参数才能查看火焰图。
-```sh
+```s
 go tool pprof -http=:8081 ./profile
 go tool pprof -http=:8081 ./main ./goroutinedebug1
 ```
 ![java-javascript](/pics/pprof_flame.png) 
 
 采集 block 和 mutex 的命令如下，这两个 profile 只有在代码中添加了代码[runtime.SetBlockProfileRate](https://pkg.go.dev/runtime#SetBlockProfileRate)和[runtime.SetMutexProfileFraction](https://pkg.go.dev/runtime#SetMutexProfileFraction)才起作用，否则采样是空的。
-```sh
+```s
 go tool pprof http://localhost:6060/debug/pprof/block
 go tool pprof http://localhost:6060/debug/pprof/mutex
 ```
-
-### trace 采集与分析
-采集 trace 同样是引入 package `_ "net/http/pprof"` 即可，分析 trace 使用命令 `go tool trace ./trace.out`
-```s
-curl http://127.0.0.1:8080/debug/pprof/trace -o trace.out
-```
-trace 的介绍参考官方文档《[Go Execution Tracer](https://docs.google.com/document/u/1/d/1FP5apqzBgr7ahCCgFO-yoVhk4YZrNIDNf9RybngBc14/pub)》。
-Go trace 对于分析程序运行时延非常有用，运行 `go tool trace ./trace.out`命令之后，会打开一个 web 页面，页面中的`Goroutine analysis`链接可以分析各个 goroutine 阻塞在一些事件上的时间。
-
-![java-javascript](/pics/gotrace.png) 
 
 ### 在 gin 中使用 pprof
 在 gin 中使用 pprof，可以使用特殊的 package `github.com/gin-contrib/pprof`。
@@ -71,6 +60,16 @@ func main() {
     app.Run(":8080")
 }
 ```
+
+### trace 采集与分析
+trace 的介绍参考官方文档《[Go Execution Tracer](https://docs.google.com/document/u/1/d/1FP5apqzBgr7ahCCgFO-yoVhk4YZrNIDNf9RybngBc14/pub)》。
+Go trace 对于分析程序运行时延非常有用。采集 trace 同样是引入 package `_ "net/http/pprof"` 即可。
+```s
+curl http://127.0.0.1:8080/debug/pprof/trace -o trace.out
+```
+运行 `go tool trace ./trace.out`命令之后，会打开一个 web 页面，页面中的 `Goroutine analysis` 链接可以分析各个 goroutine 阻塞在一些事件上的时间。
+
+![java-javascript](/pics/gotrace.png) 
 
 ## GOMEMLIMIT 环境变量
 [GOMEMLIMIT](https://pkg.go.dev/runtime/debug#SetMemoryLimit) 环境变量设置 go 运行时内存使用上限，debug 包里面的 `runtime/debug.SetMemoryLimit` 可以动态的配置这个值。配置了这个值以后，在内存快达到此上限后会触发 GC，即使设置环境变量 `GOGC=off`，这个配置的默认值是 `math.MaxInt64`。通过配置这个内存上限，使内存达到上限时发生 GC，[能缓解程序 OOM 的问题](https://docs.pingcap.com/zh/tidb/stable/configure-memory-usage/#%E8%AE%BE%E7%BD%AE%E7%8E%AF%E5%A2%83%E5%8F%98%E9%87%8F-gomemlimit-%E7%BC%93%E8%A7%A3-oom-%E9%97%AE%E9%A2%98)。
