@@ -6,14 +6,28 @@ author:     "weak old dog"
 header-img-credit: false
 tags:
     - K8s
-    - Volume
 ---
+
+**目录**
+- [CSI Spec中的RPC接口](#csi-spec中的rpc接口)
+  - [Identity Service](#identity-service)
+  - [Controller Service](#controller-service)
+  - [Node Service](#node-service)
+- [In Tree CSI Plugin](#in-tree-csi-plugin)
+- [关于通信方式](#关于通信方式)
+  - [推荐的部署以及开发方式](#推荐的部署以及开发方式)
+- [开发CSI驱动](#开发csi驱动)
+  - [Kubernetes CSI Sidecar 容器](#kubernetes-csi-sidecar-容器)
+- [在Kubernetes集群中部署CSI驱动](#在kubernetes集群中部署csi驱动)
+  - [Controller组件](#controller组件)
+  - [Node plugin](#node-plugin)
+
 
 官方文档地址：[https://kubernetes-csi.github.io/docs/](https://kubernetes-csi.github.io/docs/)。
 
 设计文档：[Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec/blob/master/spec.md)
 
-#### CSI Spec中的RPC接口
+## CSI Spec中的RPC接口
 CSI接口分三部分`Identity Service`、`Controller Service`、`Node Service`。其中
 * Identidy Service: Node组件以及Controller组件都需要实现的接口。
 * Controller Service: Controller组件需要实现的接口。
@@ -21,7 +35,7 @@ CSI接口分三部分`Identity Service`、`Controller Service`、`Node Service`�
 
 在上面三类接口中，只有`Identiry Service`接口以及`Node Service`中的部分接口是required。`Controller Service`不是必须的。对这三类接口具体看下：
 
-##### Identity Service
+### Identity Service
 其proto定义如下，重点关注下`GetPluginCapabilities`接口，该接口说明插件提供的能力，一般有：
 * PluginCapability_Service_CONTROLLER_SERVICE: 表示实现了`Controller Service`的部分或全部接口。
 * PluginCapability_Service_VOLUME_ACCESSIBILITY_CONSTRAINTS：表示volume对节点拓扑有要求，如果提供了此种能力，csi external provisioner在provision PVC的时候，还需要检查节点的拓扑是否符合PVC的需求。
@@ -42,7 +56,7 @@ service Identity {
 }
 ```
 
-##### Controller Service
+### Controller Service
 `Controller Service`接口众多，我们只分析几个重要的。另外Controller Service的接口也都是可选的。
 
 * CreateVolume/DeleteVolume: 这两个是最重要的两个接口，从字面看也容易理解，主要是负责具体后端存储介质的创建以及回收，这个过程对应的是provision过程，也就是provision一个具体的底层设备。
@@ -83,7 +97,7 @@ service Controller {
 }
 ```
 
-##### Node Service
+### Node Service
 `Node Service`包含必须实现的接口，其实也就是`NodePublishVolume`以及`NodeUnpublishVolume`，
 * NodeStageVolume/NodeUnstageVolume：这个接口是将存储设备挂载到global mountpath的，global mountpath的路径我记得是`/var/lib/kubelet/plugins/volume`，我记得是这个，用到的时候再去翻一下。这个是可选的，global mountpath一般是一个volume供多个pod消费的时候采用，这个路径跟具体某个pod是没有关系的。一般情况下，我们直接将磁盘的路径挂载到`/var/lib/kubelet/pods/`路径下，这个是跟global path相对的，跟具体某个pod相关的挂载路径。
 * NodePublishVolume/NodeUnpublishVolume：这个是将global path挂载到pod目录下面（这样的话得使用bind mount），或者直接将磁盘路径挂载到pod目录下面，这个是必须要实现的。
@@ -110,12 +124,12 @@ service Node {
 }
 ```
 
-#### In Tree CSI Plugin
+## In Tree CSI Plugin
 这里稍微介绍一下In Tree CSI Plugin，其实controller manager里面的Attach-detach controller以及Kubelet只与这个In-tree的Plugin交互，这个Intree Plugin再通过创建CR资源`VolumeAttachement`与CSI controller交互，或者通过UDS与CSI Node组件交互。
 
 其实现的接口跟其他Intree plugin实现的接口基本一致，比如：Attach:将磁盘添加到节点；MountDevice:将磁盘挂载到Global mountpath；Setup：将磁盘从global path挂载到具体某个pod路径下，或者直接挂载磁盘到pod目录下。这个插件没有实现Provisioner接口，这个是通过CSI external Provisioner来实现的，其通过调用CSI controller的CreateVolume接口实现存储设备创建。
 
-#### 关于通信方式
+## 关于通信方式
 K8s与csi组件有两种通信方式，分下面两部分
 * Kubelet与CSI驱动通信
     - Kubelet直接向CSI驱动发起调用（`NodeStageVolume`, `NodePublishVolume`等），调用是通过UDS(Unix Domain Socket)完成的，用来mount以及umount volume。
@@ -126,7 +140,7 @@ K8s与csi组件有两种通信方式，分下面两部分
     - Master只与Kubernetes API互动，应该说的是通过K8s API与资源打交道。
     - 因此，CSI驱动需要监听资源的变化（volume create, volume attach, volume snapshot等），通过事件处理来处理任务。
 
-###### 推荐的部署以及开发方式
+### 推荐的部署以及开发方式
 `推荐方式`包括以下几部分：
 * CSI [Sidecar Containers](https://kubernetes-csi.github.io/docs/sidecar-containers.html)，选择需要的Sidecar Container，不需要的不用部署。
 * CSI `objects`，CSI驱动引入的两个CRD: `CSIDriver`，`CSINode`，这两个在部署的时候一般自动配置。
@@ -137,7 +151,7 @@ K8s与csi组件有两种通信方式，分下面两部分
 3. 定义Kubernetes API Yaml文件来部署CSI驱动，并选择适当的sidecar容器。参考下面的部署方式。
 4. 部署，并进行e2e测试。
 
-#### 开发CSI驱动
+## 开发CSI驱动
 第一步就是实现[CSI specification](https://github.com/container-storage-interface/spec/blob/master/spec.md#rpc-interface)中的gRPC接口。至少需要实现的接口是：
 * CSI `Identity`服务
     - 让调用者（Kubernetes组件，以及sidecar容器）识别驱动，并且知道驱动提供了哪些功能。
@@ -146,7 +160,7 @@ K8s与csi组件有两种通信方式，分下面两部分
     - 调用者通过required方法让volume在某个路径上可用，就是挂载吧，并发现驱动还提供了哪些额外的功能。
 Kubelet代码中的csi-plugin会调用Node service中的服务，来实现Volume的挂载等。
 
-##### Kubernetes CSI Sidecar 容器
+### Kubernetes CSI Sidecar 容器
 sidecar容器是社区维护的，为了方便开发，减少冗余代码，严格来说，这些sidecar容器都是可选的，但是推荐使用。社区提供的sidecar有：
 * external-provisioner
 * external-attacher
@@ -163,13 +177,13 @@ sidecar容器是社区维护的，为了方便开发，减少冗余代码，严�
 能够实现自动provision的容器需要使用这个sidecar容器，并声明有`CREATE_DELETE_VOLUME`controller capability.
 
 
-#### 在Kubernetes集群中部署CSI驱动
+## 在Kubernetes集群中部署CSI驱动
 CSI驱动在集群中一般分两部分部署：一个Controller组件，以及部署在每个节点的pre-node组件。
 
-###### Controller组件
+### Controller组件
 控制器组件可以以Deployment或者Statefulset的形式部署在集群的任何一个节点中，它包含CSI driver中实现了CSI Controller服务的那部分，以及一个或者多个sidecar容器。这些Controller服务，一般与K8s资源交互，并调用CSI driver的Controller service。**sidecar与CSI driver之间的通信是通过UDS进行的**，因为sidecar需要与k8s资源交互（PV的创建等），所以需要设置RBAC权限。
 
-###### Node plugin
+### Node plugin
 Node组件需要以DaemonSet的形式部署在集群的各个节点中，Node组件需要实现CSI Node service以及需要包含一个`node-driver-registrar`sidecar容器。
 
 Kubernetes Kubelet运行在每个节点上，负责调用`CSI Node service`接口，这些接口主要是mount以及unmount volume，使Pod能够使用这些volume，Kubelet与CSI driver的通信是靠UDS进行的，这个UDS必须以hostpath的形式挂到Node组件中，同时还有第二个uds，这个uds主要是用来实现`node-driver-registrar`sidecar与csi driver直接的通信。

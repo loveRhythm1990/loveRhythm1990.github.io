@@ -5,9 +5,16 @@ date:       2021-5-9 16:53:00
 author:     "decent"
 header-img-credit: false
 tags:
-    - 其他
+    - 存储
 ---
 
+**目录**
+- [概述](#概述)
+- [写入wal](#写入wal)
+- [恢复](#恢复)
+- [校验](#校验)
+
+### 概述
 `WAL`(Write Ahead Log)很久就听说过，但是一直不理解怎么实现的，搜索的时候翻到一个写数据库的damo程序，看了一下，总结下`WAL`的实现。参考的文章为[Writing a Database: Learning By Doing](https://medium.com/@daniel.chia/writing-a-database-learning-by-doing-72480647b978)，这个项目的代码地址为[https://github.com/danchia/ddb](https://github.com/danchia/ddb).
 
 `WAL`的大致思想是在将数据写到数据库之前，先将原始数据（raw record）写到磁盘上，防止在数据落盘之前系统重启了。一般在数据在写到数据库之前需要进行额外处理，比如压缩、格式化等。应用在处理数据之前，先放到内存，然后就给客户端返回成功。如果只是这样，系统一旦重启，内存里的数据就没了，这样数据就丢失了，这个时候就需要WAL，在写内存之前，先将请求的裸数据（全部请求信息），直接写到磁盘普通文件上，基本不做什么处理，然后再写入内存，内存里的数据经处理后，写入数据库，这个时候对应记录的wal就可以删除了。
@@ -23,7 +30,7 @@ tags:
 ![java-javascript](/img/in-post/common/wal.png)
 
 
-##### 写入wal
+### 写入wal
 写入的代码如下，`LogRecord`是原始数据，`cb func(error)`是写入WAL之后的回调函数，其中`formRecord`是根据原始数据生成一个record日志，然后写入`recordCh`通道，这个是此通道生产者。通道的消费者就从通道中取出消息，然后写入文件（另外需要注意，写文件的时候一定要`flush`，避免只写入buffer cache），
 ```go
 func (w *Writer) Append(l *pb.LogRecord, cb func(error)) {
@@ -71,7 +78,7 @@ func(err error) {
 		ch <- nil
 	}
 ```
-##### 恢复
+### 恢复
 启动时，从数据库拿最新的序号，跟wal的序号做对比，如果wal的序号比数据库的序号新，则将wal写入内存。
 ```go
 	lastAppliedSeqNo := int64(0)
@@ -94,7 +101,7 @@ func(err error) {
 	}
 ```
 
-##### 校验
+### 校验
 校验是将待写入磁盘的数据进行hash，并将hash结果同样写入磁盘（写入头8个字节），进行读操作，或者传输时，把数据hash，然后与保存在头部的8个字节比较。
 ```go
     var scratch [8]byte
