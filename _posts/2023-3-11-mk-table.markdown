@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "vscode ide 使用实践"
+title:      "VSCODE IDE 快捷键"
 date:       2023-3-11 10:10:00
 author:     "decent"
 header-img-credit: false
