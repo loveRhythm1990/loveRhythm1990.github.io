@@ -28,12 +28,17 @@ B-tree中，所有的数据分布在所有节点中（这个是与 B+ 树的区�
 下面的程序中，定义了一个 32 度的 B-tree，其元素类型是 `*bItem`，并且在通过 `NewG` 定义 B-tree 时，传入了一个 less 函数用来对元素进行排序。
 
 ```go
+import (
+	"fmt"
+	"github.com/google/btree" //v1.1.2
+)
+
 type bItem struct {
 	value int64
 }
 
 func main() {
-	tree := btree.NewG[*bItem](32, func(a, b *bItem) bool {
+	tree := btree.NewG(32, func(a, b *bItem) bool {
 		return a.value < b.value
 	})
 
@@ -45,11 +50,12 @@ func main() {
 	tree.ReplaceOrInsert(&f2)
 	tree.ReplaceOrInsert(&f3)
 
-	_, _ := tree.AscendGreaterOrEqual(&bItem{value: 2}, func(item *bItem) bool {
+	tree.AscendGreaterOrEqual(&bItem{value: 2}, func(item *bItem) bool {
 		fmt.Println(item.value)
 		return true
 	})
 }
+
 ```
 google 这个库提供的 api 有如下，我们可以直接使用：
 * ReplaceOrInsert：替换或者插入元素，如果元素已经存在，而第二个返回值为 true。
