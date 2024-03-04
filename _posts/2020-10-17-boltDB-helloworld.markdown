@@ -5,8 +5,7 @@ date:       2021-06-20 10:10:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - Etcd
-    - bbolt
+    - boltdb
 ---
 
 本文转载于 晒太阳的猫 [《bbolt初体验》](https://zhengyinyong.com/post/bbolt-first-experience/)

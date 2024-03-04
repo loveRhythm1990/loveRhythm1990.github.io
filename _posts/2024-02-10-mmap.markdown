@@ -1,0 +1,63 @@
+---
+layout:     post
+title:      "在 Go 中使用 mmap 映射文件到内存"
+date:       2024-02-10 10:10:00
+author:     "decent"
+header-img-credit: false
+tags:
+    - boltdb
+---
+
+**目录**
+- [mmap 系统调用](#mmap-系统调用)
+- [在 Go 中使用 mmap](#在-go-中使用-mmap)
+
+
+## mmap 系统调用
+Linux 支持通过 [mmap系统调用](https://man7.org/linux/man-pages/man2/mmap.2.html) 将文件映射到内存中，然后我们读写映射之后的虚拟内存就可以了，不用再用 write/read 系统调用读写文件。系统会将我们对内存读写 flush 到文件中，flush 是由系统自动执行的，我们也可以调用 Flush 强制刷盘。
+
+```c
+void *mmap(void addr[.length], size_t length, int prot, int flags,
+                  int fd, off_t offset);
+```
+
+addr 表示映射内存的起始地址（可填0，由系统给我们指定），length 表示映射的内存大小。
+
+支持的 prot 保护标志有：1）PROT_EXEC: 映射的 pages 可被执行；2）PROT_READ: 读；3）PROT_WRITE: 写；4）PROT_NONE: 不能被访问。
+
+支持的 flags 有：1）MAP_SHARED: 对内存的读写能被其他进程看到，并且能被刷回磁盘；2）MAP_PRIVATE: 其他进程看不到，不能被刷回磁盘；3）MAP_ANON: 映射匿名内存，用于子进程之间通信。 
+
+## 在 Go 中使用 mmap
+在 Go 可以使用 syscall 系统调用。但是有一个第三方的 package [https://github.com/edsrzf/mmap-go](https://github.com/edsrzf/mmap-go) 可以帮我们做这个事情。一个例子：
+
+```go
+package main
+
+import (
+	"github.com/edsrzf/mmap-go"
+	"os"
+)
+
+func main() {
+	f, _ := os.OpenFile("./file", os.O_RDWR, 0644)
+	f.WriteString("hello, world")
+	defer f.Close()
+
+	mmap, _ := mmap.Map(f, mmap.RDWR, 0)
+	defer mmap.Unmap()
+
+	mmap[0] = 'X' // 覆盖文件中的第一个字节
+	mmap.Flush()  // 强制刷盘
+}
+```
+映射的文件不能是空的，否则会报 invalid arguments 错误。所以一开始我们写入了一个字符串 “hello,world”。在代码执行之后，我们再看文件中的内容变成 “Xello, world”
+```s
+lr90@mo mmap % cat file 
+Xello, world%   
+```
+
+参考 
+
+[https://brunocalza.me/discovering-and-exploring-mmap-using-go/](https://brunocalza.me/discovering-and-exploring-mmap-using-go/)
+
+[【Linux内存管理】细说mmap系统调用](https://zhuanlan.zhihu.com/p/527532465)
