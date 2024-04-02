@@ -13,6 +13,7 @@ tags:
 - [生成 markdown 目录](#生成-markdown-目录)
 - [插入图片](#插入图片)
 - [mac快捷键](#mac快捷键)
+- [markdown 表情](#markdown-表情)
 - [Goland 试用](#goland-试用)
 
 ### 生成 markdown 目录
@@ -30,6 +31,11 @@ tags:
 ### mac快捷键
 * 搜索文件名：快捷键为 `command + p`
 * 全局搜索：`command + shift + f`
+
+### markdown 表情
+这里有一些有意思的 markdown 表情，可以添加到自己的博客里。:yum: :helicopter:
+
+[https://gist.github.com/rxaviers/7360908](https://gist.github.com/rxaviers/7360908)
 
 ### Goland 试用
 从 jetbra 官方网站下载最新版，从 Russia 老哥那里下载一个 jetbra.zip 压缩包，解压之后，script 目录下面有一个 `install.sh` 脚本，执行一下。
