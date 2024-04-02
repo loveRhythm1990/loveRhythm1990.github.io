@@ -33,7 +33,7 @@ tags:
 * 全局搜索：`command + shift + f`
 
 ### markdown 表情
-这里有一些有意思的 markdown 表情，可以添加到自己的博客里。:yum: :helicopter:
+这里有一些有意思的 markdown 表情，~~可以添加到自己的博客里~~。:yum: :helicopter:
 
 [https://gist.github.com/rxaviers/7360908](https://gist.github.com/rxaviers/7360908)
 
