@@ -26,15 +26,19 @@ curl http://localhost:6060/debug/pprof/profile\?seconds\=30 -o cpu_profile
 curl http://localhost:6060/debug/pprof/heap -o heap
 curl http://localhost:6060/debug/pprof/goroutine\?debug\=1 -o goroutinedebug1
 ```
-收集指标时，可添加 seconds 参数，不同 profile 有不同的含义：1）对于`allocs`, `block`, `goroutine`, `heap`, `mutex`, `threadcreate`返回的是指定时间段的增量 profile（因为是 delta 所以有可能是负数，针对内存泄漏或者 goroutine 泄漏，这种方式更容易发现问题）。2）对于 `cpu (profile)`, `trace` 是指采集固定的时间段。
+收集指标时，可添加 seconds 参数，不同 profile 有不同的含义：1）对于 allocs, block, goroutine, heap, mutex, threadcreate 返回的是指定时间段的增量 profile（因为是 delta 所以有可能是负数，针对内存泄漏或者 goroutine 泄漏，这种方式更容易发现问题）。2）对于 cpu (profile), trace 是指采集固定的时间段。
 
 > 参考 https://pkg.go.dev/net/http/pprof#hdr-Parameters：
+> 
 > // - debug=N (all profiles): response format: N = 0: binary (default), N > 0: plaintext
+> 
 > // - gc=N (heap profile): N > 0: run a garbage collection cycle before profiling
+> 
 > // - seconds=N (allocs, block, goroutine, heap, mutex, threadcreate profiles): return a delta profile
+> 
 > // - seconds=N (cpu (profile), trace profiles): profile for the given duration
 
-在查看 goroutine 时，如果不加 debug 参数，返回的 binary 形式的结果，可以使用 go tool pprof 分析，如果是 `debug=1` 则是概述性的分析（如果 goroutine stack相同则会合并），如果是 `debug=2`会单独打印每个 goroutine 的 stack。下面是 heap profile 的 top 结果。其中：
+在查看 goroutine 时，如果不加 debug 参数，返回的 binary 形式的结果，可以使用 go tool pprof 分析，如果是 `debug=1` 则是概述性的分析（如果 goroutine stack相同则会合并），如果是 `debug=2` 会单独打印每个 goroutine 的 stack。下图是 heap profile 的 top 示例。其中：
 * Flat, Flat%: 在采样周期中，函数正在运行的采样数，以及采样数所占总采样数的比例。这里的"正在运行"指的是本函数正在 Running，而不是正在调用本函数的子函数。可以区别 Cum。
 * Sum%: 累积的百分比，是从第一行到当前行，所有 Flat% 的和。
 * Cum, Cum%: 采样周期中，这个函数在 goroutine 中出现的次数，包括了两种情况：1）当前函数正在执行，2）当前函数正在调用一个子函数（callee，区别 caller），并等待子函数返回。在查看 top 时，有时候观察到 Flat 和 Flat% 都是 0，但是 Cum 不为 0，应该就是第二种 case。
@@ -42,7 +46,7 @@ curl http://localhost:6060/debug/pprof/goroutine\?debug\=1 -o goroutinedebug1
 ![java-javascript](/pics/pprof-top.png) 
 
 
-`-http=:8081` 表示在本地启动一个 profile web 服务器。在本机 `8081` 端口可以查看 pprof 信息。只有指定 `-http` 参数才能查看火焰图。
+查看 profile 时，可以使用 `-http=:8081` 在本地启动一个 profile web 服务器，此时可以在浏览器页面查看 profile 信息，浏览器中的信息较为丰富，比如可以查看火焰图。
 ```s
 go tool pprof -http=:8081 ./profile
 go tool pprof -http=:8081 ./main ./goroutinedebug1
@@ -60,7 +64,7 @@ go tool pprof http://localhost:6060/debug/pprof/mutex
 
 
 ### 在 gin 中使用 pprof
-在 gin 中使用 pprof，可以使用特殊的 package `github.com/gin-contrib/pprof`。
+在 gin 中使用 pprof，可以使用第三方 package [github.com/gin-contrib/pprof](github.com/gin-contrib/pprof)。
 ```go
 package main
 
