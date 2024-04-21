@@ -12,6 +12,10 @@ tags:
 - [K8s 原生 hpa](#k8s-原生-hpa)
 - [快速入手](#快速入手)
 - [原生 hpa 扩容算法](#原生-hpa-扩容算法)
+- [配置扩缩容行为](#配置扩缩容行为)
+  - [扩缩容策略(scaling policies)](#扩缩容策略scaling-policies)
+  - [稳定窗口(stabilization window)](#稳定窗口stabilization-window)
+  - [默认行为(default behavior)](#默认行为default-behavior)
 - [hpa 指标](#hpa-指标)
   - [metrics server](#metrics-server)
   - [自定义指标(custom metrics)](#自定义指标custom-metrics)
@@ -127,7 +131,54 @@ desiredReplicas = ceil[currentReplicas * ( currentMetricValue / desiredMetricVal
 * currentMetricValue 是负载所属 pod 的平均值，比如同属一个 deploy 的所有 pod的利用率平均值。利用率是使用值跟 request 的比值。
 * 选择 pod 时，不考虑 deletiontimestamp 不为 nil，或者 failed 状态的 pod。
 * 如果 pod 的指标缺失，不会被纳入统计。对于缺失的指标，hpa 处理比较谨慎，在通过公司计算出是该扩容还是缩容时，通过这些指标缺失的 pod 来进行简单校准。在计算出来要进行缩容时，认为指标缺失的 pod 利用了 100% 资源；在扩容时，认为缺失的 pod 利用了 0% 的资源，尽量避免扩缩容。
-  
+
+### 配置扩缩容行为
+在使用 hpa 进行扩缩容时，有时候业务的资源使用率会导致 hpa 控制器在扩容、缩容之间不停切换，这种情况称为 `flapping`，hpa 提供一些参数可以优化这种行为。
+
+#### 扩缩容策略(scaling policies)
+hpa 资源的 `behavior` 字段允许我们配置扩缩容策略，下面的配置配置了两个缩容策略：1）在一分钟内最多缩容 4 个 pod；2）在一分钟内最多缩容 10% 的 pod。当有多个扩缩容策略存在时，hpa 的策略 `selectPolicy: Max` 是：`选择会导致最多副本数变化的策略`。假设此 hpa CR 对应的 deployment 少于 40 个副本，那么 10% 小于 4，因此会选择策略 1）；当副本数大于 40 时，将会选择策略2。（注意文档里提到了一个 case，如果有 72 个副本，72 的 10% 是 7.2，但在计算时，会 round up 到 8，因此会选择最多缩容 8 个副本。）
+
+我们可以将 `selectPolicy: Min` 来实现 `选择会导致最少副本数变化的策略`；配置 `selectPolicy: Disabled` 为禁用扩容或者缩容。另外 `peroidSeconds` 的最大配置是 1800，也就是半小时。
+
+```yaml
+spec:
+  behavior:
+    scaleDown:
+      policies:
+      - type: Pods
+        value: 4
+        periodSeconds: 60
+      - type: Percent
+        value: 10
+        periodSeconds: 60
+      selectPolicy: Max
+      stabilizationWindowSeconds: 300
+```
+#### 稳定窗口(stabilization window)
+稳定窗口配置是为了缓解 `flapping` 也就是波动行为。具体配置是上面 yaml 中的 `stabilizationWindowSeconds: 180` 配置，这个配置是说：如果要进行缩容，请参考过去 5 分钟（180秒）计算出来的期望状态，并选择一个会导致副本数变化最大的配置（也是由 `selectPolicy` 选项配置？）。这样在 5 分钟的时间窗口内，扩缩容策略是一致的，避免了波动行为。
+
+#### 默认行为(default behavior)
+默认行为是不配置 behavior 时的默认参数，这个参考 [Default Behavior](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#default-behavior)。
+```yaml
+behavior:
+  scaleDown:
+    stabilizationWindowSeconds: 300
+    policies:
+    - type: Percent
+      value: 100
+      periodSeconds: 15
+  scaleUp:
+    stabilizationWindowSeconds: 0
+    policies:
+    - type: Percent
+      value: 100
+      periodSeconds: 15
+    - type: Pods
+      value: 4
+      periodSeconds: 15
+    selectPolicy: Max
+```
+
 ### hpa 指标
 hpa 获取指标是通过 [K8s apiserver aggregation api](https://kubernetes.io/docs/tasks/extend-kubernetes/configure-aggregation-layer/) 接口进行的，简单的说，当你访问 aggregation api 时，apiserver 实际是将你的请求转发到了集群里的一个应用服务。是扩展 apiserver 的一种方式。metrics-server 注册了一个 apiservices `metrics.k8s.io`，我们可以通过下面命令查看：
 ```s
