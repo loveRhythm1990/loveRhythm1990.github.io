@@ -8,6 +8,18 @@ tags:
     - 网络
 ---
 
+**目录**
+- [1. 容器发包到 cni0](#1-容器发包到-cni0)
+- [2. cni0 路由报文到 flannel.1](#2-cni0-路由报文到-flannel1)
+- [3. flannel.1 设备封包](#3-flannel1-设备封包)
+  - [3.1 如何已知目标 VTEP 设备的 IP 查其 mac](#31-如何已知目标-vtep-设备的-ip-查其-mac)
+  - [3.2 添加 vxlan header](#32-添加-vxlan-header)
+  - [3.3 把 vxlan 报文封装到 udp 报文](#33-把-vxlan-报文封装到-udp-报文)
+- [4. 主机网络发送 udp 报文](#4-主机网络发送-udp-报文)
+- [5. 主机发送报文](#5-主机发送报文)
+- [6. 协议栈将报文发给 flannel.1 设备](#6-协议栈将报文发给-flannel1-设备)
+- [7. 原始报文发给 cni0](#7-原始报文发给-cni0)
+
 在 flannel 网络插件中，vxlan 的思想在主机网络（underlay 网络）的基础上，通过封包解包，构建一个虚拟的二层网络（overlay 网络），其中 vxlan 的封包解包是在内核态进行的，因为 linux 本身就支持，所以效率还是比较高的。对于 flannel vxlan 来说，集群中所有的节点只工作在一个 vxlan 网络中，因此所有的 VTEP 设备名字都是 `flannel.1`，这名字中的 `1` 就是 VNI（vxlan network identifier），vxlan 网络序号。 
 
 本文根据 flannel vxlan 网络模式中的 pod 发包流程理解下 vxlan 的工作原理。实验环境有三台节点，hostname 和 ip 对应如下（第三台节点 HostGW-Node2 基本用不到，除了偶尔看下路由策略，所以本文称 node 节点时，指的是 HostGW-Node 节点）：
