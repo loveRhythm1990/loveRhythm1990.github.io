@@ -117,7 +117,7 @@ php-apache   Deployment/php-apache   0%/50%     1         5         1          1
 
 ### 原生 hpa 扩容算法
 官方文档 [algorithm-details](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#algorithm-details) 有说明，这里概述一下。
-从大致思路上来讲，auto-scaler 控制器通过下面公式计算期望副本数。具体是：
+从大致思路上来讲，该算法希望将容器的平均资源使用率维持在一个特定的数值，如果高于此利用率，则扩容；如果低于此利用率，则缩容。auto-scaler 控制器通过下面公式计算期望副本数。具体是：
 ```s
 desiredReplicas = ceil[currentReplicas * ( currentMetricValue / desiredMetricValue )]
 ```
@@ -128,9 +128,9 @@ desiredReplicas = ceil[currentReplicas * ( currentMetricValue / desiredMetricVal
 结合我们上边的例子，这个公式的效果是使 cpu 利用率大致在 50% 左右。我们通过几个例子来解释这个公式：假设当前有两个副本，每个副本利用率是 80%，那期望副本数是 `ceil(2*(8/5))=4` 即要扩容两个副本出来；假设当前有两个副本，每个副本利用率是 30%，那期望副本数是 `ceil(2*(3/5))=2`，可以发现当前既不用扩容，也不用缩容；那如果每个副本利用率是 20%，则 `ceil(2*(2/5))=1`，则要缩容一个副本。
 
 除了这个公式带来的设计思路，auto-scaler 控制器还有一些原则（或者 case 要处理）：
-* currentMetricValue 是负载所属 pod 的平均值，比如同属一个 deploy 的所有 pod的利用率平均值。利用率是使用值跟 request 的比值。
+* currentMetricValue 是负载所属 pod 的平均值，比如同属一个 deploy 的所有 pod的利用率平均值。**利用率是使用值跟 request 的比值**。
 * 选择 pod 时，不考虑 deletiontimestamp 不为 nil，或者 failed 状态的 pod。
-* 如果 pod 的指标缺失，不会被纳入统计。对于缺失的指标，hpa 处理比较谨慎，在通过公司计算出是该扩容还是缩容时，通过这些指标缺失的 pod 来进行简单校准。在计算出来要进行缩容时，认为指标缺失的 pod 利用了 100% 资源；在扩容时，认为缺失的 pod 利用了 0% 的资源，尽量避免扩缩容。
+* 如果 pod 的指标缺失，不会被纳入统计。对于缺失的指标，hpa 处理比较谨慎，在通过公式计算出是该扩容还是缩容之后，再通过这些指标缺失的 pod 来进行简单校准。在计算出来要进行缩容时，认为指标缺失的 pod 利用了 100% 资源；在扩容时，认为缺失的 pod 利用了 0% 的资源，尽量避免扩缩容，其思想是在出现指标缺失时，尽量避免做出扩缩容动作，以免误判。
 
 ### 配置扩缩容行为
 在使用 hpa 进行扩缩容时，有时候业务的资源使用率会导致 hpa 控制器在扩容、缩容之间不停切换，这种情况称为 `flapping`，hpa 提供一些参数可以优化这种行为。
