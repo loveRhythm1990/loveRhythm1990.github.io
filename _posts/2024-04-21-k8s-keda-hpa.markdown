@@ -152,9 +152,10 @@ Normal  ScaledObjectReady         3m28s  keda-operator  ScaledObject is ready fo
 Normal  KEDAScaleTargetActivated  28s    keda-operator  Scaled apps/v1.Deployment my-project/worker from 0 to 1, triggered by mySQLScaler
   ```
 d. 继续往 connections 中插入数据。
-  a) 当 connections 中一共有两条记录时，不会触发扩容，因为平均连接数还是 2。
 
-  b) 当 connections 中一共有三条记录时，会发生扩容，平均连接数不是 2 了。
+a) 当 connections 中一共有两条记录时，不会触发扩容，因为平均连接数还是 2。
+
+b) 当 connections 中一共有三条记录时，会发生扩容，平均连接数不是 2 了。
 
   ```s
   mysql> INSERT INTO connections (state) VALUES ('running');
@@ -186,7 +187,7 @@ keda 支持很多事件源，具体可以参考文档 [Scalers](https://keda.sh/
 
 ### 一些参考
 #### openkruise 基于HPA的极致弹性调度最佳实践
-[基于HPA的极致弹性调度最佳实践](https://openkruise.io/zh/docs/best-practices/elastic-deployment)》 这个是 openkruise 写的一篇技术实践，其总体架构如下，在该方案中，keda 通过 prometheus 采集 Ingress Nginx 的指标，原生 nginx 的指标，prometheus 是无法采集的，这里通过 [Nginx-Prometheus-Exporter](https://github.com/nginxinc/nginx-prometheus-exporter) 开源组件进行适配，使 prometheus 能够采集 nginx 指标。
+《[基于HPA的极致弹性调度最佳实践](https://openkruise.io/zh/docs/best-practices/elastic-deployment)》 这个是 openkruise 写的一篇技术实践，其总体架构如下，在该方案中，keda 通过 prometheus 采集 Ingress Nginx 的指标，原生 nginx 的指标，prometheus 是无法采集的，这里通过 [Nginx-Prometheus-Exporter](https://github.com/nginxinc/nginx-prometheus-exporter) 开源组件进行适配，使 prometheus 能够采集 nginx 指标。
 
 在该方案中，keda 扩缩容的对象为 CloneSet，只要实现了 scale subresource 的资源都可以跟 hpa 协助来进行自动扩缩容。
 
