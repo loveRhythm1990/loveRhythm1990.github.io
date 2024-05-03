@@ -15,7 +15,9 @@ tags:
 - [keda 的一些特性](#keda-的一些特性)
   - [缩容到 0](#缩容到-0)
   - [事件驱动，事件源丰富](#事件驱动事件源丰富)
-- [参考资料](#参考资料)
+- [一些参考](#一些参考)
+  - [openkruise 基于HPA的极致弹性调度最佳实践](#openkruise-基于hpa的极致弹性调度最佳实践)
+  - [蚂蚁金服 Kapacity](#蚂蚁金服-kapacity)
 
 ### keda 概述
 keda 是开源的基于 K8s 自动扩缩容解决方案，相对于原生 hpa，其支持的事件类型更为丰富，官方网站 [Scalers](https://keda.sh/docs/2.14/scalers/) 列举了其支持的事件源以及配置方式，本文会以 mysql 事件源为例说明 keda 的工作过程。
@@ -46,73 +48,73 @@ CREATE TABLE connections (
 ```
 我们通过一个 nginx deployment 来模拟业务，当 connections 较多时，会触发 deployment，我们先部署 deployment。一开始的时候，副本数设置为 0，期望 keda 会激活 deployment，并进行库容。
 
-1. 创建 deploy，副本数为 0。
+a. 创建 deployment，初始副本数为 0。
 
-  ```yaml
-  apiVersion: apps/v1
-  kind: Deployment
-  metadata:
-    name: worker
-    namespace: my-project
-    labels:
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+  namespace: my-project
+  labels:
+    app: nginx
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
       app: nginx
-  spec:
-    replicas: 0
-    selector:
-      matchLabels:
+  template:
+    metadata:
+      labels:
         app: nginx
-    template:
-      metadata:
-        labels:
-          app: nginx
-      spec:
-        containers:
-        - name: nginx
-          image: nginx:1.14.2
-          ports:
-          - containerPort: 80
-  ```
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.14.2
+        ports:
+        - containerPort: 80
+```
 
-2. 创建 ScaledObject。下面的配置中 secret 里配置了连接 mysql 用的连接串，其内容格式为 `user:password@tcp(mysql-host:3306)/keda`，需要配置为 base64 编码后配置到 mysql_conn_str 中。另外需要关注 triggers 部分 metadata 部分的配置，一共有三个：1）`queryValue`：每个副本需要处理的连接数。2）`activationQueryValue`：激活业务需要的连接数，这里设置为 0.1 有点牵强，表示只要有连接就要激活；3）`query`: sql查询语句，这个需要需要返回一个数值，表示当前连接总数。结合我们的配置，所期望达到的效果是：平均每个 nginx 副本需要处理两个连接。
+b. 创建 ScaledObject。下面的配置中 secret 里配置了连接 mysql 用的连接串，其内容格式为 `user:password@tcp(mysql-host:3306)/keda`，需要配置为 base64 编码后配置到 mysql_conn_str 中。另外需要关注 triggers 部分 metadata 部分的配置，一共有三个：1）`queryValue`：每个副本需要处理的连接数。2）`activationQueryValue`：激活业务需要的连接数，这里设置为 0.1 有点牵强，表示只要有连接就要激活；3）`query`: sql查询语句，这个需要需要返回一个数值，表示当前连接总数。结合我们的配置，所期望达到的效果是：平均每个 nginx 副本需要处理两个连接。
    
-  ```yaml
-  apiVersion: v1
-  kind: Secret
-  metadata:
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mysql-secrets
+  namespace: my-project
+type: Opaque
+data:
+  mysql_conn_str: cm9vdDp1WWlwc1VSVWxkQHRjcCgxMC45Ni4xMjkuODc6MzMwNikva2VkYQ==
+---
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: keda-trigger-auth-mysql-secret
+  namespace: my-project
+spec:
+  secretTargetRef:
+  - parameter: connectionString
     name: mysql-secrets
-    namespace: my-project
-  type: Opaque
-  data:
-    mysql_conn_str: cm9vdDp1WWlwc1VSVWxkQHRjcCgxMC45Ni4xMjkuODc6MzMwNikva2VkYQ==
-  ---
-  apiVersion: keda.sh/v1alpha1
-  kind: TriggerAuthentication
-  metadata:
-    name: keda-trigger-auth-mysql-secret
-    namespace: my-project
-  spec:
-    secretTargetRef:
-    - parameter: connectionString
-      name: mysql-secrets
-      key: mysql_conn_str
-  ---
-  apiVersion: keda.sh/v1alpha1
-  kind: ScaledObject
-  metadata:
-    name: mysql-scaledobject
-    namespace: my-project
-  spec:
-    scaleTargetRef:
-      name: worker
-    triggers:
-    - type: mysql
-      metadata:
-        queryValue: "2"
-        activationQueryValue: "0.1"
-        query: "select count(*) from connections where state='running';"
-      authenticationRef:
-        name: keda-trigger-auth-mysql-secret
-  ```
+    key: mysql_conn_str
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: mysql-scaledobject
+  namespace: my-project
+spec:
+  scaleTargetRef:
+    name: worker
+  triggers:
+  - type: mysql
+    metadata:
+      queryValue: "2"
+      activationQueryValue: "0.1"
+      query: "select count(*) from connections where state='running';"
+    authenticationRef:
+      name: keda-trigger-auth-mysql-secret
+```
 另外，因为 keda 是通过原生 hpa 来进行副本扩缩容的，我们可以看下 keda 帮忙生成 hpa 配置：
 ```yaml
 spec:
@@ -135,23 +137,25 @@ spec:
     name: worker
 ```
 
-3. 往数据库表 connections 中插入一条记录，查看扩缩容情况。
-   ```sql
-   INSERT INTO connections (state) VALUES ('running');
-   ```
-   此时表中仅有一行记录。根据我们的配置，此时来了一个连接，keda 应该会帮我们对 deployment 进行激活，现象如下。describe scaledObject，发现触发了 deployment 的扩容。
-   ```s
-   Events:
-  Type    Reason                    Age    From           Message
-  ----    ------                    ----   ----           -------
-  Normal  KEDAScalersStarted        3m28s  keda-operator  Scaler mysql is built.
-  Normal  KEDAScalersStarted        3m28s  keda-operator  Started scalers watch
-  Normal  ScaledObjectReady         3m28s  keda-operator  ScaledObject is ready for scaling
-  Normal  KEDAScaleTargetActivated  28s    keda-operator  Scaled apps/v1.Deployment my-project/worker from 0 to 1, triggered by mySQLScaler
-   ```
-4. 继续往 connections 中插入数据。
-  1. 当 connections 中一共有两条记录时，不会触发扩容，因为平均连接数还是 2。
-  2. 当 connections 中一共有三条记录时，会发生扩容，平均连接数不是 2 了。
+c. 往数据库表 connections 中插入一条记录，查看扩缩容情况。
+```sql
+INSERT INTO connections (state) VALUES ('running');
+```
+此时表中仅有一行记录。根据我们的配置，此时来了一个连接，keda 应该会帮我们对 deployment 进行激活，现象如下。describe scaledObject，发现触发了 deployment 的扩容。
+  ```s
+  Events:
+Type    Reason                    Age    From           Message
+----    ------                    ----   ----           -------
+Normal  KEDAScalersStarted        3m28s  keda-operator  Scaler mysql is built.
+Normal  KEDAScalersStarted        3m28s  keda-operator  Started scalers watch
+Normal  ScaledObjectReady         3m28s  keda-operator  ScaledObject is ready for scaling
+Normal  KEDAScaleTargetActivated  28s    keda-operator  Scaled apps/v1.Deployment my-project/worker from 0 to 1, triggered by mySQLScaler
+  ```
+d. 继续往 connections 中插入数据。
+  a) 当 connections 中一共有两条记录时，不会触发扩容，因为平均连接数还是 2。
+
+  b) 当 connections 中一共有三条记录时，会发生扩容，平均连接数不是 2 了。
+
   ```s
   mysql> INSERT INTO connections (state) VALUES ('running');
   Query OK, 1 row affected (0.01 sec)
@@ -171,7 +175,8 @@ spec:
   worker-7fb96c846b-9mkkv   1/1     Running   0          102s
   worker-7fb96c846b-fb7d4   1/1     Running   0          14m
   ```
-  3. 当 connections 表中有四条记录时，不会触发扩容。
+
+  c) 当 connections 表中有四条记录时，不会触发扩容。
 
 ### keda 的一些特性
 #### 缩容到 0
@@ -179,8 +184,44 @@ spec:
 #### 事件驱动，事件源丰富 
 keda 支持很多事件源，具体可以参考文档 [Scalers](https://keda.sh/docs/2.14/scalers/)。
 
-### 参考资料
-kruise《[基于HPA的极致弹性调度最佳实践](https://openkruise.io/zh/docs/best-practices/elastic-deployment)》
+### 一些参考
+#### openkruise 基于HPA的极致弹性调度最佳实践
+[基于HPA的极致弹性调度最佳实践](https://openkruise.io/zh/docs/best-practices/elastic-deployment)》 这个是 openkruise 写的一篇技术实践，其总体架构如下，在该方案中，keda 通过 prometheus 采集 Ingress Nginx 的指标，原生 nginx 的指标，prometheus 是无法采集的，这里通过 [Nginx-Prometheus-Exporter](https://github.com/nginxinc/nginx-prometheus-exporter) 开源组件进行适配，使 prometheus 能够采集 nginx 指标。
 
-《[弹性伸缩落地实践](https://mp.weixin.qq.com/s?__biz=MzI4NzAxMjIzNw==&mid=2247483935&idx=1&sn=242b6495c513fb4996aae83f023b61d8&chksm=ebd566fddca2efeb7efd2efd2119a76e4ead35a6c323c8f388228ce6232d7f801af7bd424043&scene=21#wechat_redirect)》
+在该方案中，keda 扩缩容的对象为 CloneSet，只要实现了 scale subresource 的资源都可以跟 hpa 协助来进行自动扩缩容。
 
+![java-javascript](/pics/openkruise-hpa.jpeg){:height="60%" width="60%"}
+
+因为使用了 prometheus 作为指标来源，其 ScaledObject 配置如下，所使用的 prometheus 查询语句为 `sum(rate(nginx_http_requests_total{job="ingress-nginx-exporter"}[12s]))`，表示所有带有 `job="ingress-nginx-exporter"` 的请求增长率。prometheuse trigger 的其他配置参数有：1）serverAddress: prometheus 服务器的地址；2）metricName: 指标名称；3）threshold: 触发扩容的阈值。
+```yaml
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: ingress-nginx-scaledobject
+  namespace: ingress-nginx
+spec:
+  maxReplicaCount: 10
+  minReplicaCount: 1
+  pollingInterval: 10
+  cooldownPeriod:  2
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleDown:
+          stabilizationWindowSeconds: 10
+  scaleTargetRef:
+    apiVersion: apps.kruise.io/v1alpha1
+    kind: CloneSet
+    name: hello-web
+  triggers:
+  - type: prometheus
+    metadata:
+      serverAddress: http://kube-prometheus-stack-1640-prometheus.prometheus:9090/
+      metricName: nginx_http_requests_total
+      query: sum(rate(nginx_http_requests_total{job="ingress-nginx-exporter"}[12s]))
+      threshold: '100'
+```
+另外本文使用了一个 golang 压测工具 [https://github.com/link1st/go-stress-testing](https://github.com/link1st/go-stress-testing)，需要压测的时候可以了解一下。
+
+#### 蚂蚁金服 Kapacity
+[Kapacity ](https://github.com/traas-stack/kapacity/blob/main/README_zh.md) 是蚂蚁金服开源的扩缩容解决方案，该方案的好处在于提前预测流量趋势，提前扩容，而不是到达阈值之后再进行扩容（从被动扩容变成了主动扩容），但是感觉该方案有点复杂，有空研究一下。
