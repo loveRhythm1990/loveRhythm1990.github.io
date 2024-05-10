@@ -26,7 +26,7 @@ pod := &corev1.Pod{}
 _ := versionClient.Get(context.TODO, types.NamespacedName{Name:"pod1", Namespace:"default"}, pod)
 ```
 #### 处理 crd
-在使用 typed client 处理 crd 的时候，我们首先需要注册 crd 到我们的 scheme 中，然后使用这个 scheme 初始化 client，这个时候就可以像处理 K8s 内置资源一样处理 crd 资源了。我们以 cert-manager 为例说明初始化过程。在下面代码中，我把 import 都列出来了，这个还真是挺重要的，然后是：1）初始化自己的一个 scheme，这个 scheme 默认含有 K8s 内置资源的所有 gvk；2）将 cert-manager 的 api 也就是 crd 注册到这个 scheme；3）初始化一个可用的 K8s client，我们直接初始化了一个 controller-runtime 的 client，一般情况下，我们用这个 client 更多，而不是 K8s 原生的 client。
+在使用 typed client 处理 crd 的时候，我们首先需要注册 crd 到我们的 scheme 中，然后使用这个 scheme 初始化 client，这个时候就可以像处理 K8s 内置资源一样处理 crd 资源了。我们以 cert-manager 为例说明初始化过程。在下面代码中，我把 import 都列出来了，这个还真是挺重要的，然后是：1）初始化自己的一个 scheme，这个 scheme 默认不含有任何内置类型，然后在 init 函数中将 K8s 的默认类型注册到这个 scheme 中；2）将 cert-manager 的 api 也就是 crd 注册到这个 scheme；3）初始化一个可用的 K8s client，我们直接初始化了一个 controller-runtime 的 client，一般情况下，我们用这个 client 更多，而不是 K8s 原生的 client。
 
 ```go
 import (
@@ -35,12 +35,14 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	controllerclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"k8s.io/client-go/tools/clientcmd"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 )
 var (
 	scheme  = runtime.NewScheme() // our scheme
 )
 func init() {
-	utilruntime.Must(cmapi.AddToScheme(scheme)) // 注册 cert-manager api
+	utilruntime.Must(clientgoscheme.AddToScheme(scheme))  // 注册 K8s 默认的 scheme
+	utilruntime.Must(cmapi.AddToScheme(scheme))           // 注册 cert-manager api
 }
 
 func buildTypedClient(bs []byte) controllerclient.Client {
