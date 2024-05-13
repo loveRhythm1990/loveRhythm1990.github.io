@@ -17,11 +17,12 @@ tags:
 - [修改函数返回值](#修改函数返回值)
   - [非命名返回值](#非命名返回值)
   - [命名返回值](#命名返回值)
+- [执行顺序](#执行顺序)
 
 Golang 中的 defer 关键字允许我们在函数退出的时候执行一些资源回收操作，比如关闭数据库连接、关闭文件等。常规使用 defer 时一般没什么问题，但是遇到 corner case 的时候总是有点搞不清，这里记录一个笔记。
 
 ### happy case
-正常使用 defer 的情况如下，函数打开一个文件，在函数返回的时候，关闭这个文件，否则会有文件泄漏 `too many open files` 的问题。
+正常使用 defer 的情况如下，比如函数打开一个文件，在函数返回的时候，关闭这个文件，否则会有文件泄漏 `too many open files` 的问题。
 ```go
 func foo() error {
   f, err := os.Open("/home/test")
@@ -31,6 +32,8 @@ func foo() error {
   defer func(){
     f.Close()
   }
+  // ...
+  return nil
 }
 ```
 
@@ -149,3 +152,6 @@ func modifyReturnParam() (s string) {
 	return "origin"
 }
 ```
+
+### 执行顺序
+golang 中的 defer 是先声明的后执行，跟 stack 是一样的。
