@@ -54,6 +54,8 @@ go tool pprof -http=:8081 http://localhost:6060/debug/pprof/goroutine -o gorouti
 ```
 ![java-javascript](/pics/pprof_flame.png) 
 
+在 K8s 集群中，如果我们将 pod 的端口 forward 到了本地，使用 `kubectl port-forward pod/podname -n namespace` 命令，也可以直接使用浏览器查看 pod 的 profile（通过 url: `http://localhost:8082/debug/pprof/goroutine?debug=2`），直接在浏览器查看时，不能将 debug 参数设置为 0，goroutine 比较多时，可以通过关键词 `minutes` 或者应用程序中的关键字进行搜索。
+
 采集 block 和 mutex 的命令如下，这两个 profile 只有在代码中添加了代码[runtime.SetBlockProfileRate](https://pkg.go.dev/runtime#SetBlockProfileRate)和[runtime.SetMutexProfileFraction](https://pkg.go.dev/runtime#SetMutexProfileFraction)才起作用，否则采样是空的。
 ```s
 go tool pprof http://localhost:6060/debug/pprof/block
