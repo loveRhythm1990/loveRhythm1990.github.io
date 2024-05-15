@@ -129,11 +129,15 @@ return hash.Sum32()
 ### 检查文件是否存在
 这个是代码中比较常用的方法，通过 os.Stat 可以检查文件是否存在。
 ```go
-fileInfo, err := os.Stat("test.txt")
-if err != nil {
-    if os.IsNotExist(err) {
-        log.Fatal("File does not exist.")
-    }
+func fileExist(path string) (bool, error) {
+	_, err := os.Stat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
 }
 ```
 另外还有个 `os.Lstat` 方法，这个方法使用方式跟 `os.Stat` 一致，区别是如果文件是个软连接，`Lstat` 返回软连接的 `FileInfo`，并不会跟随软连接。
