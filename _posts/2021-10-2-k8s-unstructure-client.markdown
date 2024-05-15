@@ -35,7 +35,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	controllerclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"k8s.io/client-go/tools/clientcmd"
-	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme" // 这个 package 下有个全局变量 scheme
 )
 var (
 	scheme  = runtime.NewScheme() // our scheme
@@ -54,6 +54,24 @@ func buildTypedClient(bs []byte) controllerclient.Client {
 	return client
 }
 ```
+
+在上面代码中，我们使用 `runtime.NewScheme()` 初始化了一个新的 scheme，另外一种方式是直接使用 clientgoscheme.Scheme，后者是一个全局变量，并且内置了 K8s 里默认 scheme（其实也是在自己 package 的 init 方法中调用了 AddToScheme 方法），这样我们在代码里只需要注册我们自己的 scheme 就可以了，使用方式如下。
+```go
+import (
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+)
+func init() {
+	utilruntime.Must(cmapi.AddToScheme(clientgoscheme.Scheme))  // 注册 cert-manager api
+}
+func buildTypedClient(bs []byte) controllerclient.Client {
+	// ...
+	client, _ := controllerclient.New(config, controllerclient.Options{
+		Scheme: clientgoscheme.Scheme, // 使用全局变量那个 scheme
+	})
+	return client
+}
+```
+
 在 build client 的时候，把所有 err 都忽略了，本文后面的代码也是这样的，另外 `buildTypedClient` 的参数为 kubeconfig 文件的 bytes 数组。
 ### discovery client
 这个主要用于发现 kube-apiserver 到底都有哪些资源，我们用下面例子说明，我们知道 kubectl 有个命令 `kubectl api-resrouces` 会打印集群中所有资源，其中也包括 crd 资源，其输出如下：
