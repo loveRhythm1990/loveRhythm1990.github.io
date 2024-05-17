@@ -91,3 +91,5 @@ webhooks:
   sideEffects: None
 
 ```
+
+另外，访问 webhook 的时候遇到 `failed to call webhook: Post "https://cluster-webhook.cos.svc:443/clusters/validating?timeout=10s": EOF` 错误，大概率是程序 panic 了。
