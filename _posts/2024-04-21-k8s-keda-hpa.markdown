@@ -14,6 +14,7 @@ tags:
 - [快速入手(以mysql为例)](#快速入手以mysql为例)
 - [keda 的一些特性](#keda-的一些特性)
   - [缩容到 0](#缩容到-0)
+  - [定时扩缩容](#定时扩缩容)
   - [事件驱动，事件源丰富](#事件驱动事件源丰富)
 - [一些参考](#一些参考)
   - [openkruise 基于HPA的极致弹性调度最佳实践](#openkruise-基于hpa的极致弹性调度最佳实践)
@@ -182,6 +183,23 @@ b) 当 connections 中一共有三条记录时，会发生扩容，平均连接�
 ### keda 的一些特性
 #### 缩容到 0
 在 keda 中，从 0 副本扩容到 1 副本的过程称为激活。 我们上面的示例中也说明了这个过程。另外 keda 有配置 [idleReplicaCount](https://keda.sh/docs/2.13/concepts/scaling-deployments/#idlereplicacount) 也能说明这个过程，根据官方文档这个值目前只能被设置为 0。当没有业务时 keda 会将这个副本数设置为这个值，如果业务来了，会先将副本数从 `idleReplicaCount` 调整为 `minReplicaCount`，这个过程是 keda 负责的，称为激活，调整为 minReplicaCount 之后，就由 hpa 负责了，在 [minReplicaCount, maxReplicaCount] 之间波动。
+
+#### 定时扩缩容
+基于事件的扩缩容，一般都会存在延时，也就是滞后性，一些业务带有明显的波峰和波谷，对于这种类型的业务，可以使用定时扩缩容功能。keda 支持 [Corn 类型的 trigger](https://keda.sh/docs/2.14/scalers/cron/)，其配置为：
+```yaml
+triggers:
+- type: cron
+  metadata:
+    # Required
+    timezone: Asia/Kolkata  # The acceptable values would be a value from the IANA Time Zone Database.
+    start: 0 6 * * *        # At 6:00 AM
+    end: 0 20 * * *         # At 8:00 PM
+    desiredReplicas: "10"
+```
+上述配置表示在 6 点到 8 点时间段**保持 10 个副本**。
+
+总体来看 keda 的定时扩缩容感觉不是很灵活，至少保持 10 个副本可能存在资源浪费，华为的《[通过HPA+CronHPA组合应对业务复杂弹性伸缩场景](https://mp.weixin.qq.com/s/5L2_Y3whTE4fOjWQR1LBFw)》提供了一种思路：定时调整 hpa 的最小副本数，来实现定时扩缩容的目标。可通过一个额外的控制器来实现，需要注意的是控制器要调整的是 hpa CR 而不是 deployment，这是为了防止与 hpa 控制器相互冲突，这一点跟 keda 是类似的，都是借助原生 hpa 来实现扩缩容。
+
 #### 事件驱动，事件源丰富 
 keda 支持很多事件源，具体可以参考文档 [Scalers](https://keda.sh/docs/2.14/scalers/)。
 
