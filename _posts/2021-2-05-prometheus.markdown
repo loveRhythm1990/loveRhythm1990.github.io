@@ -8,19 +8,18 @@ tags:
     - 监控
 ---
 
+**目录**
 - [指标类型及使用](#指标类型及使用)
 - [查询结果数据类型](#查询结果数据类型)
 - [聚合运算符](#聚合运算符)
 - [rate 与 irate](#rate-与-irate)
 - [本地 metrics 数据缓存](#本地-metrics-数据缓存)
 
-基于 kubelet 分析 prometheus 监控的使用以及实现，主要介绍 exporter 的使用，其官方文档为：[https://prometheus.io/docs/introduction/overview/](https://prometheus.io/docs/introduction/overview/)
-
 #### 指标类型及使用
-这里要参考官方文档 [METRIC TYPES](https://prometheus.io/docs/concepts/metric_types/)，官方文档同时给出了每种指标类型的代码 example。
+参考官方文档 [METRIC TYPES](https://prometheus.io/docs/concepts/metric_types/)，官方文档同时给出了每种指标类型的代码 example。
 * Gauge：表示可以任意增加或者减小的指标，比如内存使用量，气温等。
 * Counter：表示一个一直增加的指标，比如总请求数等。
-* Histogram：调用 `Observe(float64)` 对指标进行采样，同时将采集到的指标统计到预先配置的 bucket 中，在采集到的指标中，显示每个 bucket 的区间，以及每个区间中指标的个数。Histogram 可以用来采集请求时延，以及返回数据大小等。比如
+* Histogram：调用 Observe(float64) 对指标进行采样，同时将采集到的指标统计到预先配置的 bucket 中，在采集到的指标中，显示每个 bucket 的区间，以及每个区间中指标的个数。Histogram 可以用来采集请求时延，以及返回数据大小等。比如
 ```s
 prometheus_tsdb_compaction_chunk_range_bucket{le="100"} 0
 prometheus_tsdb_compaction_chunk_range_bucket{le="1.6384e+06"} 260
@@ -46,7 +45,7 @@ prometheus_tsdb_wal_fsync_duration_seconds_count 216
 * scalar：一个浮点数。
 * string：一个字符串。（没有用到）
 
-关于 prometheus 的时序数列指标以及数据类型，[understanding the Prometheus rate() function](https://www.metricfire.com/blog/understanding-the-prometheus-rate-function/)有两张图值的看一下：
+关于 prometheus 的时序数列指标以及数据类型，《[understanding the Prometheus rate() function](https://www.metricfire.com/blog/understanding-the-prometheus-rate-function/)》有两张图值的看一下：
 ![java-javascript](/img/in-post/monitor/prometheus_range.png){:height="50%" width="50%"}
 
 上面是三个采样指标，指标名称都一样，但是标签不一样（所以是三个不同的 metrics），也是通过三个不同的时序序列来表示的。横轴表示时间，上图显示了最近 60 秒的采样数据，每个指标都是一个序列。上面是一个 Range vector，有一个时间范围。
@@ -69,7 +68,7 @@ avg (calculate the average over dimensions)
 将 by/without 放在后面也是可以的。label list 是一组标签列表，不需要加引号。by 表示按照特定的一组 label 分组（without 语义与其相反）。以 sum 为例，by 括号后面的 label 相同的 metrics 为一组，一组内的 metrics 进行累加（instant vector 累加）；by 括号里的 labels 不同的 metrics 形成了新的 instant vector。 
 如 `sum by (application, group) (http_requests_total)` 是按照标签 application 以及 group 分组，相同的为一组并进行累加。
 
-我们在监控 K8s kube-apiserver 时，需要监控请求的 qps，这个时候我们可以先用 rate 来计算每秒的 qps，然后按照资源（resource）以及方法（verb）来分组，来查看特定资源类型以及请求的 QPS。参考 [A Deep Dive into Kubernetes Metrics — Part 4: The Kubernetes API Server](https://blog.freshtracks.io/a-deep-dive-into-kubernetes-metrics-part-4-the-kubernetes-api-server-72f1e1210770)，查询语句为：
+我们在监控 K8s kube-apiserver 时，需要监控请求的 qps，这个时候我们可以先用 rate 来计算每秒的 qps，然后按照资源（resource）以及方法（verb）来分组，来查看特定资源类型以及请求的 QPS。参考《[A Deep Dive into Kubernetes Metrics — Part 4: The Kubernetes API Server](https://blog.freshtracks.io/a-deep-dive-into-kubernetes-metrics-part-4-the-kubernetes-api-server-72f1e1210770)》，查询语句为：
 ```s
 sum(rate(apiserver_request_count[5m])) by (resource,subresource,verb)
 ```
@@ -78,7 +77,7 @@ sum(rate(apiserver_request_count[5m])) by (resource,subresource,verb)
 看一个几个常用查询函数的使用
 #### rate 与 irate
 rate(v range-vector) 只作用于 range vector，并且只适用于 counter 指标类型，其输出为 instant vector，用来计算每秒增长率，也就是每秒增长的个数，如 `rate(http_requests_total{job="api-server"}[5m])`
-计算 5 分钟内，每秒的增长数，计算方式就是这五分钟内增长的总数（当前总数 - 5分钟之前的总数），除以 5 分钟内的所有秒数。rate 能自动检测到指标重置（组件重启），因为是counter类型，指标采集的数据是只增不减的，如果遇到下降的指标，表示组件重启了，rate 在计算的时候，会将下降的指标累加之前的最大值，参考 [understanding the Prometheus rate() function](https://www.metricfire.com/blog/understanding-the-prometheus-rate-function/)。
+计算 5 分钟内，每秒的增长数，计算方式就是这五分钟内增长的总数（当前总数 - 5分钟之前的总数），除以 5 分钟内的所有秒数。rate 能自动检测到指标重置（组件重启），因为是counter类型，指标采集的数据是只增不减的，如果遇到下降的指标，表示组件重启了，rate 在计算的时候，会将下降的指标累加之前的最大值，参考《[understanding the Prometheus rate() function](https://www.metricfire.com/blog/understanding-the-prometheus-rate-function/)》。
 
 相对于 rate 函数来说，irate 函数是 prometheus 针对长尾效应专门提供的灵敏性更高的函数，其反应出的是瞬时的增长率。在计算时，只会考虑最近的两个采样点，并除以这里两个点的 interval。假设有下面 6 个采样点，每个采样点的间隔是 1 分钟：
 ```s
@@ -128,15 +127,4 @@ type metricMap struct {
 }
 ```
 
-参考[Prometheus源码分析：基于Go Client自定义的Exporter，是如何在Local存储Metrics的](https://cloud.tencent.com/developer/article/1778616)
-
-参考：
-[官方文档](https://prometheus.io/docs/introduction/overview/)
-
-[How does a Prometheus Histogram work?](https://www.robustperception.io/how-does-a-prometheus-histogram-work)
-
-[How to visualize Prometheus histograms in Grafana](https://grafana.com/blog/2020/06/23/how-to-visualize-prometheus-histograms-in-grafana/)
-
-[Understanding the Prometheus rate() function](https://www.metricfire.com/blog/understanding-the-prometheus-rate-function/)
-
-[irate() Vs rate() Functions in Prometheus](https://www.reddit.com/r/PrometheusMonitoring/comments/eyvsyl/irate_vs_rate_functions_in_prometheus/)
+参考《[Prometheus源码分析：基于Go Client自定义的Exporter，是如何在Local存储Metrics的](https://cloud.tencent.com/developer/article/1778616)》
