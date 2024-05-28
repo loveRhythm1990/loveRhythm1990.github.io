@@ -47,10 +47,9 @@ prometheus_tsdb_wal_fsync_duration_seconds_count 216
 
 关于 prometheus 的时序数列指标以及数据类型，《[understanding the Prometheus rate() function](https://www.metricfire.com/blog/understanding-the-prometheus-rate-function/)》有两张图值的看一下：
 ![java-javascript](/img/in-post/monitor/prometheus_range.png){:height="50%" width="50%"}
+![java-javascript](/img/in-post/monitor/prometheus_instant.png){:height="20%" width="20%"}
 
 上面是三个采样指标，指标名称都一样，但是标签不一样（所以是三个不同的 metrics），也是通过三个不同的时序序列来表示的。横轴表示时间，上图显示了最近 60 秒的采样数据，每个指标都是一个序列。上面是一个 Range vector，有一个时间范围。
-
-![java-javascript](/img/in-post/monitor/prometheus_instant.png){:height="20%" width="20%"}
 
 这个是一个 instant vector，只显示了指标 foo 在某一个时刻的值，但是有三个采样，表示不同的采样指标。这两个图很有代表性。
 
