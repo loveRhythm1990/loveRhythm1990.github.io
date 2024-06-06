@@ -16,6 +16,7 @@ tags:
 - [使用 chart 来管理依赖](#使用-chart-来管理依赖)
   - [自动管理](#自动管理)
   - [手动管理](#手动管理)
+  - [配置 subchart 的 values](#配置-subchart-的-values)
 - [使用 hook 来解决前置依赖或者后置检查](#使用-hook-来解决前置依赖或者后置检查)
 - [使用 helm test 来对应用进行测试](#使用-helm-test-来对应用进行测试)
 - [将 crd 放在 crds 目录](#将-crd-放在-crds-目录)
@@ -83,6 +84,20 @@ wordpress:
 4. B-Service
 5. B-ReplicaSet
 6. A-StatefulSet 
+
+#### 配置 subchart 的 values
+subchart 的 values 可以直接在主 chart 的 values 里配置，不过第一级变量变成了 subchart 的名字，这个可以参考官方文档 [Subcharts and Global Values](https://helm.sh/docs/chart_template_guide/subcharts_and_globals/)，以配置 kruise subchart 为例，在主 chart 仓库的配置方式为：
+```yaml
+nodeSelector: {}
+tolerations: []
+
+kruise:
+  featureGates: "StatefulSetAutoDeletePVC=true,PodUnavailableBudgetDeleteGate=true,PodUnavailableBudgetUpdateGate=true"
+  manager:
+    image:
+      repository: openkruise/kruise-manager
+```
+其中 `kruise` 为 subchart kruise 的名字。
 
 ### 使用 hook 来解决前置依赖或者后置检查
 helm 提供了 hook 允许我们安装过程中进行干预，在配置了 hook 的 chart 中，其执行流程如下。
