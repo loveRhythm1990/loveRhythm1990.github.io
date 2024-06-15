@@ -119,7 +119,7 @@ php-apache   Deployment/php-apache   0%/50%     1         5         1          1
 
 ### 原生 hpa 是怎么工作的
 #### 工作过程
-K8s 中的 ControllerManager hpa 控制器会周期性的评估 pod 资源使用情况，并决定是否扩缩容，这个周期由 kube-controller-manager 的参数 `--horizontal-pod-autoscaler-sync-period` 决定，默认是 15s。
+K8s 中的 ControllerManager hpa 控制器会周期性的评估 pod 资源使用情况，并决定是否扩缩容，这个周期由 kube-controller-manager 的参数 `--horizontal-pod-autoscaler-sync-period` 决定，默认是 15s，**也就是说最快负载变化 15s 后开始扩缩容**。
 
 在每个周期中，hpa控制器首先根据 hpa 资源中配置的 scaleTargetRef 找到一组 pod（根据其 .spec.selector 字段），然后根据 metrics api 获取 pod 的平均资源使用率，结合 hpa 中配置的期望资源利用率计算出一个期望副本数，并与当前副本数进行比较，以扩容或者缩容。计算公式参考下面的`扩容算法`。
 
@@ -160,10 +160,10 @@ spec:
         value: 10
         periodSeconds: 60
       selectPolicy: Max
-      stabilizationWindowSeconds: 300
+      stabilizationWindowSeconds: 180
 ```
 #### 稳定窗口(stabilization window)
-稳定窗口配置是为了缓解 `flapping` 也就是波动行为。具体配置是上面 yaml 中的 `stabilizationWindowSeconds: 180` 配置，这个配置是说：如果要进行缩容，请参考过去 5 分钟（180秒）计算出来的期望状态，并选择一个会导致副本数变化最大的配置（也是由 `selectPolicy` 选项配置？）。这样在 5 分钟的时间窗口内，扩缩容策略是一致的，避免了波动行为。
+稳定窗口配置是为了缓解 `flapping` 也就是波动行为。具体配置是上面 yaml 中的 `stabilizationWindowSeconds: 180` 配置，这个配置是说：如果要进行缩容，请参考过去 5 分钟（180秒）计算出来的期望状态，并选择一个会导致副本数变化最大的配置。这样在 5 分钟的时间窗口内，扩缩容策略是一致的，避免了波动行为。说的直白一点，就是等待 180s 之后再扩容。
 
 #### 默认行为(default behavior)
 默认行为是不配置 behavior 时的默认参数，这个参考 [Default Behavior](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#default-behavior)。
