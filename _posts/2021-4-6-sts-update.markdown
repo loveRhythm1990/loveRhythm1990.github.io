@@ -5,7 +5,7 @@ date:       2021-4-6 16:49:00
 author:     "decent"
 header-img-credit: false
 tags:
-    - Controller
+    - K8s
 ---
 
 [Sts控制器概述](https://loverhythm1990.github.io/2019/09/23/k8s-updateStatefulset/)大概描述了sts控制器的工作原理，这里重点关注下滚动升级的实现。

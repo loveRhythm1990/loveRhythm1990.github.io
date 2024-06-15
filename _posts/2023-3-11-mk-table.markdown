@@ -1,11 +1,11 @@
 ---
 layout:     post
-title:      "VSCODE IDE 快捷键"
+title:      "vscode goland markdown 能效"
 date:       2023-3-11 10:10:00
 author:     "decent"
 header-img-credit: false
 tags:
-    - 能效
+    - 运维
 ---
 
 **目录**
@@ -15,6 +15,8 @@ tags:
 - [mac快捷键](#mac快捷键)
 - [markdown 表情](#markdown-表情)
 - [Goland 试用](#goland-试用)
+
+记录一些提升能效的快捷键、技巧等。
 
 ### 生成 markdown 目录
 在 vscode 中安装 `Markdown All in One` 插件。文章写完后，按下快捷键 `command + shift + p`，输入`Markdown All in One: Create Table of Contents` 会自动生成文章的目录。

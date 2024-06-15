@@ -5,7 +5,7 @@ date:       2024-03-30 10:10:00
 author:     "decent"
 header-img-credit: false
 tags:
-    - Controller
+    - K8s
 ---
 
 **目录**

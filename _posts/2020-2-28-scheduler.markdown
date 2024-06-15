@@ -6,7 +6,6 @@ author:     "weak old dog"
 header-img-credit: false
 tags:
     - K8s
-    - Scheduler
 ---
 **目录**
 - [初始化 Scheduler](#初始化-scheduler)

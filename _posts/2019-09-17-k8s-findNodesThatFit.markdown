@@ -7,7 +7,6 @@ author:     "weak old dog"
 header-img-credit: false
 tags:
     - K8s
-    - Scheduler
 ---
 
 > 由点到线，由线到面。本文针对的k8s的版本是1.16.0

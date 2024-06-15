@@ -5,7 +5,7 @@ date:       2019-09-23 19:16:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - Controller
+    - K8s
 ---
 **目录**
 - [前言](#前言)

@@ -5,7 +5,7 @@ date:       2023-09-20 10:10:00
 author:     "decent"
 header-img-credit: false
 tags:
-    - Scheduler
+    - K8s
 ---
 
 **目录**

@@ -6,7 +6,6 @@ author:     "weak old dog"
 header-img-credit: false
 tags:
     - K8s
-    - Kubelet
 ---
 
 ### 前言

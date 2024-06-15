@@ -5,7 +5,7 @@ date:       2022-11-22 10:10:00
 author:     "decent"
 header-img-credit: false
 tags:
-    - 能效
+    - 运维
 ---
 
 一些 K8s 资源 yaml 例子，用的时候直接粘贴复制

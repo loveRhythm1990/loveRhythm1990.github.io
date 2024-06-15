@@ -6,7 +6,6 @@ author:     "weak old dog"
 header-img-credit: false
 tags:
     - K8s
-    - Controller
 ---
 
 学习一下ReplicaSet Controlelr代码，基于的k8s版本为1.9.6

@@ -6,8 +6,6 @@ author:     "weak old dog"
 header-img-credit: false
 tags:
     - K8s
-    - Kubelet
-    - 网络
 ---
 
 kubelet的 [syncPod方法](https://loverhythm1990.github.io/2019/12/14/kubelet-brief/) 是同步Pod的主要方法，在这个方法的最后调用了`kl.containerRuntime.SyncPod`方法，其实现是`kubeGenericRuntimeManager.SyncPod`，其代码目录为：`pkg/kubelet/kuberuntime/kuberuntime_manager.go`
