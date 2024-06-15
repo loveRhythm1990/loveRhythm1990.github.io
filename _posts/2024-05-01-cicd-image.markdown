@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "CICD —— Github action 自动 build/push 镜像"
+title:      "CICD 系列1：使用 github action 自动 build/push 镜像"
 date:       2024-05-01 10:10:00
 author:     "decent"
 header-img-credit: false
