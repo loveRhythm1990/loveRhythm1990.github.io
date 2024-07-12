@@ -8,6 +8,16 @@ tags:
   - K8s
 ---
 
+**文章目录**
+- [线上问题概述](#线上问题概述)
+- [K8s 中的 ingress 资源](#k8s-中的-ingress-资源)
+- [K8s 维护的 controller: ingress-nginx](#k8s-维护的-controller-ingress-nginx)
+- [Nginx 代理 websocket](#nginx-代理-websocket)
+- [金丝雀发布](#金丝雀发布)
+- [遗留问题](#遗留问题)
+- [参考](#参考)
+
+### 线上问题概述
 这几天一直在排查一个 websocket 连接不断断开的问题，场景大概是：K8s 集群外面的浏览器访问集群内部的服务，集群外 client 访问集群内内部服务是通过 ingress-nginx 来实现的，其部署方式是 hostnetwork，也就是直接以宿主机服务的方式部署在 master 节点的，监听的是 80 以及 443 端口。我们的现象是我们的前端 websocket 连接不断断开，排查的原因是因为我们配置的 ingress-nginx 没有配置网络超时时间，默认是 60s，也就是说，如果 websocket 60s 不发送数据或者 60s 不接收数据，连接就有可能断开了。因为之前没怎么关注过 ingress 这个资源，本文总结下其相关使用。文末还有几个问题，有时间继续补充下。
 
 ### K8s 中的 ingress 资源
@@ -52,7 +62,7 @@ spec:
 K8s 自己维护的 ingress controller 是 ingress-nginx，其文档为[ingress-nginx](https://kubernetes.github.io/ingress-nginx/)，在其 github 中有很多文档可以读一下：[ingress-nginx/docs/user-guide/](https://github.com/kubernetes/ingress-nginx/tree/main/docs/user-guide)，其部署文档为：[Installation Guide](https://github.com/kubernetes/ingress-nginx/blob/main/docs/deploy/index.md)。
 
 
-### Nginx 代理 websocket。
+### Nginx 代理 websocket
 根据 K8s 的文档，[miscellaneous/#websockets](https://kubernetes.github.io/ingress-nginx/user-guide/miscellaneous/#websockets)，ingress nginx 对 websocket 的支持是开箱即用的，不需要做额外配置，只需要配置两个参数就可以了，防止连接断开，这两个参数的默认时间都是 60s。
 * proxy-read-timeout：连续没读到数据的超时时间，单位为秒，如果在指定的时间内没读到数据，则断开连接。
 * proxy-send-timeout：连续没写入数据的超时时间，同上。
