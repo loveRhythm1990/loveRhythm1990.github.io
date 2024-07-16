@@ -23,9 +23,11 @@ tags:
 [pulumi](https://www.pulumi.com/) 是一个配置管理工具，是 terraform 的替代品，可以通过声明式的配置对 K8s 集群（及集群中的组件）进行管理交付，其所倡导的思想是 `代码即配置`。用户可以根据自己的语音偏好来写交付代码（如 go/javascript/typescript 等）。
 本文入门部分包括环境配置，以及编写简单的 go 交付代码。
 
-本文使用 pulumi 中的 kubernetes-go 模板初始化项目，并用 [kind](https://kind.sigs.k8s.io/) 启动一个 K8s 集群作为 pulumi 的测试集群。默认情况下 project 寻找 kubeconfig 的方式跟 kubectl 是一致的：1）先找 $KUBECONFIG 环境变量；2）再找 ~/.kube/config 文件。在生产环境中是不能这么配置的，尤其是有多个集群的情况下。不过本文作为了解 pulumi 使用，暂不对 kubeconfig 配置展开描述（在运维供应商的集群时，比如阿里云的 Ack 集群，我们只需要一个 Ack 集群的 ID 就可以了，通过这个 ID 就拿到集群所有配置，包括 kubeconfig）。
+本文使用 pulumi 中的 kubernetes-go 模板初始化项目，并用 [kind](https://kind.sigs.k8s.io/) 启动一个 K8s 集群作为 pulumi 的测试集群。默认情况下 project 寻找 kubeconfig 的方式跟 kubectl 是一致的：1）先找 $KUBECONFIG 环境变量；2）再找 ~/.kube/config 文件。在 cicd 实践中，我们可以将 kubeconfig 放在 github action secret 中。
 
-在 [kind](https://kind.sigs.k8s.io/) 环境中，将 kubeconfig 写到 ~/.kube/config 文件的命令为：kind export kubeconfig -n kind。其中 -n kind 是指定 kind 集群的名字。`kubernetes-go` 模板，顾名思义，生成的 project 是 go 语言的，并且是直接跟一个 kubernetes 集群交互。这个也没有明显的界限，一般来讲，我们生成 go 语言的 project，可以引入 aws 或者 aliyun 的 sdk 跟云供应商交互，比如创建一个 vpc/swtich/kubernetes 集群等。通过 `pulumi new -l` 可以查看 pulumi 支持的所有模板。
+在 [kind](https://kind.sigs.k8s.io/) 环境中，将 kubeconfig 写到 ~/.kube/config 文件的命令为：kind export kubeconfig -n kind。其中 -n kind 是指定 kind 集群的名字。`kubernetes-go` 模板，顾名思义，生成的 project 是 go 语言的，并且是直接跟一个 kubernetes 集群交互。
+
+> cicd 实现因供应商而异。对阿里云来说，我们不仅要实现组件交付，还要实现 IaaS 管理，比如 vpc/switch/K8s集群等。pulumi 的 template 也没有明显的界限，一般来讲，我们生成 go 语言的 project，可以引入 aws 或者 aliyun 的 sdk 跟云供应商交互，比如创建一个 vpc 等，不过从最佳实践来讲，我们要使用对应环境的目标，比如 aws、azure等。通过 `pulumi new -l` 可以查看 pulumi 支持的所有模板。
 
 #### 环境初始化
 使用下面步骤初始化一个项目，本文以 kubernetes-go 模板构建项目。
