@@ -14,10 +14,10 @@ tags:
 - [lifecycle 实践](#lifecycle-实践)
   - [preNormal](#prenormal)
   - [inPlaceUpdate](#inplaceupdate)
-- [preDelete](#predelete)
+  - [preDelete](#predelete)
 
 ## kruise 部署安装
-根据 [文档](https://openkruise.io/zh/docs/installation) 通过 helm 安装。
+根据 [kruise 文档](https://openkruise.io/zh/docs/installation) 通过 helm 安装。
 ```s
 helm install kruise openkruise/kruise --version 1.6.3
 ```
@@ -148,7 +148,7 @@ lr90@sj ~ % kubectl get pods -o yaml | grep lifecycle.apps.kruise.io/state
 
 **总结来说，对于 inPlaceUpdate hook，用户控制器需要干预两次：1）在升级前去掉 finalizer，并开始替换镜像升级；2）在升级完成之后，添加 finalizer，完成一个 pod 的升级，并开始升级下一个 pod**
 
-## preDelete
+### preDelete
 这里删除的场景是正常缩容，或者重建升级。我们首先以缩容来看下效果。还是继续上面的测试，假设我们要将三副本改为二副本，修改之后，发现一个 pod 卡在了 PreparingDelete 状态。此时有两点需要注意：1）此时该 pod 已经 NotReady，因为我们设置了 markPodNotReady: true；2）此时 pod 的 deletionTimestamp 为 nil，也就是说还没有触发 K8s 层面的删除。当业务控制器删除 finalizer 之后，pod 被删除。
 
 ```s
