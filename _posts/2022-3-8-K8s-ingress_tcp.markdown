@@ -18,7 +18,7 @@ tags:
 
 
 ## 概述
-K8s Ingress 资源本身不支持四层转发，但是 [ingress-nginx](https://kubernetes.github.io/ingress-nginx/deploy/) 控制器可通过配置端口转发做到 tcp 四层转发，本文以部署 mysql server 为例对四层转发做一下实践。
+K8s Ingress 资源本身不支持四层转发，但是 [ingress-nginx](https://kubernetes.github.io/ingress-nginx/user-guide/exposing-tcp-udp-services/) 控制器可通过配置端口转发做到 tcp 四层转发，本文以部署 mysql server 为例对四层转发做一下实践。
 
 本文的测试环境为在 mac 上通过 [kind](https://kind.sigs.k8s.io/) 部署一套 K8s 集群。
 
