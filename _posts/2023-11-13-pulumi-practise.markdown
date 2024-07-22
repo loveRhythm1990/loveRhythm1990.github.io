@@ -30,7 +30,7 @@ tags:
 > cicd 实现因供应商而异。对阿里云来说，我们不仅要实现组件交付，还要实现 IaaS 管理，比如 vpc/switch/K8s集群等。pulumi 的 template 也没有明显的界限，一般来讲，我们生成 go 语言的 project，可以引入 aws 或者 aliyun 的 sdk 跟云供应商交互，比如创建一个 vpc 等，不过从最佳实践来讲，我们要使用对应环境的目标，比如 aws、azure等。通过 `pulumi new -l` 可以查看 pulumi 支持的所有模板。
 
 #### 环境初始化
-使用下面步骤初始化一个项目，本文以 kubernetes-go 模板构建项目。
+使用下面步骤初始化一个项目，初始化时尤其需要注意当前使用的 pulumi 账号，使用 `pulumi whoami` 命令可以查看当前登录的账号，表明对资源进行了错误的运维。本文以 kubernetes-go 模板构建项目。
 ```s
 # 1.（可选）退出之前的登录，如果经常使用多个账号，比如公司账号和个人账号，建议首先执行这一步，避免对 project 资源进行了错误的配置。
 pulumi logout
