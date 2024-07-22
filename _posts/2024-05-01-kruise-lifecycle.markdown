@@ -19,7 +19,14 @@ tags:
 ## kruise 部署安装
 根据 [kruise 文档](https://openkruise.io/zh/docs/installation) 通过 helm 安装。
 ```s
-helm install kruise openkruise/kruise --version 1.6.3
+# Firstly add openkruise charts repository if you haven't do this.
+$ helm repo add openkruise https://openkruise.github.io/charts/
+
+# [Optional]
+$ helm repo update
+
+# Install the latest version.
+$ helm install kruise openkruise/kruise --version 1.6.3
 ```
 
 ## cloneset lifecycle 概述
