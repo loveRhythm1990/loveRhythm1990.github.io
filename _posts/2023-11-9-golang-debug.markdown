@@ -11,22 +11,21 @@ tags:
 **目录**
 - [通过 pprof 与 trace 进行性能分析](#通过-pprof-与-trace-进行性能分析)
   - [profile 采集与分析](#profile-采集与分析)
-  - [在 gin 中使用 pprof](#在-gin-中使用-pprof)
   - [trace 采集与分析](#trace-采集与分析)
 - [GOMEMLIMIT 环境变量](#gomemlimit-环境变量)
 - [automaxprocs 自动配置 GOMAXPROCS](#automaxprocs-自动配置-gomaxprocs)
 - [参考](#参考)
 
 ## 通过 pprof 与 trace 进行性能分析
-官方文档 [https://pkg.go.dev/net/http/pprof](https://pkg.go.dev/net/http/pprof)，以及官方一篇文章《[Profiling Go Programs](https://go.dev/blog/pprof)》。
+官方文档 [https://pkg.go.dev/net/http/pprof](https://pkg.go.dev/net/http/pprof)，以及官方一篇文章 [Profiling Go Programs](https://go.dev/blog/pprof)。
 ### profile 采集与分析
-安装 graphviz，`brew install graphviz`，用于 web 展示。收集指标命令如下。
+安装 graphviz，`brew install graphviz`，用于 web 展示。Go 收集 metrics 的指标命令如下。
 ```s
 curl http://localhost:6060/debug/pprof/profile\?seconds\=30 -o cpu_profile
 curl http://localhost:6060/debug/pprof/heap -o heap
 curl http://localhost:6060/debug/pprof/goroutine\?debug\=1 -o goroutinedebug1
 ```
-收集指标时，可添加 seconds 参数，不同 profile 有不同的含义：1）对于 allocs, block, goroutine, heap, mutex, threadcreate 返回的是指定时间段的增量 profile（因为是 delta 所以有可能是负数，针对内存泄漏或者 goroutine 泄漏，这种方式更容易发现问题）。2）对于 cpu (profile), trace 是指采集固定的时间段。
+收集指标时，可添加 seconds 参数，此参数不同 profile 有不同的含义：1）对于 allocs, block, goroutine, heap, mutex, threadcreate 返回的是指定时间段的增量 profile（因为是 delta 所以有可能是负数，针对内存泄漏或者 goroutine 泄漏，这种方式更容易发现问题）；2）对于 cpu (profile), trace 是指采集固定的时间段。
 
 > 参考 https://pkg.go.dev/net/http/pprof#hdr-Parameters：
 > 
@@ -38,10 +37,12 @@ curl http://localhost:6060/debug/pprof/goroutine\?debug\=1 -o goroutinedebug1
 > 
 > // - seconds=N (cpu (profile), trace profiles): profile for the given duration
 
-在查看 goroutine 时，如果不加 debug 参数，返回的 binary 形式的结果，可以使用 go tool pprof 分析，如果是 `debug=1` 则是概述性的分析（如果 goroutine stack相同则会合并），如果是 `debug=2` 会单独打印每个 goroutine 的 stack。下图是 heap profile 的 top 示例。其中：
-* Flat, Flat%: 在采样周期中，函数正在运行的采样数，以及采样数所占总采样数的比例。这里的"正在运行"指的是本函数正在 Running，而不是正在调用本函数的子函数。可以区别 Cum。
+在查看 goroutine 时，如果不加 debug 参数，返回的 binary 形式的结果，可以使用 go tool pprof 分析，如果是 `debug=1` 则是概述性的分析（如果 goroutine stack 相同则会合并），如果是 `debug=2` 会单独打印每个 goroutine 的 stack。
+
+我们以 heap 为例，解释下 pprof 输出数据中每列的含义。下图是 heap profile 的 top 输出。其中：
+* Flat, Flat%: 在采样周期中，正在运行的函数所消耗的资源（比如第一行是 Alloc 函数自身消耗了 1831kB），正在运行的函数消耗资源所占总资源的比例。这里的"正在运行"指的是本函数正在 Running，而不是本函数调用的子函数。可以区别 Cum，Cum 涵盖了本函数以及本函数调用的子函数。
 * Sum%: 累积的百分比，是从第一行到当前行，所有 Flat% 的和。
-* Cum, Cum%: 采样周期中，这个函数在 goroutine 中出现的次数，包括了两种情况：1）当前函数正在执行，2）当前函数正在调用一个子函数（callee，区别 caller），并等待子函数返回。在查看 top 时，有时候观察到 Flat 和 Flat% 都是 0，但是 Cum 不为 0，应该就是第二种 case。
+* Cum, Cum%: 采样周期中，函数所消耗的资源，包括了两种情况：1）当前函数，2）当前函数正在调用的子函数。查看 top 时，有时候观察到 Flat 和 Flat% 都是 0，但是 Cum 不为 0，应该就是第二种 case。
 
 ![java-javascript](/pics/pprof-top.png) 
 
@@ -63,27 +64,6 @@ go tool pprof http://localhost:6060/debug/pprof/mutex
 ```
 
 > 在采样 profile 时，有时会遇到错误 `Could not enable CPU profiling: cpu profiling already in use`，这是因为有另一个程序已经在采样了，比如同时运行两个 `curl http://localhost:6060/debug/pprof/profile -o cpu_profile` 就会报这个错误。
-
-
-### 在 gin 中使用 pprof
-在 gin 中使用 pprof，可以使用第三方 package [github.com/gin-contrib/pprof](github.com/gin-contrib/pprof)。
-```go
-package main
-
-import (
-    "net/http"
-    "github.com/gin-contrib/pprof"
-    "github.com/gin-gonic/gin"
-)
-func main() {
-    app := gin.Default()
-    pprof.Register(app)
-    app.GET("/test", func(c *gin.Context) {
-        c.String(http.StatusOK, "ok")
-    })
-    app.Run(":8080")
-}
-```
 
 ### trace 采集与分析
 trace 的介绍参考官方文档《[Go Execution Tracer](https://docs.google.com/document/u/1/d/1FP5apqzBgr7ahCCgFO-yoVhk4YZrNIDNf9RybngBc14/pub)》。
