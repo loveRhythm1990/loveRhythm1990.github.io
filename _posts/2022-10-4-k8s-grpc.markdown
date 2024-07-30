@@ -105,18 +105,20 @@ Envoy 是一款由 Lyft 开源的 L7 代理和通信总线，是 CNCF 旗下的�
 ### Service Mesh
 服务网格（Service Mesh)跟上面的Envoy proxy as sidecar有点类似，在Service Mesh下，svc A和svc B 中所有Pod中都会有一个流量代理组件作为sidecar,它们构成了data plane，所有流入(ingress)/流出(egress)的流量都会经过sidecar。市场上常见的实现了Service Mesh的工具是istio和linkered。本方案采用istio实现service mesh。具体k8s部署可以参考[service mesh 模式](https://github.com/cyub/grpc-examples/tree/main/lb#service-mesh-%E6%A8%A1%E5%BC%8F)。
 
-![java-javascript](/pics/servicemesh.png)
+![java-javascript](/pics/servicemesh.png){:height="60%" width="60%"}
 
 
 ### 总结
-|  方案   | 负载均衡类型  |优点|缺点|
-|  ----  | ----  |----|----|
-| k8s service直连  | Proxy Model |部署和使用最简单|未实现HTTP/2协议的负载均衡|
-| 基于Etcd/consul 等外部服务注册中心  | Balancing-aware Client |使用相对简单，服务信息方便查看|1. 需要维护Etcd等服务注册中心。2.服务提供者需要实现注册机制，服务调用方需要实现发现机制|
-|k8s endpoints	|Balancing-aware Client|部署和使用相对简单|需要配置Pod支持serviceAccount，在权限要求很严系统中，比较麻烦|
-|Envoy proxy|Proxy Model|部署和使用相对简单|由于需要走k8s service代理和envoy代理，性能相比有一定损失|
-|Envoy proxy as sidecar	|External Load Balancing Service|部署和使用相对简单，可以通过度量envoy指标，获取服务质量	|部署相对复杂|
-|Service Mesh|External Load Balancing Service|功能强大，支持熔断器，灰度发布等功能	|部署相对复杂，链路长，有性能损耗，内部机制复杂，出问题定位难|
+
+| 方案                      | 负载均衡类型                          | 优点                              | 缺点                                               |
+|-------------------------|---------------------------------|---------------------------------|--------------------------------------------------|
+| k8s service直连           | Proxy Model                     | 部署和使用最简单                        | 未实现HTTP/2协议的负载均衡                                 |
+| 基于Etcd/consul 等外部服务注册中心 | Balancing-aware Client          | 使用相对简单，服务信息方便查看                 | 1. 需要维护Etcd等服务注册中心。2.服务提供者需要实现注册机制，服务调用方需要实现发现机制 |
+| k8s endpoints	          | Balancing-aware Client          | 部署和使用相对简单                       | 需要配置Pod支持serviceAccount，在权限要求很严系统中，比较麻烦          |
+| Envoy proxy             | Proxy Model                     | 部署和使用相对简单                       | 由于需要走k8s service代理和envoy代理，性能相比有一定损失             |
+| Envoy proxy as sidecar	 | External Load Balancing Service | 部署和使用相对简单，可以通过度量envoy指标，获取服务质量	 | 部署相对复杂                                           |
+| Service Mesh            | External Load Balancing Service | 功能强大，支持熔断器，灰度发布等功能              | 部署相对复杂，链路长，有性能损耗，内部机制复杂，出问题定位难                   |
+
 
 上面表格中负载均衡类型的介绍，可以查看gRPC服务发现&负载均衡，其中介绍到Proxy Model指的是集中式LB，Balancing-aware Client指的是进程内LB，External Load Balancing Service 是独立LB进程，一般就是sidecar代理。
 
