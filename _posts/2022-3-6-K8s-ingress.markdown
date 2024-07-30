@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "Ingress-nginx 原理、应用及灰度发布"
+title:      "Ingress-nginx 代理 websocket"
 date:       2022-3-6 10:10:00
 author:     "decent"
 header-img-credit: false
@@ -14,7 +14,6 @@ tags:
 - [K8s 维护的 controller: ingress-nginx](#k8s-维护的-controller-ingress-nginx)
 - [Nginx 代理 websocket](#nginx-代理-websocket)
 - [金丝雀发布](#金丝雀发布)
-- [遗留问题](#遗留问题)
 - [参考](#参考)
 
 ### 线上问题概述
@@ -146,21 +145,6 @@ $ for i in $(seq 1 10); do curl -s -H "canary: other-value" --resolve kubesphere
 ![](/img/in-post/all-in-one/2022-04-30-15-16-25.png){:height="60%" width="60%"}
 
 Ingress-nginx 支持的灰度有两种策略，一种是根据 header，一种是按比例进行灰度（这种按比例将请求分到不同版本的行为也称为蓝绿发布，即即存在"蓝"版本，也存在"绿"版本），分别由 annotation `nginx.ingress.kubernetes.io/canary-by-header` 以及 `nginx.ingress.kubernetes.io/canary-weight` 控制。关于 annotation 的详细叙述，可以查看 ingress-nginx 的文档：[https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/annotations/#canary](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/annotations/#canary)
-
-### 遗留问题
-1. ingress 中的负载均衡是怎么做的？
-	
-	在看一个 ingress 资源详细信息的时候，在 status 中如下信息，这三个 ip 是 ingress-nginx 三个 pod 的 IP，这个负载均衡是怎么做的？
-	```yaml
-    status:
-      loadBalancer:
-        ingress:
-        - ip: 10.72.220.155
-        - ip: 10.73.245.148
-        - ip: 10.73.246.123
-	```
-
-2. 在支持 `LoadBalancer` service 的 K8s 集群中，需要给 ingress controller 分配一个 external IP 或者一个 FQDN，参考 [ingress-nginx-online testing](https://github.com/kubernetes/ingress-nginx/blob/main/docs/deploy/index.md#online-testing)，这个具体是怎么工作的？
 
 ### 参考
 [k8s ingress原理及ingress-nginx部署测试](https://segmentfault.com/a/1190000019908991)
