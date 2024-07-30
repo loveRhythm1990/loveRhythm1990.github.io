@@ -105,7 +105,7 @@ Envoy 是一款由 Lyft 开源的 L7 代理和通信总线，是 CNCF 旗下的�
 ### Service Mesh
 服务网格（Service Mesh)跟上面的Envoy proxy as sidecar有点类似，在Service Mesh下，svc A和svc B 中所有Pod中都会有一个流量代理组件作为sidecar,它们构成了data plane，所有流入(ingress)/流出(egress)的流量都会经过sidecar。市场上常见的实现了Service Mesh的工具是istio和linkered。本方案采用istio实现service mesh。具体k8s部署可以参考[service mesh 模式](https://github.com/cyub/grpc-examples/tree/main/lb#service-mesh-%E6%A8%A1%E5%BC%8F)。
 
-![java-javascript](/pics/servicemesh.png){:height="60%" width="60%"}
+![java-javascript](/pics/servicemesh.png){:height="75%" width="75%"}
 
 
 ### 总结
