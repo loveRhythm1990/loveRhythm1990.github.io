@@ -9,13 +9,13 @@ tags:
 ---
 
 **目录**
-- [ControllerRuntime Webhook 接口概述](#controllerruntime-webhook-接口概述)
+- [controllerruntime webhook 接口概述](#controllerruntime-webhook-接口概述)
 - [controller 注册 webhook](#controller-注册-webhook)
 - [自动签发证书](#自动签发证书)
 - [配置 webhook 不拦截自身 pod](#配置-webhook-不拦截自身-pod)
 
-### ControllerRuntime Webhook 接口概述
-K8s 支持 MutatingWebhookConfiguration 以及 ValidatingWebhookConfiguration 资源，前者主要用于配置一些字段的默认值，或者修改某些字段（比如替换镜像），可用在资源的 create 以及 update 阶段；后者主要是执行一些校验，可以校验资源的 create/update/delete 操作。
+### controllerruntime webhook 接口概述
+K8s 支持 mutatingWebhookConfiguration 以及 validatingWebhookConfiguration 资源，前者主要用于配置一些字段的默认值，或者修改某些字段（比如替换镜像），可用在资源的 create 以及 update 阶段；后者主要是执行一些校验，可以校验资源的 create/update/delete 操作。
 
 在 [kubernetes-sigs/controller-runtime](https://github.com/kubernetes-sigs/controller-runtime) 项目中，资源用户自定以 validator 被定义为 CustomValidator 接口。ValidateDelete 看似没什么用，但是可以阻止特定的资源被删除，比如业务 namespace。用户自定义 defaulter 被定义为 CustomDefaulter 接口。
 ```go
