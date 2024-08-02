@@ -72,6 +72,9 @@ spec:
     targetPort: 3306
 ```
 
+> 在 K8s Service 的 ports 定义中，targetPort 是指所代理的 pod 的 port（所代理的 pod 即通过 service 的 label selector 筛选出来的 pod），这个 targetPort 可以是具体的端口数字，也可以是一个名字。pod 的 port 是在其 spec 中定义的，当 service 的 targetPort 是一个名字时，表示的是 pod 的 spec 中给这个 port 起的名字。
+
+
 ## 测试端口转发
 将 ingress-nginx service 的 3306 通过端口转发暴露出来。
 ```s
