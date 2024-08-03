@@ -6,6 +6,7 @@ author:     "decent"
 header-img-credit: false
 tags:
     - K8s生态
+    - Istio
 ---
 
 **目录**
