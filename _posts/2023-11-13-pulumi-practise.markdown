@@ -16,6 +16,7 @@ tags:
 - [pulumi 常用命令](#pulumi-常用命令)
 - [使用技巧](#使用技巧)
   - [将 pulumi.StringOutput 转换为 pulumi.ID](#将-pulumistringoutput-转换为-pulumiid)
+  - [结构化配置](#结构化配置)
 - [配置 github action 运行 preview/up](#配置-github-action-运行-previewup)
 - [pulumi 运维注意事项](#pulumi-运维注意事项)
 
@@ -160,6 +161,15 @@ idOutput := stringOutput.ApplyT(func(v string) pulumi.ID {
 idOutput := stringOutput.ApplyT(func(v string) string {
    return v
 }).(pulumi.IDOutput)
+```
+
+#### 结构化配置
+结构化配置是指在 Pulumi.dev.yaml 中配置结构体配置，并在代码中反序列化为结构体，这部分内容可以参考官方文档：[Structured Configuration](https://www.pulumi.com/docs/concepts/config/#structured-configuration)，不过有个问题文档中没有说清楚，配置中的字段跟 go 中的 struct 字段是如何映射的？不过我们稍微研究一下 `cfg.RequireObject` 代码就会发现，代码中用的是 json.Unmarshal，所以我们要为 struct 配置 json tag。
+```go
+type foo struct {
+	Name string `json:"name"`
+	ID   string `json:"id"`
+}
 ```
 
 ### 配置 github action 运行 preview/up
