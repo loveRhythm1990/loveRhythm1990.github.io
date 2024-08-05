@@ -12,6 +12,7 @@ tags:
 - [pulumi 入门](#pulumi-入门)
   - [环境初始化](#环境初始化)
   - [写交付代码](#写交付代码)
+  - [pulumi 是怎么工作的](#pulumi-是怎么工作的)
 - [pulumi 中的依赖](#pulumi-中的依赖)
 - [pulumi 常用命令](#pulumi-常用命令)
 - [使用技巧](#使用技巧)
@@ -91,7 +92,18 @@ func main() {
 }
 ```
 
+#### pulumi 是怎么工作的
+pulumi 遵循 K8s 的设计模式：声明式配置。因此代码中声明的资源配置都是 `Spec`，也即集群中最终应该变成的样子。根据文档，pulumi 架构如下图，其中：
+* Laguage host: 理解成我们自己写的交付代码，有两点需要关注：1）sdk 语言，比如用 go 还是 typescript；2）provider，是 Kubernetes 还是 aws 或者 alyun。
+* CLI and Engine: pulumi 核心控制器，由 pulumi 团队维护。根据 state 的 diff 对集群中的资源进行 CRUD 操作。
+* Last Deploy State: 资源的 state 列表，可通过命令 [pulumi state](https://www.pulumi.com/docs/cli/commands/pulumi_state/) 管理 state。 state 是保存在 pulumi cloud 中的，一般不需要我们处理。除非配置出问题了需要我们手动干预，比如手动强制删除资源。 
+
+![java-javascript](/pics/pulumi-work.png){:height="60%" width="60%"}
+
+
 ### pulumi 中的依赖
+pulumi 将尽可能并行创建/更新代码中声明的资源，但是一般来说多个资源之间可能有依赖关系，在遇到依赖时，会先创建被依赖的资源。pulumi 中资源的依赖会记录在 state 中。
+
 依赖管理是 pulumi 的核心功能，这部分在 pulumi 的文档 [Inputs & outputs](https://www.pulumi.com/docs/concepts/inputs-outputs/) 中介绍，思路就是通过资源的 output 以及 input 来构建依赖。比如 B 资源依赖 A，C 资源依赖 A/B 资源等，这样就构成了一个依赖树，也就是 DAG 图。
 
 在配置资源依赖时，应尽量简单，不要有太多的中间依赖，否则可能会构建失败：waiting for RPCs: rpc error: code = InvalidArgument desc = invalid dependency URN: missing required URN。一般来说，依赖有多种方式：
