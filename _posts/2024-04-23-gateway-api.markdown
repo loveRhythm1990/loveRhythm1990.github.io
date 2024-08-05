@@ -31,11 +31,11 @@ gateway api 的设计目标为：更加通用，表现力强，权限分工明�
 ### 快速入门
 
 #### 部署 metallb 
-部署 istio 需要一个 loadbalancer 类型的 service，此 service 即公网入口。我们通过 [metall](https://metallb.universe.tf/installation/) 为其分配 externalip，安装完成之后，组件部署在 metallb-system 命名空间。
+部署 istio 需要一个 loadbalancer 类型的 service，此 service 即公网入口。我们通过 [metallb](https://metallb.universe.tf/installation/) 为其分配 externalIP。安装完成之后，组件部署在 metallb-system 命名空间。
 ```s
 kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.14.8/config/manifests/metallb-native.yaml
 ```
-安装完成之后，还要分配 ip 池，loadbalancer 类型的 service 从这个 ip 池里分配 ip，这里注意 ip 池里面的网段不要跟集群中的已知网段重合，包括：节点池网段、service 网段、pod ip 网段等。下面是配置使用 `192.168.10.0/24` 网段。
+安装完成之后，还要配置 ip 池，loadbalancer 类型的 service 将从这个 ip 池里分配 ip，这里注意 ip 池里面的网段不要跟集群中的已知网段重合，包括：节点池网段、service 网段、pod ip 网段等。下面是配置使用 `192.168.10.0/24` 网段，kind 不会使用这个网段。
 ```yaml
 apiVersion: metallb.io/v1beta1
 kind: IPAddressPool
@@ -48,7 +48,7 @@ spec:
 ```
 
 #### 安装 crd 以及 istio
-首先安装 gateway api 所需要的 crd，通过下面命令安装。
+首先安装 gateway api 所需要的 crd，通过下面命令安装，这些 crd 是 K8s 定义的，跟供应商无关的。
 ```s
 lr90@sj ingress % kubectl get crd gateways.gateway.networking.k8s.io &> /dev/null || \
   { kubectl kustomize "github.com/kubernetes-sigs/gateway-api/config/crd?ref=v1.1.0" | kubectl apply -f -; }
@@ -72,7 +72,7 @@ cd istio-1.22.3
 kubectl create ns sample
 kubectl apply -f samples/helloworld/helloworld.yaml -n sample
 ```
-部署完成后我们先看一下项目。sample 项目有两个不同的 deployment，代表不同的版本，每个 deployment 除了带有 `app: helloworld` selector 外还有 version 的 selector。但是 sample 只有一个 service，并且这个 service 的 selector 只有 app label，所以这个 service 会同时选中两个 pod。
+部署完成后我们先看一下项目部署结构。sample 项目有两个不同的 deployment，代表服务有两个不同的版本，每个 deployment 除了带有 `app: helloworld` selector 外还有 version selector。但是 sample 只有一个 service，并且这个 service 的 selector 只有 app label，所以这个 service 会同时选中两个 pod。
 ```s
 lr90@sj istio % kubectl get deploy -n sample
 NAME            READY   UP-TO-DATE   AVAILABLE   AGE
@@ -82,7 +82,6 @@ lr90@sj istio % kubectl get pods -n sample --show-labels
 NAME                            READY   STATUS    RESTARTS   AGE     LABELS
 helloworld-v1-c5ffc9b8-thslw    1/1     Running   0          2m21s   app=helloworld,pod-template-hash=c5ffc9b8,version=v1
 helloworld-v2-86b5f6484-mqz29   1/1     Running   0          2m21s   app=helloworld,pod-template-hash=86b5f6484,version=v2
-lr90@sj istio %
 lr90@sj istio % kubectl get service -n sample
 NAME         TYPE        CLUSTER-IP    EXTERNAL-IP   PORT(S)    AGE
 helloworld   ClusterIP   10.96.66.82   <none>        5000/TCP   2m45s
@@ -92,9 +91,9 @@ helloworld   10.244.0.6:5000,10.244.0.7:5000   2m57s
 ```
 
 #### 配置入口 gateway
-在 gateway api 中 [gateway](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gateway) 定义是集群外部流量进入 K8s 集群的入口，如：loadbalancer 类型的 service，外部硬件负载均衡等。
+在 gateway api 中 [gateway](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gateway) 定义为集群外部流量进入 K8s 集群的入口，如：loadbalancer 类型的 service，外部硬件负载均衡等。
 
-除了 gateway 资源，gateway api 中还有两个核心资源：gatewayclass 以及 route，他们关系如下。其中不同厂商实现自己的 gateway api 并抽象为 gatewayclass 提供出来；gateway 从属于一种 gatewayclass，并且跟 route 是 m:n 的关系，但是每个 gateway 都必须提供公网接入的方式。
+除了 gateway 资源，gateway api 中还有两个核心资源：gatewayclass 以及 route，他们关系图如下。其中不同厂商实现自己的 gateway api 并抽象为 gatewayclass 提供出来；gateway 从属于一种 gatewayclass，并且跟 route 是 m:n 的关系，但是每个 gateway 都必须提供公网接入的方式。
 ![java-javascript](/pics/gateway-api01.svg){:height="60%" width="60%"}
 
 我们通过下面配置创建 gateway，并指定 gatewayclass 为 istio；该配置转发的虚拟主机为 `*.sample.com`；允许**所有命名空间**的 route 附加到该 gateway。
@@ -151,13 +150,13 @@ spec:
       port: 5000
 EOF
 ```
-ok，创建完成之后，终于可以测试了，我们首先将 kind 环境中的 loadbalancer service port-forward 出来。
+ok，路由信息配置完之后，终于可以测试了，我们首先将 kind 环境中的 loadbalancer service port-forward 出来，因为 kind K8s 网络跟我们的个人电脑网络不一致，我们通过将服务 forward 出来模拟暴露公网。
 ```s
 lr90@sj ingress % kubectl port-forward service/sample-gateway-istio -n sample-ingress 8080:80
 Forwarding from 127.0.0.1:8080 -> 80
 Forwarding from [::1]:8080 -> 80
 ```
-通过下面命令测试，可以看到 v1 跟 v2 五五开。
+通过下面命令测试，可以看到 v1 跟 v2 五五开，流量各占一半。
 ```s
 for run in {1..10}; do curl -HHost:helloworld.sample.com http://127.0.0.1:8080/hello; done
 lr90@sj ~ % for run in {1..10}; do curl -HHost:helloworld.sample.com http://127.0.0.1:8080/hello; done
@@ -174,7 +173,7 @@ Hello version: v1, instance: helloworld-v1-c5ffc9b8-thslw
 ```
 
 #### 基于权重的路由
-整体路由配置跟上面差不多，不同之处在于 backendRefs 的不同。这里配置了两个 service，并且为两个不同的 service 配置了权重。具体操作流程跟上述一致，这里不在叙述了。
+整体路由配置跟上面差不多，不同之处在于 backendRefs 的不同。针对 `/hello`这个前缀，这里配置了两个 service（这两个 service 需要提前创建，示例代码的目录里有），并且为两个不同的 service 配置了权重，转发到 `helloworld-1` 服务的权重为 90%， 转发到 `helloworld-2` 服务的权重为 10%。具体操作流程跟上述一致，这里不在叙述了。
 ```yaml
 $ kubectl apply -n sample -f - <<EOF
 apiVersion: gateway.networking.k8s.io/v1beta1
