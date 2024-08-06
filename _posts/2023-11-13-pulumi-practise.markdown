@@ -93,12 +93,12 @@ func main() {
 ```
 
 #### pulumi 是怎么工作的
-pulumi 遵循 K8s 的设计模式：声明式配置。因此代码中声明的资源配置都是 `Spec`，也即集群中最终应该变成的样子。根据文档，pulumi 架构如下图，其中：
-* Laguage host: 理解成我们自己写的交付代码，有两点需要关注：1）sdk 语言，比如用 go 还是 typescript；2）provider，是 Kubernetes 还是 aws 或者 alyun。
+pulumi 遵循 K8s 的设计模式：声明式配置。因此代码中声明的资源配置都是 `spec`，也即集群中最终应该变成的样子。根据文档，pulumi 架构如下图，其中：
+* Language host: 理解成我们自己写的交付代码，有两点需要关注：1）sdk 语言，比如用 go 还是 typescript；2）provider，是 Kubernetes 还是 aws 或者 aliyun。
 * CLI and Engine: pulumi 核心控制器，由 pulumi 团队维护。根据 state 的 diff 对集群中的资源进行 CRUD 操作。
 * Last Deploy State: 资源的 state 列表，可通过命令 [pulumi state](https://www.pulumi.com/docs/cli/commands/pulumi_state/) 管理 state。 state 是保存在 pulumi cloud 中的，一般不需要我们处理。除非配置出问题了需要我们手动干预，比如手动强制删除资源。 
 
-![java-javascript](/pics/pulumi-work.png){:height="60%" width="60%"}
+![java-javascript](/pics/pulumi-work.png){:height="55%" width="55%"}
 
 
 ### pulumi 中的依赖
