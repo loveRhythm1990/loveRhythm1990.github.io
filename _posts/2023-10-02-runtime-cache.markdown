@@ -16,6 +16,8 @@ tags:
 - [初始化过程](#初始化过程)
 	- [cache 初始化](#cache-初始化)
 	- [client 初始化](#client-初始化)
+	- [informerCache 的 Get 接口](#informercache-的-get-接口)
+- [总结](#总结)
 
 ### cache 问题概述
 近期我们需要将组件部署到客户机房，客户机房对权限要求比较严格，需要我们提供一个 ClusterRole 以及 Role 列表，在梳理 ClusterRole 列表时，发现一个问题，controllerruntime 的缓存机制默认是缓存集群内所有资源的。比如我只想关注 test-ns 命名空间下的 pod 资源，但是缓存默认缓存所有命名空间下的 pod 资源，因此需要 ClusterRole 权限。
@@ -227,5 +229,38 @@ func (c *client) Get(ctx context.Context, key ObjectKey, obj Object, opts ...Get
 		return c.cache.Get(ctx, key, obj, opts...)
 	}
 	// ...
+}
+```
+
+#### informerCache 的 Get 接口
+通过上面的分析，我们知道通过 client.Get 接口拿资源时，默认走的是 cache，也就是 informerCache 的接口。其中下面的 `ic.Informers.Get` 方法中，如果没有 gvk 对应的 informer，则会动态创建一个。
+```go
+// Get implements Reader.
+func (ic *informerCache) Get(ctx context.Context, key client.ObjectKey, out client.Object, opts ...client.GetOption) error {
+	gvk, err := apiutil.GVKForObject(out, ic.scheme)
+	if err != nil {
+		return err
+	}
+
+	started, cache, err := ic.Informers.Get(ctx, gvk, out)
+	if err != nil {
+		return err
+	}
+
+	if !started {
+		return &ErrCacheNotStarted{}
+	}
+	return cache.Reader.Get(ctx, key, out)
+}
+```
+
+### 总结
+上面我们提到过，在控制器代码中，如果我们使用 client.Get 接口拿资源时，默认是走的 informerCache。还有另一个中情况是，我们在构建一个控制器时，通常会通过 For 或者 Owns 来指定 watch 的资源，这这种情况下，也是共用上面的 informerCache，因此如果我们在初始化 Manager 时指定了命名空间，也会影响到我们的 Controller 可同步到的资源。
+```go
+// SetupWithManager sets up the controller with the Manager.
+func (r *GuestbookReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	return ctrl.NewControllerManagedBy(mgr).
+		For(&webappv1.Guestbook{}).
+		Complete(r)
 }
 ```
