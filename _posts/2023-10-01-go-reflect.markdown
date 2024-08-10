@@ -11,21 +11,21 @@ tags:
 **目录**
 - [一个具体问题](#一个具体问题)
 - [反射相关类型](#反射相关类型)
-  - [interface: eface 与 iface](#interface-eface-与-iface)
-  - [reflect.Type 接口](#reflecttype-接口)
-  - [reflect.Value 结构体](#reflectvalue-结构体)
+	- [interface: eface 与 iface](#interface-eface-与-iface)
+	- [reflect.Type 接口](#reflecttype-接口)
+	- [reflect.Value 结构体](#reflectvalue-结构体)
 - [解决具体问题](#解决具体问题)
 
-## 一个具体问题
+### 一个具体问题
 
 最近遇到一个问题，在使用工具 [gocsv](https://github.com/gocarina/gocsv) 将一个 csv 文件反序列化为 struct 的时候，反序列出来的字符串都带有一个后缀 `\t`，显然后缀是多余的，但是反序列出来的 struct 字段有上百个， 不可能一个一个检查并去掉 `\t`，于是想用反射来解决这个问题：如果遇到的字段类型是 string 或者 *string 时，检查是否有后缀 `\t`，如果有则去掉。
 
 思路很明确，实现起来却有点摸不着头脑，原来 reflect 我一直没搞清楚。
 
-## 反射相关类型
+### 反射相关类型
 先通过文档了解下 go 中的基本类型。go 反射机制中最主要的两个方法 reflect.ValueOf 以及 reflect.TypeOf 其参数都是一个 interface{} 类型，在获取其类型、值信息时，都是分解 interface{} 来获取信息的，我们先复习下 go 中的 interface 类型。
 
-### interface: eface 与 iface
+#### interface: eface 与 iface
 eface 是 go 中类型 `interface{}` 也就是 `any` 的底层数据类型，其不包含任何接口方法，任何类型都可以赋值给 interface{}，因此 eface 是不描述实际类型的方法信息的，只包含两部分信息：1）实际类型的类型信息；2）指向实际类型的指针。
 ```go
 type eface struct {
@@ -85,7 +85,7 @@ type InterfaceType struct {
 	Methods []Imethod // sorted by hash
 }
 ```
-### reflect.Type 接口
+#### reflect.Type 接口
 在大概了解了 go 中的 interface 之后，我们来看下反射中的相关类型，首先我们需要注意，reflect.Type 是一个接口，我们通过 `reflect.TypeOf(a any) Type` 来得到一个这样的接口，这个接口只描述类型信息，没有值信息。
 reflect.TypeOf 的实现也相对比较明确，从下面代码看，就是取了 eface 的 _type 字段，也就是最终是 abi.Type 类型，其实现了 reflect.Type 接口。
 ```go
@@ -113,7 +113,7 @@ func TypeOf(i any) Type {
 * Len() int: 返回数组类型实例的长度，非数组则 panic。
 * In(i int) Type: 返回 function 类型的第 i 个参数的类型，如果类型的 kind 不是 Func 则 panic。同样，如果 i 不在区间 `[0, NumIn())` 之间时，也 panic。
 
-### reflect.Value 结构体
+#### reflect.Value 结构体
 我们通过 `reflect.ValueOf(a any) Value` 方法可以得到任意类型的 Value 信息。其定义如下（为 src/reflect/value.go）。从 [Value 的定义](https://cs.opensource.google/go/go/+/refs/tags/go1.22.4:src/reflect/value.go;l=39) 中，可以看到非常类似 eface 的定义，包含类型信息，以及指向数据的指针。其中 flag 字段表示 Value 的元数据，比如是否可以 Set。
 ```go
 type Value struct {
@@ -139,7 +139,7 @@ Value 同样有很多方法，参考 [https://pkg.go.dev/reflect#Value](https://
 * Kind() Kind: 返回类型，这个跟 Type 接口的 Kind 方法是一致的。
 * Type() Type: 返回 Value 的 Type 类型，跟对变量调用 reflect.TypeOf 方法效果是一样的。
 
-## 解决具体问题
+### 解决具体问题
 解决具体的方法很简单，如下，注意改方法的参数必须是指针类型，不然我们是无法修改字段的值的也就是无法 CanSet()。
 ```go
 func TrimStringFields(instance interface{}) {
