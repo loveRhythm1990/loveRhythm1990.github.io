@@ -78,8 +78,8 @@ jobs:
 ```go
 func NewGitClient(cfgGithubToken string) *github.Client {
 	if cfgGithubToken == "" {
-    panic("nil token")
-  }
+		panic("nil token")
+	}
 	client := github.NewClient(nil).WithAuthToken(token)
 	return client
 }
