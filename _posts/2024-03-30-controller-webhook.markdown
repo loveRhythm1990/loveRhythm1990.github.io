@@ -5,7 +5,7 @@ date:       2024-03-30 10:10:00
 author:     "decent"
 header-img-credit: false
 tags:
-    - K8s
+    - Operator
 ---
 
 **目录**
