@@ -23,9 +23,9 @@ tags:
 
 
 ### 部署安装
-先把 istio 安装一下，个人感觉 istio 门槛比较高的原因是需要配置部署一整套东西，而我又没有稳定的 K8s 环境，我之前有一个台式机，但是搬家的时候被搬家公司给顺走了（我现在想起来还伤心），然后也就一直没有再买。大多数情况下，在 mac 电脑上起一个 kind 环境能应付。
+先把 istio 安装一下，个人感觉 istio 门槛比较高的一个原因是需要配置部署一整套东西，而我又没有稳定的 K8s 环境，我之前有一个台式机，但是搬家的时候被搬家公司给顺走了（现在想起来还伤心），然后也就一直没有再买。大多数情况下，在 mac 电脑上起一个 kind 环境能应付。
 #### 部署 metallb
-用于在内网环境下，给 loadbalancer 类型的 service 分配 ip。使用下面命令部署。
+这一步是可选的，用于在内网环境下，给 Loadbalancer 类型的 service 分配 externalIP。使用下面命令部署。
 ```s
 kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.14.8/config/manifests/metallb-native.yaml
 ```
@@ -40,7 +40,7 @@ spec:
   addresses:
   - 192.168.10.0/24
 ```
-> 注意，如果是通过 kind 部署的 K8s，仍然需要通过 port-forward 的方式来暴露服务，因为网段 192.168.10.0/24 跟我们的 mac 笔记本是不互通的。
+如果是通过 kind 部署的 K8s，仍然需要通过 port-forward 的方式来暴露服务，因为网段 192.168.10.0/24 跟我们的 mac 笔记本是不互通的，这个是 kind 的网络模式决定的，kubeadm 部署 K8s 没有这个问题。
 
 #### 部署 istio 和 bookinfo 示例应用
 安装 istio 参考文档 [istio 入门](https://istio.io/latest/zh/docs/setup/getting-started/)，使用 istioctl 二进制进行安装。
@@ -59,7 +59,7 @@ kubectl apply -f samples/bookinfo/platform/kube/bookinfo.yaml
 
 ##### 通过 gateway 暴露 bookinfo 服务
 部署完成之后，需要将 bookinfo 示例暴露出去，并能在浏览器里访问。这里需要部署 istio 中的 gateway，通过 gateway 暴露服务原理跟通过 K8s ingress 暴露服务类似，在 ingress 中是需要将 ingress-controller 提供外放访问方式，在 istio 中，则需要将 istio controller 提供外网访问方式；具体来说，是 istio-system 命名空间下面有个 loadbalancer 类型的 service `istio-ingressgateway`，需要给这个 service 分配 external ip。因为 gateway 不是本文的重点，所以这里不过多解释，部署完能访问就可以。
-```
+```s
 kubectl apply -f samples/bookinfo/networking/bookinfo-gateway.yaml
 ```
 因为我们是通过 kind 部署的 K8s 集群，所以仍然需要将 istio-controller 的 service port-forward 出去作为整个 K8s 集群的入口，因为下面这个 service 的 external ip `192.168.10.0` 是无法访问的。
@@ -74,7 +74,7 @@ Forwarding from [::1]:8080 -> 8080
 ```
 
 配置好之后，通过访问 [http://127.0.0.1:8080/productpage](http://127.0.0.1:8080/productpage) 就可以访问 bookinfo 示例了。
-![java-javascript](/pics/bookinfo-sample.png)
+![java-javascript](/pics/bookinfo-sample.png){:height="80%" width="80%"}
 
 #### 部署 Kiali 仪表盘
 通过下面命令安装 Kiali、Prometheus、Grafana，所有的组件均部署在 istio-system 命名空间。
@@ -91,7 +91,7 @@ http://localhost:20001/kiali
 
 #### 查看 bookinfo 服务流量
 我们可以通过 kiali 查看 bookinfo 服务的构成，从下图中可以看出，流量从 istio-system 下面的 ingressgateway 进入，流向 productpage 服务，productpage 服务有两个上游，并且 reviews 服务有三个版本 v1/v2/v3，而 reviews 服务的上游为 ratings。 
-![java-javascript](/pics/kiali-sample.png){:height="60%" width="60%"}
+![java-javascript](/pics/kiali-sample.png){:height="80%" width="80%"}
 
 ### 配置超时与重试
 我们已经部署 bookinfo 服务，下面的例子中，通过 bookinfo 服务的 review 服务来验证学习超时与重试的配置。在测试之前，我们先看一下经过上述步骤创建的 virtualservice。
