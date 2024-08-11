@@ -91,7 +91,7 @@ http://localhost:20001/kiali
 
 #### 查看 bookinfo 服务流量
 我们可以通过 kiali 查看 bookinfo 服务的构成，从下图中可以看出，流量从 istio-system 下面的 ingressgateway 进入，流向 productpage 服务，productpage 服务有两个上游，并且 reviews 服务有三个版本 v1/v2/v3，而 reviews 服务的上游为 ratings。 
-![java-javascript](/pics/kiali-sample.png)
+![java-javascript](/pics/kiali-sample.png){:height="60%" width="60%"}
 
 ### 配置超时与重试
 我们已经部署 bookinfo 服务，下面的例子中，通过 bookinfo 服务的 review 服务来验证学习超时与重试的配置。在测试之前，我们先看一下经过上述步骤创建的 virtualservice。
