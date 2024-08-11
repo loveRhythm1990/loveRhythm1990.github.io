@@ -6,6 +6,7 @@ author:     "weak old dog"
 header-img-credit: false
 tags:
     - K8s
+    - Operator
 ---
 
 **文章目录**
