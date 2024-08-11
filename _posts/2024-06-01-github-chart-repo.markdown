@@ -11,6 +11,7 @@ tags:
 **目录**
 - [helm chart 概述](#helm-chart-概述)
 - [自动打包 chart 到 github repo](#自动打包-chart-到-github-repo)
+- [发布chart到K8s集群](#发布chart到k8s集群)
 
 ### helm chart 概述
 在云原生领域，helm chart 是事实上的应用交付标准，一般来说，我们构建 helm chart 之后，有两种方式可以发布 chart: 1）可以通过 helm chart tgz 压缩包进行传输和发布；2）将 chart 放到仓库（公共或者私有），大家通过 helm repo add 命令添加 repo 之后，可以直接使用 helm install 命令进行安装，比如下面是安装 openkruise 的命令。
@@ -68,7 +69,59 @@ jobs:
           CR_SKIP_EXISTING: true
 ```
 
-将 helm charts 发布为 repo 的 release 资源后。有两种方式可以消费这个 chart: 1）在 github 界面下载安装 chart（或者通过 git sdk 下载 chart tgz 并安装）；2）直接通过 helm install 来安装 helm chart，对于这种方式，需要将 gh-pages 分支发布成 github pages，如果是私有镜像仓库，则需要处理鉴权问题。直接通过 helm install 时，仓库的地址为：`https://<org-name>.github.io/<repo-name>`，需要注意带着 `.github.io`。添加 helm repo 时，可以先访问 url `https://<org-name>.github.io/<repo-name>/index.yaml` 看看能不能访问通，如果不能，则说明 github pages 发布有问题。
+### 发布chart到K8s集群
+
+将 helm charts 发布为 repo 的 release 资源后。有两种方式可以消费这个 chart。
+
+1）在 github 界面下载安装 chart（或者通过 git sdk 下载 chart tgz 并安装），git sdk 可以使用 [https://github.com/google/go-github/](https://github.com/google/go-github/)，初始化的方式为使用 github token，可以参考下面例子。
+
+```go
+func NewGitClient(cfgGithubToken string) *github.Client {
+	if cfgGithubToken == "" {
+    panic("nil token")
+  }
+	client := github.NewClient(nil).WithAuthToken(token)
+	return client
+}
+
+func DownloadChart(c *github.Client, org, repo, tag, assetName string) (string, error) {
+	release, resp, err := c.Repositories.GetReleaseByTag(context.TODO(), org, repo, tag)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	var assetID *int64
+	for _, asset := range release.Assets {
+		if *asset.Name == assetName {
+			assetID = asset.ID
+			break
+		}
+	}
+	if assetID == nil {
+		return "", fmt.Errorf("couldn't find asset %s", assetName)
+	}
+
+	readerCloser, _, err := c.Repositories.DownloadReleaseAsset(context.TODO(), org, repo, *assetID, http.DefaultClient)
+	if err != nil || readerCloser == nil {
+		return "", fmt.Errorf("unexpected error or nil reader downloading asset %v, %v", err, readerCloser)
+	}
+	defer readerCloser.Close()
+
+	tempFile, err := os.CreateTemp("", "chart-*.tgz")
+	if err != nil {
+		return "", err
+	}
+	defer tempFile.Close()
+
+	if _, err = io.Copy(tempFile, readerCloser); err != nil {
+		return "", err
+	}
+	return tempFile.Name(), nil
+}
+```
+
+2）直接通过 helm install 来安装 helm chart，对于这种方式，需要将 gh-pages 分支发布成 github pages，如果是私有镜像仓库，则需要处理鉴权问题。直接通过 helm install 时，仓库的地址为：`https://<org-name>.github.io/<repo-name>`，需要注意带着 `.github.io`。添加 helm repo 时，可以先访问 url `https://<org-name>.github.io/<repo-name>/index.yaml` 看看能不能访问通，如果不能，则说明 github pages 发布有问题。
 
 将 github repo 的特定分支发布成 github pages 的方式为：点击仓库主页右上角的 Settings，在设置页面中，向下滚动到 "Pages" 部分。在 "Source" 下拉菜单中，选择你要用于 GitHub Pages 的分支（例如 main 或 gh-pages）。另外需要注意，对于私有 github repo 来讲，只有被发布成 github pages 的分支才是被公开的，其他分支，以及各种 release 都是私有的，需要提供用户名密码或者 token 才能被访问。
 
