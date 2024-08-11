@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "在 controller runtime 控制器中配置资源 webhook"
+title:      "在 controllerruntime 控制器中配置资源 webhook"
 date:       2024-03-30 10:10:00
 author:     "decent"
 header-img-credit: false

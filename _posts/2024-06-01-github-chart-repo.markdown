@@ -11,7 +11,7 @@ tags:
 **目录**
 - [helm chart 概述](#helm-chart-概述)
 - [自动打包 chart 到 github repo](#自动打包-chart-到-github-repo)
-- [发布chart到K8s集群](#发布chart到k8s集群)
+- [发布 chart 到 K8s 集群](#发布-chart-到-k8s-集群)
 
 ### helm chart 概述
 在云原生领域，helm chart 是事实上的应用交付标准，一般来说，我们构建 helm chart 之后，有两种方式可以发布 chart: 1）可以通过 helm chart tgz 压缩包进行传输和发布；2）将 chart 放到仓库（公共或者私有），大家通过 helm repo add 命令添加 repo 之后，可以直接使用 helm install 命令进行安装，比如下面是安装 openkruise 的命令。
@@ -69,7 +69,7 @@ jobs:
           CR_SKIP_EXISTING: true
 ```
 
-### 发布chart到K8s集群
+### 发布 chart 到 K8s 集群
 
 将 helm charts 发布为 repo 的 release 资源后。有两种方式可以消费这个 chart。
 
