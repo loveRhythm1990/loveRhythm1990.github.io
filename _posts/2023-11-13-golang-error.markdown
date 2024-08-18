@@ -12,15 +12,15 @@ tags:
 - [概述](#概述)
 - [通过 fmt.Errorf 来 wrap error](#通过-fmterrorf-来-wrap-error)
 - [errors.Is: 是否有错误 equal](#errorsis-是否有错误-equal)
-  - [理解与使用](#理解与使用)
-  - [errors.Is 实现](#errorsis-实现)
+	- [理解与使用](#理解与使用)
+	- [errors.Is 实现](#errorsis-实现)
 - [errors.As: 是否有错误类型匹配](#errorsas-是否有错误类型匹配)
-  - [理解与使用](#理解与使用-1)
-  - [errors.As 实现](#errorsas-实现)
+	- [理解与使用](#理解与使用-1)
+	- [errors.As 实现](#errorsas-实现)
 - [Go 中的 Comparable](#go-中的-comparable)
-  - [struct](#struct)
-  - [指针](#指针)
-  - [interface](#interface)
+	- [struct](#struct)
+	- [指针](#指针)
+	- [interface](#interface)
 
 ### 概述
 [errors](https://pkg.go.dev/errors#pkg-functions) 包中的 Is 方法与 As 方法理解起来有点抽象，如果使用不当可能会引发代码逻辑错误，本文目标是明确 Is 与 As 的使用场景，并了解下内部实现。
@@ -61,7 +61,7 @@ func main() {
 #### errors.Is 实现
 这一小章节，我们看一下 Is 的具体实现，判断按照下面顺序执行。
 
-1）如果 target 可比较，则利于 `==` 运算符判断两个 error 是否相等。这里有个细节是没有判断第一个参数 err 是否是可比较的，因为若其类型跟 target 不一致，则 interface 在比较时直接返回 false；若类型一致，则是可比较的。本文在末尾章节补充了 Go comparable 的一些内容。
+1）如果 target 可比较，则利用 `==` 运算符判断两个 error 是否相等。这里有个细节是没有判断第一个参数 err 是否是可比较的，因为若其类型跟 target 不一致，则 interface 在比较时直接返回 false；若类型一致，则是可比较的。本文在末尾章节补充了 Go comparable 的一些内容。
 
 2）如果 err 实现了 Is(error) bool 方法，则调用其 Is 方法进行判断，如果方法返回 true，则直接返回 true。否则要继续遍历其他节点比较。在判断 err 是否实现 Is 方法时，是通过类型断言 `err.(interface{ Is(error) bool })` 来实现的，注意类型断言只适用于 interface 类型。
 
