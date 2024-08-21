@@ -7,15 +7,18 @@ author:     "decent"
 header-img-credit: false
 tags:
     - 网络
+    - K8s生态
 ---
 
 **文章目录**
+- [概述](#概述)
 - [IP 预留中的几个关键问题](#ip-预留中的几个关键问题)
 	- [实现 ip 预留](#实现-ip-预留)
 	- [怎么知道要不要预留](#怎么知道要不要预留)
 	- [预留的 ip 什么时候回收](#预留的-ip-什么时候回收)
 - [参考](#参考)
 
+### 概述
 OpenKruise 在其文档 [OpenKruise v1.2：新增 PersistentPodState 实现有状态 Pod 拓扑固定与 IP 复用](https://openkruise.io/zh/blog/openkruise-1.2/) 中说实现了 IP 预留的功能，这里看下是怎么实现的。其实实现这个功能不麻烦，很早以前我们团队也自己实现了这个功能，当时也是把 ip 放在了磁盘上，不过我那个时候对网络不了解，现在通过这些细小的知识点一点一点积累网路知识。
 
 [host-local](https://www.cni.dev/plugins/current/ipam/host-local/) 是一种 ipam(IP Address Management)插件，用于从一个 ip range 中分配一个 ip，这个是 flannel 网络模式默认使用的 ipam 插件，另一个与之对应的插件是 dhcp，这个局域网用户应该都比较清楚了。 host-local 分配的 ip 会以文件的方式放在磁盘上。文件名为分配的 ip 地址，文件内容是容器的Id以及容器内接口的名字。例子如下，有两个 pod，ip 分别为 `10.244.0.93` `10.244.0.92`，host-local 为其保存的文件及文件内容如下：
