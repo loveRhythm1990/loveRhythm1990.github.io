@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "通过 Istio gateway 将暴露服务到集群外"
+title:      "通过 Istio gateway 将服务暴露到集群外"
 date:       2023-5-3 10:10:00
 author:     "decent"
 header-img-credit: false
