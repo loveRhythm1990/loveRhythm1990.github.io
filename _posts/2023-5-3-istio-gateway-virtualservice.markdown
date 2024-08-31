@@ -9,7 +9,7 @@ tags:
 ---
 
 **目录**
-- [概述](#概述)
+- [Istio gateway 概述](#istio-gateway-概述)
 - [环境准备](#环境准备)
 - [部署 gateway 资源](#部署-gateway-资源)
 - [配置 virtualservice 资源](#配置-virtualservice-资源)
@@ -19,7 +19,7 @@ tags:
   - [定义目标规则 destinationrule](#定义目标规则-destinationrule)
 
 
-### 概述
+### Istio gateway 概述
 Istio gateway 功能跟 K8s ingress 类似，都是将集群内的服务暴露到集群外卖。与 ingress 不同的是，gateway 只提供接入点，路由规则通用 virtualservice 资源配置。
 
 本文通过一个简单的 [go httpserver](https://github.com/loveRhythm1990/simple-go-server) 来做测试，该服务对访问 url 返回 hello world。httpserver 部署在 default 命名空间下面，并通过 go-server service 的 8000 端口暴露服务。
@@ -157,7 +157,7 @@ hello world%
 #### 定义目标规则 destinationrule
 在上面定义中，我们通过 virtualservice 将流量之间转发到了后端 service，如果我们想定义一些**流量策略**或者**对不同服务的版本**做一下细分，则要定义 [destinationrule](https://istio.io/latest/docs/reference/config/networking/destination-rule/)。
 
-参考《[Istio学习笔记——DestinationRule解析](https://juejin.cn/post/7353280369382195226)》中的例子，在集群中部署 httpd 以及 nginx 作为应用的两个版本（其实是两个不同的应用 doge）。并且在 destinationrule 中分别为着两个版本定义不同的子集，并未 httpd 定义权重 90%，nginx 定义权重 10%。
+参考《[Istio学习笔记——DestinationRule解析](https://juejin.cn/post/7353280369382195226)》中的例子，在集群中部署 httpd 以及 nginx 作为应用的两个版本（其实是两个不同的应用 doge）。并且在 destinationrule 中分别为着两个版本定义不同的子集，配置 httpd 版本权重 90%，nginx 版本权重 10%。
 
 ```yaml
 # nginx deploymen
