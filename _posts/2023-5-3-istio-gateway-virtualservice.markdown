@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "Istio gateway 暴露服务到集群外"
+title:      "通过 Istio gateway 将暴露服务到集群外"
 date:       2023-5-3 10:10:00
 author:     "decent"
 header-img-credit: false
@@ -20,7 +20,7 @@ tags:
 
 
 ### 概述
-Istio gateway 功能跟 K8s ingress 类似，都是将集群内的服务暴露到集群外卖。与 ingress 不同的是，gateway 只提供接入点，路由规则由 virtualservice 资源指定。
+Istio gateway 功能跟 K8s ingress 类似，都是将集群内的服务暴露到集群外卖。与 ingress 不同的是，gateway 只提供接入点，路由规则通用 virtualservice 资源配置。
 
 本文通过一个简单的 [go httpserver](https://github.com/loveRhythm1990/simple-go-server) 来做测试，该服务对访问 url 返回 hello world。httpserver 部署在 default 命名空间下面，并通过 go-server service 的 8000 端口暴露服务。
 ```s
@@ -31,7 +31,7 @@ hello world%
 istio 官方文档的地址为 [https://istio.io/latest/docs/reference/config/networking/gateway/](https://istio.io/latest/docs/reference/config/networking/gateway)
 
 ### 环境准备
-环境准备工作包括安装 istio，部署 go httpserver 服务，以及给 default namespace 打上 label，允许 istio 注入 sidecar。这里不再赘述，可以参考《[通过 Istio 配置应用超时和重试](https://loverhythm1990.github.io/2023/05/01/istio-timeout-retry/)》。
+环境准备工作包括安装 istio，部署 go httpserver 服务，以及给 default namespace 打上 label，允许 istio 注入 sidecar，注意**给命名空间打 label 要先于在命名空间部署应用**。环境部署工作这里不再赘述，可以参考《[通过 Istio 配置应用超时和重试](https://loverhythm1990.github.io/2023/05/01/istio-timeout-retry/)》。
 ```s
 kubectl label namespace default istio-injection=enabled
 ```
@@ -155,8 +155,186 @@ lr90@sj ~ % curl -s  -HHost:httpserver.lr90.site "http://127.0.0.1:8080/hello"
 hello world%
 ```
 #### 定义目标规则 destinationrule
-在上面定义中，我们通过 virtualservice 将流量之间转发到了后端 service，如果我们想定义一些**流量策略**或者**对不同服务的版本**做一下细分，则要定义 [destinationrule](https://istio.io/latest/docs/reference/config/networking/destination-rule/)。延续上面的例子，我们的 httpserver 部署在 test 命名空间。virtualservice 和 destinationrule 部署在 default 命名空间。
+在上面定义中，我们通过 virtualservice 将流量之间转发到了后端 service，如果我们想定义一些**流量策略**或者**对不同服务的版本**做一下细分，则要定义 [destinationrule](https://istio.io/latest/docs/reference/config/networking/destination-rule/)。
 
-TODO
+参考《[Istio学习笔记——DestinationRule解析](https://juejin.cn/post/7353280369382195226)》中的例子，在集群中部署 httpd 以及 nginx 作为应用的两个版本（其实是两个不同的应用 doge）。并且在 destinationrule 中分别为着两个版本定义不同的子集，并未 httpd 定义权重 90%，nginx 定义权重 10%。
 
-ref: https://juejin.cn/post/7353280369382195226
+```yaml
+# nginx deploymen
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx
+  namespace: test-istio
+spec:
+  selector:
+    matchLabels:
+      app: nginx
+      server: web
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: nginx
+        server: web
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+---
+# httpd deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: httpd
+  name: httpd
+  namespace: test-istio
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: httpd
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: httpd
+        server: web
+    spec:
+      containers:
+      - image: httpd:latest
+        name: httpd
+---
+# service
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-svc
+  namespace: test-istio
+spec:
+  ports:
+  - name: port
+    port: 80
+    protocol: TCP
+    targetPort: 80
+  selector:
+    server: web
+---
+# client 端
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: client
+  namespace: test-istio
+spec:
+  selector:
+    matchLabels:
+      app: client-curl
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: client-curl
+    spec:
+      containers:
+      - name: curl
+        image: curlimages/curl:latest
+        command:
+        - sleep
+        - "36000"
+```
+
+通过 destinationrule 划分子集与权重，如果只是划分子集与权重，只需要配置 host 以及 subsets 字段就好了，其中 host 配置 service 的名字，因为在同一个命名空间下，配置 web-svc 就可以了。subsets 也只需要配置 name 与 labels。其中 virtualservice 也只需要配置 hosts 与 http 路由规则就好了。
+```yaml
+# DestinationRule
+apiVersion: networking.istio.io/v1alpha3
+kind: DestinationRule
+metadata:
+  name: test-dr
+  namespace: test-istio
+spec:
+  host: web-svc
+  subsets:
+  - name: httpd   # httpd 子集
+    labels:
+      app: httpd
+  - name: nginx   # nginx 子集
+    labels:
+      app: nginx
+---
+# virtualService
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: web-vs
+  namespace: test-istio
+spec:
+  hosts:
+  - web-svc
+  http:
+  - route:
+    - destination:
+        host: web-svc
+        subset: nginx
+      weight: 10
+    - destination:
+        host: web-svc
+        subset: httpd
+      weight: 90
+```
+
+配置完成后，通过在 client pod 访问 service，就可以看到到 httpd 的流量大概是 90%，而到 nginx 的流量大概是 10%。
+```s
+lr90@sj juejin % kubectl exec -it client-78cc96c576-zvcb2 -n test-istio /bin/
+sh
+kubectl exec [POD] [COMMAND] is DEPRECATED and will be removed in a future version. Use kubectl exec [POD] -- [COMMAND] instead.
+~ $ curl web-svc
+<html><body><h1>It works!</h1></body></html>
+~ $ curl web-svc
+<html><body><h1>It works!</h1></body></html>
+~ $ curl web-svc
+<html><body><h1>It works!</h1></body></html>
+~ $ curl web-svc
+<html><body><h1>It works!</h1></body></html>
+~ $ curl web-svc
+<html><body><h1>It works!</h1></body></html>
+~ $ curl web-svc
+<html><body><h1>It works!</h1></body></html>
+~ $ curl web-svc
+<html><body><h1>It works!</h1></body></html>
+~ $ curl web-svc
+<html><body><h1>It works!</h1></body></html>
+~ $ curl web-svc
+<html><body><h1>It works!</h1></body></html>
+~ $ curl web-svc
+<html><body><h1>It works!</h1></body></html>
+~ $ curl web-svc
+<html><body><h1>It works!</h1></body></html>
+~ $ curl web-svc
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
+<style>
+html { color-scheme: light dark; }
+body { width: 35em; margin: 0 auto;
+font-family: Tahoma, Verdana, Arial, sans-serif; }
+</style>
+</head>
+<body>
+<h1>Welcome to nginx!</h1>
+<p>If you see this page, the nginx web server is successfully installed and
+working. Further configuration is required.</p>
+
+<p>For online documentation and support please refer to
+<a href="http://nginx.org/">nginx.org</a>.<br/>
+Commercial support is available at
+<a href="http://nginx.com/">nginx.com</a>.</p>
+```
