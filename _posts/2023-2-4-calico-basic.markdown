@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "体验 Calico BGP 网络模型"
+title:      "Calico BGP 基本工作原理"
 date:       2023-2-4 10:10:00
 author:     "decent"
 header-img-credit: false
@@ -9,9 +9,10 @@ tags:
 ---
 
 **文章目录**
+- [概述](#概述)
 - [安装 Calico](#安装-calico)
 - [安装 calicoctl](#安装-calicoctl)
-- [calico 架构概述](#calico-架构概述)
+- [Calico 架构概述](#calico-架构概述)
 - [报文路径](#报文路径)
   - [在 master 容器内 ping node 节点上的容器](#在-master-容器内-ping-node-节点上的容器)
   - [容器网络配置](#容器网络配置)
@@ -19,6 +20,7 @@ tags:
 - [总结](#总结)
 - [参考](#参考)
 
+### 概述
 本文在一个三个节点的 K8s 集群中体验一下 Calico 网络模型，并对 Calico 的框架和通信模式做一个概述，三个节点的 K8s 集群如下，K8s 使用的版本为 1.20，Calico 使用的版本为 3.20。
 
 |  K8s 节点  | 节点 ip  | 
@@ -119,7 +121,7 @@ NAME                  AGE
 default-ipv4-ippool   5h9m
 ```
 
-### calico 架构概述
+### Calico 架构概述
 Calico v3.20.6 版本给出的架构图如下，最新版的架构图在这 [Component architecture](https://projectcalico.docs.tigera.io/master/reference/architecture/overview)，总体架构变化不大。
 ![java-javascript](/pics/architecture-calico_old.svg)
 根据 [官网](https://projectcalico.docs.tigera.io/archive/v3.20/reference/architecture/overview) 解释，主要的组件及功能如下:
