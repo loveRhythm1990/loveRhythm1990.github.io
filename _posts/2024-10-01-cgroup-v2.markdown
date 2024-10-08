@@ -130,21 +130,19 @@ func main() {
 echo 28558 > /sys/fs/cgroup/lr90/cgroup.procs
 ```
 
-不过我发现一个问题，尽管我程序申请的内存超过了 10M，**但是并没有 oom 发生，发生了啥？**，并且内存也始终控制在 10M 以下，感觉有点神奇。*TODO 排查一下这个问题*
+不过我发现一个问题，尽管我程序申请的内存超过了 10M，但是并没有 oom 发生，并且内存使用始终在 memory.high 附近。发生了啥？排查之后发现是 swap 的问题，需要在 cgroup 中禁用 swap，命令为 `echo 0 > memory.swap.max`，如果不起作用，可能还需要通过命令 `swapoff -a` 在系统层面禁用。
+
 ```s
-root@u:/sys/fs/cgroup/lr90# cat memory.events
 low 0
-high 1184
-max 0
-oom 0
-oom_kill 0
-oom_group_kill 0
-root@u:/sys/fs/cgroup/lr90# cat memory.current
-9736192
+high 14191
+max 43
+oom 1
+oom_kill 2
+oom_group_kill 1
 ```
 
 
 ### io 限制
-相比于 cgroupv1，cgroupv2 支持 buffio 限制，实现了真正意义上的 io 隔离，这一块后面再补充。
+相比于 cgroupv1，cgroupv2 支持 buffio 限制，实现了真正意义上的 io 隔离，这一块后面有时间再补充。
 
 TODO
