@@ -20,21 +20,15 @@ tags:
 ### cpu 限制
 与 cgroupv1 类似，cgroupv2 支持绑定 cpu(或者进一步绑定 numa)、配额、分片，几种限制 cpu 使用的方式，我们首先通过配额来验证下流程。
 
-1) 新建 cgroup
-   
-在 /sys/fs/cgroup 目录新建目录 lr90
+1) 新建 cgroup，在 /sys/fs/cgroup 目录新建目录 lr90
 ```s
 cd /sys/fs/cgroup
 mkdir lr90
 ```
 
-2) 配置 cpu quota
-   
-在 cgroupv2 中，`cpu.max` 文件用于配置进程可使用的 quota，包含两个值：$MAX $PERIOD，表示在 $PERIOD 周期内，进程可使用的配额为 $MAX。假设我们进程最多使用 0.5 个 cpu，则可以配置 $MAX 为 $PERIOD 的 1/2。我们将 `50000 100000` 写入到 cpu.max 文件中。
+2) 配置 cpu quota，在 cgroupv2 中，`cpu.max` 文件用于配置进程可使用的 quota，包含两个值：$MAX $PERIOD，表示在 $PERIOD 周期内，进程可使用的配额为 $MAX。假设我们进程最多使用 0.5 个 cpu，则可以配置 $MAX 为 $PERIOD 的 1/2。我们将 `50000 100000` 写入到 cpu.max 文件中。
 
-3) 启动一个消耗 cpu 的进程
-   
-写一个无限循环的 shell，因为是单进程所以最多会消耗 0.5 个 cpu，期望利用率是 50%。
+3) 启动一个消耗 cpu 的进程，写一个无限循环的 shell，因为是单进程所以最多会消耗 0.5 个 cpu，期望利用率是 50%。
 ```s
 #!/bin/bash
 while true; do :; done
@@ -45,17 +39,13 @@ lr90@u:~/cgroupv2$ ./shell.sh &
 [1] 26281
 ```
 
-4) 将进程加入到 lr90 这个 cgroup。 
-   
-在将进程加入到 cgroup 之前，我们先看一下系统的负载。
+4) 将进程加入到 lr90 这个 cgroup。在将进程加入到 cgroup 之前，我们先看一下系统的负载。
 ![java-javascript](/pics/cgroupv2-cpu1.jpg){:height="80%" width="80%"}
 
 通过命令 `echo 26281 > /sys/fs/cgroup/lr90/cgroup.procs` 将进程加入到 cgroup。期望 cpu 利用率是 50%。
 ![java-javascript](/pics/cgroupv2-cpu2.jpg){:height="80%" width="80%"}
 
-5) 查看 cpu.stat
-   
-在查看 cpu.stat 之前，我们先看一下这个文件中字段的含义：
+1) 查看 cpu.stat，我们先看一下这个文件中字段的含义：
 * usage_usec: 控制组中的进程使用的总 CPU 时间（微秒数）。它包括用户态和内核态的 CPU 使用时间
 * user_usec: 控制组中的进程在用户态使用的 CPU 时间（微秒数）。
 * system_usec: 控制组中的进程在内核态使用的 CPU 时间（微秒数）。
@@ -63,7 +53,6 @@ lr90@u:~/cgroupv2$ ./shell.sh &
 * nr_throttled: 控制组中的进程被 CPU 限制（throttled）的次数。
 * throttled_usec: 控制组中的进程被 CPU 限制的总时间（微秒数）。
    
-
 在理解 cpu.stat 中字段的含义之后，我们看下其内容。从下面内容中可以看出，880 个周期中，有 878 个周期被限流了，并且被限流的时间和运行时间基本一致，因为我们设置的 $MAX 是 $PERIOD 的 1/2。
 ```s
 root@u:/sys/fs/cgroup/lr90# cat cpu.stat
@@ -78,9 +67,7 @@ nr_bursts 0
 burst_usec 0
 ```
 
-6) 查看 cpu.pressure
-   
-关于 cgroupv2 资源 pressure 的文档可以参考 [PSI - Pressure Stall Information](https://docs.kernel.org/accounting/psi.html)，该指标用来衡量资源的紧张程度，取值范围为 `[0,1000]`，值越大则资源越紧张。应用程序可以自动监听这个文件，并在资源压力较大时主要调整 cpu.max 值，但是如何定义 `资源压力较大` 是个问题，目前看上去需要通过 grafana 实时监控这个值，并且需要观察业务实际的运行情况？
+6) 查看 cpu.pressure，关于 cgroupv2 资源 pressure 的文档可以参考 [PSI - Pressure Stall Information](https://docs.kernel.org/accounting/psi.html)，该指标用来衡量资源的紧张程度，取值范围为 `[0,1000]`，值越大则资源越紧张。应用程序可以自动监听这个文件，并在资源压力较大时主要调整 cpu.max 值，但是如何定义 `资源压力较大` 是个问题，目前看上去需要通过 grafana 实时监控这个值，并且需要观察业务实际的运行情况？
 
 ```s
 root@u:/sys/fs/cgroup/lr90# cat cpu.pressure
@@ -111,9 +98,7 @@ echo "10M" > /sys/fs/cgroup/lr90/memory.max
 echo "8M" > /sys/fs/cgroup/lr90/memory.high
 ```
 
-3) 写一个脚本，不停消耗内存
-
-这里是用 go 写的，下面程序每秒申请 2M 内存，最多申请 200M。预期会 OOM。
+3) 写一个脚本，不停消耗内存，这里是用 go 写的，下面程序每秒申请 2M 内存，最多申请 200M。预期会 OOM。
 ```go
 package main
 
