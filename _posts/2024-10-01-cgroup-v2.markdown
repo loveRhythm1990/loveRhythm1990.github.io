@@ -45,7 +45,7 @@ lr90@u:~/cgroupv2$ ./shell.sh &
 通过命令 `echo 26281 > /sys/fs/cgroup/lr90/cgroup.procs` 将进程加入到 cgroup。期望 cpu 利用率是 50%。
 ![java-javascript](/pics/cgroupv2-cpu2.jpg){:height="80%" width="80%"}
 
-1) 查看 cpu.stat，我们先看一下这个文件中字段的含义：
+5) 查看 cpu.stat，我们先看一下这个文件中字段的含义：
 * usage_usec: 控制组中的进程使用的总 CPU 时间（微秒数）。它包括用户态和内核态的 CPU 使用时间
 * user_usec: 控制组中的进程在用户态使用的 CPU 时间（微秒数）。
 * system_usec: 控制组中的进程在内核态使用的 CPU 时间（微秒数）。
