@@ -1,4 +1,4 @@
 
 a simple note.
 
-力求共赢
+合作共赢
