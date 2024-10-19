@@ -1,11 +1,11 @@
 ---
 layout:     post
-title:      "Ingress-nginx 代理 websocket"
+title:      "ingress-nginx 代理 websocket"
 date:       2022-3-6 10:10:00
 author:     "decent"
 header-img-credit: false
 tags:
-  - K8s
+  - ingress-nginx
 ---
 
 **文章目录**

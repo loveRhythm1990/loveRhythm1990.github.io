@@ -1,4 +1,4 @@
 
 a simple note.
 
-合作共赢
+心存感恩
