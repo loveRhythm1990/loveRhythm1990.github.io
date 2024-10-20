@@ -37,6 +37,18 @@ helm upgrade --install ingress-nginx ingress-nginx \
 ```
 ingress-nginx 需要公网访问，所以其 service 类型为 loadbalancer。在私有化环境下，可以使用 metallb 分配地址。
 
+根据 [ingress-nginx multiple ingress controllers](https://kubernetes.github.io/ingress-nginx/user-guide/multiple-ingress/) 文档，部署多个控制器的时候，还需要每一个控制器一个独立的 electionID:
+```yaml
+controller:
+  electionID: ingress-controller-leader
+  ingressClass: internal-nginx  # default: nginx
+  ingressClassResource:
+    name: internal-nginx  # default: nginx
+    enabled: true
+    default: false
+    controllerValue: "k8s.io/internal-ingress-nginx"  # default: k8s.io/ingress-nginx
+```
+
 #### cert-manager
 ```s
 kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.16.1/cert-manager.yaml
@@ -63,7 +75,7 @@ spec:
 ```
 
 ### 部署测试应用
-部署 kuard 服务用于测试。
+部署 kuard 服务用于测试，service 的端口为 80。
 #### 部署 deployment 服务
 参考文档 [Securing NGINX-ingress](https://cert-manager.io/docs/tutorials/acme/nginx-ingress/) 部署一个 deployment 以及 service。
 
