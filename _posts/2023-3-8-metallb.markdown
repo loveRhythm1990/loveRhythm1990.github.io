@@ -60,9 +60,9 @@ data:
 
 在高版本 metallb 中，需要使用下面命令创建 ip 池。在 kind 环境下首先需要确定 node 网段的 ip 范围，然后划出一个小网段，给 metallb 用。
 ```s
-    subnets="$(docker network inspect -f '{{json .IPAM.Config}}' kind)"
-    ipv4Subnets=$(echo "${subnets}" | use_grep -oP '"Subnet":"\K[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/[0-9]+' )
-    subnetPrefix=$(echo "${ipv4Subnets}" | awk -F'.' '{print $1"."$2}')
+subnets="$(docker network inspect -f '{{json .IPAM.Config}}' kind)"
+ipv4Subnets=$(echo "${subnets}" | use_grep -oP '"Subnet":"\K[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/[0-9]+' )
+subnetPrefix=$(echo "${ipv4Subnets}" | awk -F'.' '{print $1"."$2}')
 
     cat <<EOF | kubectl apply -f -
 apiVersion: metallb.io/v1beta1
