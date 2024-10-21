@@ -6,20 +6,22 @@ author:     "decent"
 header-img-credit: false
 tags:
     - Istio
+    - 运维
 ---
 
 **文章目录**
+- [metallb 概述](#metallb-概述)
 - [安装](#安装)
 - [配置 ip 池](#配置-ip-池)
 - [配置服务，并测试](#配置服务并测试)
   - [集群内访问](#集群内访问)
   - [集群外访问](#集群外访问)
-- [参考](#参考)
 
+### metallb 概述
 在部署测试 Istio 时，发现依赖 LoadBalance 类型的 Service。LoadBalance 类型的 Service 一般由公有云厂商分配`EXTERNAL-IP`，从而在集群外访问集群内的服务，如果是我们自己的测试集群，又依赖 LoadBalance 类型的服务，那怎么办呢？[metallb](https://github.com/metallb/metallb) 提供了一种解决方案，能够为集群内的服务分配 external-ip，并可以从集群外访问。其工作原理跟 [KeepAlived](https://loverhythm1990.github.io/2023/02/03/keepalived/) 非常类似，（[官方文档](https://metallb.universe.tf/concepts/layer2/#comparison-to-keepalived)中有解释其跟 keepalived 的区别），都是生成一个 vip，并响应这个 vip arp 请求。
 
 本文记录一下 metallb layer2 模式的使用，关于 metallb 的原理性内容，后面再整理下。
-> 当我使用最新的 v0.13.9 版本安装 metallb 时，参考[官方文档](https://metallb.universe.tf/installation/)，分配的 externalip 不能够从集群外访问，集群内时可以的，查了半天不知所以然，所以这里参考[在 Kubernetes 集群中使用 MetalLB 作为 LoadBalancer（上）- Layer2](https://atbug.com/load-balancer-service-with-metallb/) 使用 `v0.12.1` 版本进行配置。
+> 当我使用最新的 v0.13.9 版本安装 metallb 时，根据 [官方文档](https://metallb.universe.tf/installation/)，分配的 externalip 不能够从集群外访问，集群内时可以的，查了半天不知所以然，这里使用 `v0.12.1` 版本进行测试配置。
 
 ### 安装
 通过下面命令安装 metallb，并验证所有 pod 是否正常 Running。
@@ -55,6 +57,30 @@ data:
       - 192.168.31.210-192.168.31.220
 ```
 通过 kubectl apply -f 创建上面的 cm。
+
+在高版本 metallb 中，需要使用下面命令创建 ip 池。在 kind 环境下首先需要确定 node 网段的 ip 范围，然后划出一个小网段，给 metallb 用。
+```s
+    subnets="$(docker network inspect -f '{{json .IPAM.Config}}' kind)"
+    ipv4Subnets=$(echo "${subnets}" | use_grep -oP '"Subnet":"\K[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/[0-9]+' )
+    subnetPrefix=$(echo "${ipv4Subnets}" | awk -F'.' '{print $1"."$2}')
+
+    cat <<EOF | kubectl apply -f -
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: example
+  namespace: metallb-system
+spec:
+  addresses:
+    - ${subnetPrefix}.255.200-${subnetPrefix}.255.250
+---
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: empty
+  namespace: metallb-system
+EOF
+```
 
 ### 配置服务，并测试
 使用的测试服务为 nginx，配置如下，Service 要配置成 `LoadBalancer` 类型，
@@ -114,5 +140,6 @@ decent@Mac ansible % curl 192.168.31.211
 <title>Welcome to nginx!</title>
 ```
 
-### 参考
+**参考**
+
 [在 Kubernetes 集群中使用 MetalLB 作为 LoadBalancer（上）- Layer2](https://atbug.com/load-balancer-service-with-metallb/)
