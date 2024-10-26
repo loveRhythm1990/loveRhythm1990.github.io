@@ -1,0 +1,62 @@
+---
+layout:     post
+title:      "PromQL 是如何计算容器 cpu 利用率的"
+date:       2020-11-28 10:10:00
+author:     "weak old dog"
+header-img-credit: false
+tags:
+    - 监控
+---
+
+**目录**
+- [cpu 利用率高告警指标](#cpu-利用率高告警指标)
+- [1.计算容器使用核数](#1计算容器使用核数)
+- [2.计算容器的 cpu limit](#2计算容器的-cpu-limit)
+- [3.计算使用率](#3计算使用率)
+
+
+### cpu 利用率高告警指标
+我们先从告警指标说起，关于 Kubernetes 集群中的告警指标，开源项目 [awesome-prometheus-alerts](https://github.com/samber/awesome-prometheus-alerts) 提供了一些方案，真的是非常的 awesome。
+
+对于 cpu 资源利用率高，该项目给出的告警规则为 [docker-containers](https://samber.github.io/awesome-prometheus-alerts/rules#docker-containers)：
+```yaml
+  - alert: ContainerHighCpuUtilization
+    expr: (sum(rate(container_cpu_usage_seconds_total{container!=""}[5m])) by (pod, container) / 
+    sum(container_spec_cpu_quota{container!=""}/container_spec_cpu_period{container!=""}) by (pod, container) * 100) > 80
+    for: 2m
+    labels:
+      severity: warning
+    annotations:
+      summary: Container High CPU utilization (instance {{ $labels.instance }})
+      description: "Container CPU utilization is above 80%\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+```
+那上面的表达式具体是怎么计算的呢？本文章一步一步分析一下。
+
+### 1.计算容器使用核数
+容器的 cpu 利用率计算表达式为 `使用量/限制量*100`，我们首先需要计算出容器实际使用了多少核数。从上面表达式中，可以看出使用了 `container_cpu_usage_seconds_total` 这个监控指标，这个监控指标说的是容器`自启动以来使用的 cpu 秒数`，来源是容器的 cgroup 统计。如果容器使用了多个 cpu，则累加起来。因为是 counter 类型，所以这个指标是一直增加的，不会下降，大概是下面这个样子。
+![java-javascript](/pics/container-cpu-seconds.png)
+
+然后是计算容器使用核数，这个是通过 rate 函数进行的，这里需要理解一下，是如何从 cpu 使用时间转换成使用核数的，也就是 [rate](https://prometheus.io/docs/prometheus/latest/querying/functions/#rate) 函数的工作过程。rate 求的是一个**斜率**，结果是 **每秒** 的使用量。具体计算过程是 `container_cpu_usage_seconds_total` 这个指标：`（当前值 - 5分钟之前的值）/ (5 * 60)`，所以下面表达式的含义：**在过去的 5 分钟内，容器每秒使用的 cpu 秒数**。首先一个事实是，对于一个 cpu，每一秒我们最多能使用一秒。因此，如果容器每秒使用的 cpu 秒数大于 1，比如说是 `2.5s`，则表示容器在这一秒使用了 2.5 个 cpu 核。
+```sh
+rate(container_cpu_usage_seconds_total{container!=""}[5m])
+```
+因此上面指标就是容器使用的核数。理解之后，外面这一层 sum 就是按照 pod、container 分组求和。
+
+```sh
+sum(rate(container_cpu_usage_seconds_total{container!=""}[5m])) by (pod, container)
+```
+
+### 2.计算容器的 cpu limit
+计算容器使用的 cpu limit，涉及到两个指标：`container_spec_cpu_quota` 以及 `container_spec_cpu_period` 其实就是 cgroup 中的 quota 以及 period。直接相除就能得到容器的 limit。注意表达式 `container_spec_cpu_quota{container!=""}/container_spec_cpu_period{container!=""}` 在进行除法计算时，会自动进行 label join，只有标签相同的才会相除。然后再根据 pod、container 分组求和。
+```sh
+sum(container_spec_cpu_quota{container!=""}/container_spec_cpu_period{container!=""}) by (pod, container)
+```
+
+> 关于容器使用的 cpu limit，其实还有一个指标 `kube_pod_container_resource_limits`，这个是来自资源的 yaml 配置，并且包含了 cpu 以及 memory，需要通过 `resource="cpu"` 来查看 cpu 的限制，相对来说使用 quota 更精确一点。
+
+### 3.计算使用率
+最后就是计算使用量的表达式了，同样只有 pod、container 相同的才会进行计算。
+```sh
+sum(rate(container_cpu_usage_seconds_total{container!=""}[5m])) by (pod, container) / 
+    sum(container_spec_cpu_quota{container!=""}/container_spec_cpu_period{container!=""}) by (pod, container)
+```
