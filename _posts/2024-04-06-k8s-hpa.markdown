@@ -163,7 +163,7 @@ spec:
       stabilizationWindowSeconds: 180
 ```
 #### 稳定窗口(stabilization window)
-稳定窗口配置是为了缓解 `flapping` 也就是波动行为。具体配置是上面 yaml 中的 `stabilizationWindowSeconds: 180` 配置，这个配置是说：如果要进行缩容，请参考过去 5 分钟（180秒）计算出来的期望状态，并选择一个会导致副本数变化最大的配置。这样在 5 分钟的时间窗口内，扩缩容策略是一致的，避免了波动行为。说的直白一点，就是等待 180s 之后再扩容。
+稳定窗口配置是为了缓解 `flapping` 也就是波动行为。具体配置是上面 yaml 中的 `stabilizationWindowSeconds: 180` 配置，这个配置是说：如果要进行缩容，请参考过去 5 分钟（180秒）计算出来的期望状态，并选择一个会导致副本数变化最大的配置。
 
 #### 默认行为(default behavior)
 默认行为是不配置 behavior 时的默认参数，这个参考 [Default Behavior](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#default-behavior)。
