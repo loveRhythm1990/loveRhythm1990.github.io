@@ -16,7 +16,7 @@ tags:
     - [AverageValue](#averagevalue)
     - [Value](#value)
     - [Utilization](#utilization)
-- [prometheus scaler 实现](#prometheus-scaler-实现)
+  - [prometheus scaler 实现](#prometheus-scaler-实现)
 
 ### hpa 支持 prometheus 指标
 原生 hpa 支持 prometheus 时，需要部署 [prometheus-adapter](https://github.com/kubernetes-sigs/prometheus-adapter/blob/master/docs/walkthrough.md) 组件，部署该组件后，可以通过 K8s apiservice 访问 prometheus 指标，其中 apiservice 定义如下。
@@ -111,7 +111,7 @@ Value 类型并不关注每个副本的平均值，其 threshold 配置的是一
 ##### Utilization
 Utilization 多用于 CPU、内存等资源利用率的监控，通过设定一个目标利用率来保证资源的高效使用。例如设置 CPU 利用率的 Utilization=70%，当每个 Pod 的 CPU 使用率平均达到 70% 时，keda 会触发扩容。
 
-### prometheus scaler 实现
+#### prometheus scaler 实现
 这部分内容参考 keda 的源代码 [prometheus_scaler.go](https://github.com/kedacore/keda/blob/main/pkg/scalers/prometheus_scaler.go)。keda 在处理 prometheus 指标类型时，是直接向 prometheus 发送请求并结果反序列化为 promQueryResult 类型。
 ```go
 func (s *prometheusScaler) ExecutePromQuery(ctx context.Context) (float64, error) {
