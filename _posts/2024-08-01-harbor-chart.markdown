@@ -43,6 +43,9 @@ helm cm-push ./nginx-0.1.0.tgz myrepo
 
 # d. 安装 helm chart
 helm install nginx --version 0.1.0 myrepo/nginx
+
+# 下载一个 helm chart 到本地，默认有个最新版本
+helm pull repoName/chartName
 ```
 
 
