@@ -26,14 +26,15 @@ tags:
 ### helm 命令行使用
 #### 传统 helm chart 仓库格式
 通过传统 helm chart 方式管理 helm chart，这个是推荐使用的方式。
-```shell
+```sh
 # a. 登录
 helm registry login -u<userName>  my.harbor-repo.com
 
 # b. 添加 repo
 # 其中 https://my.harbor-repo.com/chartrepo/ 这部分是固定的
 # mocloud 是我们镜像仓库的地址。即使 helm registry 登录成功，添加 repo 仍然需要密码
-helm repo add  --username <userName> --password <password>  myrepo  https://my.harbor-repo.com/chartrepo/mocloud
+helm repo add  --username <userName> --password <password>  \
+  myrepo  https://my.harbor-repo.com/chartrepo/mocloud
 
 # c. 上传一个 chart，分两步
 # 第一步：安装 helm-push 插件
@@ -44,8 +45,12 @@ helm cm-push ./nginx-0.1.0.tgz myrepo
 # d. 安装 helm chart
 helm install nginx --version 0.1.0 myrepo/nginx
 
+# 其他 helm 命令
 # 下载一个 helm chart 到本地，默认有个最新版本
 helm pull repoName/chartName
+
+# 创建一个新的 chart，包含默认的一些配置，（默认是 nginx 模板，需要我们自己修改）
+helm create aChartName
 ```
 
 
