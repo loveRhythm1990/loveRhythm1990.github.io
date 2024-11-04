@@ -47,7 +47,7 @@ CREATE TABLE connections (
     state VARCHAR(100) NOT NULL
 );
 ```
-我们通过一个 nginx deployment 来模拟业务，当 connections 较多时，会触发 deployment，我们先部署 deployment。一开始的时候，副本数设置为 0，期望 keda 会激活 deployment，并进行库容。
+我们通过一个 nginx deployment 来模拟业务，当 connections 较多时，会触发 deployment 扩缩容，我们先部署 deployment。一开始的时候，副本数设置为 0，期望 keda 会激活 deployment，并进行扩容。
 
 a. 创建 deployment，初始副本数为 0。
 
@@ -209,7 +209,7 @@ keda 支持很多事件源，具体可以参考文档 [Scalers](https://keda.sh/
 
 在该方案中，keda 扩缩容的对象为 CloneSet，只要实现了 scale subresource 的资源都可以跟 hpa 协助来进行自动扩缩容。
 
-![java-javascript](/pics/openkruise-hpa.jpeg){:height="60%" width="60%"}
+![java-javascript](/pics/openkruise-hpa.jpeg){:height="40%" width="40%"}
 
 因为使用了 prometheus 作为指标来源，其 ScaledObject 配置如下，所使用的 prometheus 查询语句为 `sum(rate(nginx_http_requests_total{job="ingress-nginx-exporter"}[12s]))`，表示所有带有 `job="ingress-nginx-exporter"` 的请求增长率。prometheuse trigger 的其他配置参数有：1）serverAddress: prometheus 服务器的地址；2）metricName: 指标名称；3）threshold: 触发扩容的阈值。
 ```yaml
