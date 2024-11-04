@@ -85,13 +85,13 @@ triggers:
     unsafeSsl: "false"    
 ```
 看几个重点的参数：
-* serverAddress: prometheus 服务器地址，集群内部添 service 地址就可以了。
-* query: prometheus 查询指标。用在这里的 PromQL 必须是一个指，要么是一个 scalar类型；如果是 vector 类型，则 vector 类型必须只返回一个元素，否则 keda 不知道怎么处理数据。
-* activationThreshold：激活阈值，是指 keda 从 0 扩到 1 的阈值。
+* serverAddress: prometheus 服务器地址，在 K8s 集群内部填 service 地址就可以了。
+* query: prometheus 查询指标。用在这里的 PromQL 的结果必须是一个值：1）要么是一个 scalar类型；2）如果是 vector 类型，则 vector 类型必须只返回一个元素，否则 keda 不知道怎么处理数据。
+* activationThreshold：激活阈值，是指 keda 从 0 扩到 1 的阈值，从 0 到 1 这个过程是 keda 负责的，原生 hpa 不支持缩容到 0。
 
-这里需要注意的是 PromQL 表达式的写法，因为要求结果只有一个值，所以需要使用聚合函数 sum 对结果进行聚合。对于上面的例子来说，rate 需要一个 range vector `http_requests_total{deployment="my-deployment"}[2m]`，并返回一个 instant vector，因为 instant vector 的结果是一个数组，每个数组都是同一个指标 http_requests_total 但是具有不同的 label，所以需要使用聚合函数 sum 对结果进行聚合，sum 后面没有跟跟 by，那就是将所有的结果都聚合为一个指。
+这里需要注意的是 PromQL 表达式的写法，因为要求结果只有一个值，所以需要使用聚合函数 sum 对结果进行聚合。对于上面的例子来说，rate 需要一个 range vector `http_requests_total{deployment="my-deployment"}[2m]`，并返回一个 instant vector，因为 instant vector 的结果是一个数组，每个数组元素都是同一个指标 http_requests_total 但是具有不同的 label，所以需要使用聚合函数 sum 对结果进行聚合，sum 后面没有跟跟 by，那就是将所有的结果都聚合为一个值。
 
-另外**聚合函数只对 instant vector 起作用，并且其输出也是 instant vector**，因为指标没有跟 by，所以 instant vector 的结果是只有一个值。
+另外 **聚合函数只对 instant vector 起作用，并且其输出也是 instant vector**，因为 sum 没有跟 by 运算符进行分组，所以 instant vector 的结果是只有一个值。
 
 #### trigger 中的 metricType
 keda scaleobject 中可以指定 metricType，metricType 影响结果的计算，主要有三种类型： AverageValue, Value, Utilization。 默认是 AverageValue，具体可以参考文档 [keda-triggers](https://keda.sh/docs/2.15/reference/scaledobject-spec/#triggers)。
@@ -99,7 +99,7 @@ keda scaleobject 中可以指定 metricType，metricType 影响结果的计算�
 ##### AverageValue
 在 AverageValue 类型中， threshold 指定的是**每个副本的期望值**，因此在计算最终副本数的时候，计算过程如下：
 1. metricValue/threshold，得到期望副本数。
-2. 那期望副本数与当前副本数做比较，决定扩容还是缩容。
+2. 拿期望副本数与当前副本数做比较，决定扩容还是缩容。
 
 从上面计算过程可以看出，metricValue 往往是一个 sum 值。
 
@@ -112,11 +112,11 @@ Value 类型并不关注每个副本的平均值，其 threshold 配置的是一
 Utilization 多用于 CPU、内存等资源利用率的监控，通过设定一个目标利用率来保证资源的高效使用。例如设置 CPU 利用率的 Utilization=70%，当每个 Pod 的 CPU 使用率平均达到 70% 时，keda 会触发扩容。
 
 #### prometheus scaler 实现
-这部分内容参考 keda 的源代码 [prometheus_scaler.go](https://github.com/kedacore/keda/blob/main/pkg/scalers/prometheus_scaler.go)。keda 在处理 prometheus 指标类型时，是直接向 prometheus 发送请求并结果反序列化为 promQueryResult 类型。
+这部分内容参考 keda 的源代码 [prometheus_scaler.go](https://github.com/kedacore/keda/blob/main/pkg/scalers/prometheus_scaler.go)。keda 在处理 prometheus 指标类型时，是直接向 prometheus server 发送请求并结果反序列化为 promQueryResult 结构体类型。
 ```go
 func (s *prometheusScaler) ExecutePromQuery(ctx context.Context) (float64, error) {
 
-  // 1. 拼 url
+	// 1. 拼 url
 	queryEscaped := url_pkg.QueryEscape(s.metadata.Query)
 	url := fmt.Sprintf("%s/api/v1/query?query=%s&time=%s", s.metadata.ServerAddress, queryEscaped, t)
 
@@ -126,7 +126,7 @@ func (s *prometheusScaler) ExecutePromQuery(ctx context.Context) (float64, error
 		return -1, err
 	}
 
-  // 2. 反序列化指标
+	// 2. 反序列化指标
 	r, err := s.httpClient.Do(req)
 	b, err := io.ReadAll(r.Body)
 	var result promQueryResult
