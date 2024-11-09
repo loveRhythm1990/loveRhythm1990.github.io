@@ -169,7 +169,7 @@ lr90@sj pulumi % curl -L -k kuard.mo.cn-dev.mmoo.tech
 dns 验证是 ca 验证**签证书的人真正拥有证书里面的域名**，或者说对域名具有控制权，有下面两种方式。
 #### http01 验证
 http01 需要结合 ingress 使用，在使用这种方式时，需要事先在 dns 服务器处添加好 ingress 资源中的域名，比如上面的 `kuard.mo.cn-dev.mmoo.tech`，cert-manager 在帮我们执行 http01 验证的时候，会在对应 ingress 资源同命名空间创建一个用于验证域名的 http 服务以及对应的临时 ingress。这个临时 
-+9q3.*6    ingress 的配置大概如下：
+ingress 的配置大概如下：
 ```yaml
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -191,6 +191,8 @@ spec:
 
 ```
 上面的临时 ingress 以及整个 http01 验证我们都不需要关心，都是自动完成的。进行 dns 验证时，只要能访问通这个地址 `kuard.mo.cn-dev.mmoo.tech/.well-known/acme-challenge/<token>` 就认为验证是成功的。
+
+另外需要注意访问 `kuard.mo.cn-dev.mmoo.tech/.well-known/acme-challenge/<token>` 是通过 http 协议访问，也就意味着走的是 80 端口，如果中间链路有 80 端口不是开放的，需要注意一下。
 
 #### dns01 验证
 dns01 验证是指需要域名拥有者在域名服务出添加一个 txt 记录，证书提供商监听到这个 txt 记录之后，就认为域名是合法的。
