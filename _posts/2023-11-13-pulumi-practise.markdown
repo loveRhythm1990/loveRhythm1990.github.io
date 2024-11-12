@@ -18,6 +18,8 @@ tags:
 - [使用技巧](#使用技巧)
   - [将 pulumi.StringOutput 转换为 pulumi.ID](#将-pulumistringoutput-转换为-pulumiid)
   - [结构化配置](#结构化配置)
+  - [管理集群中已有资源](#管理集群中已有资源)
+  - [get 非 pulumi 创建的资源](#get-非-pulumi-创建的资源)
 - [配置 github action 运行 preview/up](#配置-github-action-运行-previewup)
 - [pulumi 运维注意事项](#pulumi-运维注意事项)
 
@@ -183,6 +185,25 @@ type foo struct {
 	ID   string `json:"id"`
 }
 ```
+
+#### 管理集群中已有资源
+对于集群中已有资源，比如 pod、cr 等，pulumi 能直接管理，已有资源不一定是 pulumi 创建的，也可能是手动创建的。
+
+#### get 非 pulumi 创建的资源
+get 非 pulumi 创建的资源其实有点折腾，这个使用新版本 pulumi sdk 之后好了很多，可以直接通用下面 sdk 来拿到集群中已有资源，这个资源可能不是 pulumi 创建的。
+
+下面代码获取一个 secret，其中 namespace/name 分别是命名空间和名字。并获取 secret 的 data 字段的 key `kubeconfig`，然后转换为 StringOutput 返回。
+```go
+	secret, err := corev1.GetSecret(ctx, "cos-kubeconfig",
+		pulumi.ID(fmt.Sprintf("%s/%s", namespace, name)), nil)
+	if err != nil {
+		return err
+	}
+	cosConfig := secret.Data.ApplyT(func(d map[string]string) string {
+		return d["kubeconfig"]
+	}).(pulumi.StringOutput)
+```
+
 
 ### 配置 github action 运行 preview/up
 《[github action](https://docs.github.com/en/actions)》 依据 github 提供的 runner 虚拟机（容器）来执行一些 ci 动作，比如测试、代码检查、pulumi 预览、执行等。在未付费的情况下，github runner 一般是有运行时间限制的。我们以执行 pulumi priview 为例子，看一下对应的 yaml 配置。下面的配置文件需要放在项目的 .github/workflows 目录。
