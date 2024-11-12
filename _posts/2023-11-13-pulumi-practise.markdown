@@ -194,14 +194,18 @@ get 非 pulumi 创建的资源其实有点折腾，这个使用新版本 pulumi 
 
 下面代码获取一个 secret，其中 namespace/name 分别是命名空间和名字。并获取 secret 的 data 字段的 key `kubeconfig`，然后转换为 StringOutput 返回。
 ```go
-	secret, err := corev1.GetSecret(ctx, "cos-kubeconfig",
-		pulumi.ID(fmt.Sprintf("%s/%s", namespace, name)), nil)
-	if err != nil {
-		return err
-	}
-	cosConfig := secret.Data.ApplyT(func(d map[string]string) string {
-		return d["kubeconfig"]
-	}).(pulumi.StringOutput)
+//import (
+//   corev1 "github.com/pulumi/pulumi-kubernetes/sdk/v4/go/kubernetes/core/v1"
+//)
+
+secret, err := corev1.GetSecret(ctx, "cos-kubeconfig",
+   pulumi.ID(fmt.Sprintf("%s/%s", namespace, name)), nil)
+if err != nil {
+   return err
+}
+cosConfig := secret.Data.ApplyT(func(d map[string]string) string {
+   return d["kubeconfig"]
+}).(pulumi.StringOutput)
 ```
 
 
