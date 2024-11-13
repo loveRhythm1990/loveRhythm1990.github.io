@@ -5,14 +5,13 @@ date:       2020-11-27 10:10:00
 author:     "weak old dog"
 header-img-credit: false
 tags:
-    - K8s
     - Operator
 ---
 
 **文章目录**
 - [概述](#概述)
 - [structured client](#structured-client)
-	- [处理 crd](#处理-crd)
+	- [处理自定义资源 cr](#处理自定义资源-cr)
 - [discovery client](#discovery-client)
 - [unstructured client](#unstructured-client)
 
@@ -21,13 +20,19 @@ tags:
 除了我们常用的 structured client（或typed client），K8s 里还有 discovery client 以及 dynamic client，后者大多数在处理 crd 的情况下比较有用，本文也主要介绍这几种 client 在处理 crd 时的使用方式。
 
 ### structured client
-这个是我们常用的 client，一般情况下，使用这种 client 的时候，我们对所要处理的资源的 gvk 是比较清楚的，比如 pod，其 group 是空 `""`，version 是 `v1`, kind 是 pod。在 K8s 中所对应的结构体类型是 `Pod`，这个时候，我们可以直接通过下面代码来获取集群中的某个 pod 资源。
+这个是我们常用的 client，一般情况下，使用这种 client 的时候，我们对所要处理的资源的 gvk 是比较清楚的，比如 pod，其 group 是空 `""`，version 是 v1, kind 是 pod。在 K8s 中所对应的结构体类型是 corev1.Pod，这个时候，我们可以直接通过下面代码来获取集群中的某个 pod 资源。
 ```go
 pod := &corev1.Pod{}
 _ := versionClient.Get(context.TODO, types.NamespacedName{Name:"pod1", Namespace:"default"}, pod)
 ```
-#### 处理 crd
-在使用 typed client 处理 crd 的时候，我们首先需要注册 crd 到我们的 scheme 中，然后使用这个 scheme 初始化 client，这个时候就可以像处理 K8s 内置资源一样处理 crd 资源了。我们以 cert-manager 为例说明初始化过程。在下面代码中，我把 import 都列出来了，这个还真是挺重要的，然后是：1）初始化自己的一个 scheme，这个 scheme 默认不含有任何内置类型，然后在 init 函数中将 K8s 的默认类型注册到这个 scheme 中；2）将 cert-manager 的 api 也就是 crd 注册到这个 scheme；3）初始化一个可用的 K8s client，我们直接初始化了一个 controller-runtime 的 client，一般情况下，我们用这个 client 更多，而不是 K8s 原生的 client。
+#### 处理自定义资源 cr
+在使用 typed client 处理 cr 的时候，首先需要注册 crd 到我们的 scheme 中，然后使用这个 scheme 初始化 client，这个时候就可以像处理 K8s 内置资源一样处理 crd 资源了。我们以 cert-manager 为例说明初始化过程。在下面代码中，我把 import 都列出来了,然后是：
+
+1）初始化自己的一个 scheme，这个 scheme 默认不含有任何内置类型，然后在 init 函数中将 K8s 的默认类型注册到这个 scheme 中；
+
+2）将 cert-manager 的 api 也就是 crd 注册到这个 scheme；
+
+3）初始化一个可用的 K8s client，我们直接初始化了一个 controller-runtime 的 client，一般情况下，我们用这个 client 更多，而不是 K8s 原生的 client。
 
 ```go
 import (
@@ -170,6 +175,17 @@ func main() {
 	}
 }
 ```
+通过 unstructuredClient 返回的资源类型结果体为 Unstructured，其实是对一个 `map[string]interface{}` 的封装，在使用时需要在代码里遍历分析这个 map。
+```go
+type Unstructured struct {
+	// Object is a JSON compatible map with string, float, int, bool, []interface{}, or
+	// map[string]interface{}
+	// children.
+	Object map[string]interface{}
+}
+```
+
+
 dynamic 客户端也支持构建 informer，这个可以参考[The Kubernetes Dynamic Client](https://medium.com/@caiorcferreira/the-kubernetes-dynamic-client-cd14af2047f5)，这里贴一下代码，需要的时候可以参考。
 
 ```go
