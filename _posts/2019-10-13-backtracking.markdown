@@ -1,7 +1,6 @@
 ---
 layout:     post
-title:      "回溯法合集"
-subtitle:   " \"关于回溯法题目的总结\""
+title:      "回溯法"
 date:       2019-10-13 16:09:00
 author:     "weak old dog"
 header-img-credit: false
@@ -10,10 +9,10 @@ tags:
 ---
 
 ### 全排列
-全排列这种题目，自己做过很多次了，然而每次做都不能痛快的写出来，很痛苦。leetcode上关于全排列的题目为（现在用力扣多一点）：
+全排列这种题目，自己做过很多次了，然而每次做都不能痛快的写出来，很痛苦：
 
-46. [全排列](https://leetcode-cn.com/problems/permutations/)，不含相同字符的全排列。
-47. [全排列 II](https://leetcode-cn.com/problems/permutations-ii/)，含相同字符的全排列，需要**去重**
+1.  [全排列](https://leetcode-cn.com/problems/permutations/)，不含相同字符的全排列。
+2.  [全排列 II](https://leetcode-cn.com/problems/permutations-ii/)，含相同字符的全排列，需要**去重**
 
 网上关于用回溯法解决全排列的解法很多，自己也用过好几种解法，然而看的多了就茫然起来，每次都是跟着别人的思路走，后来发现自己的想法也不错，以后总结自己的套路。这里以47题为例，46题相对于47题改动很小。
 
