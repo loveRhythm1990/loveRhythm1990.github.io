@@ -26,10 +26,12 @@ tags:
 ### metallb 概述
 在部署测试 Istio 时，发现依赖 LoadBalance 类型的 Service。LoadBalance 类型的 Service 一般由公有云厂商分配 external-ip，从而在集群外访问集群内的服务，如果是我们自己的测试集群，又依赖 LoadBalance 类型的服务，那怎么办呢？[metallb](https://github.com/metallb/metallb) 提供了一种解决方案，能够为集群内的服务分配 external-ip，并可以从集群外访问。
 
-#### 对比 keepalived 
-在 layer2 工作模式下，其与 [KeepAlived](https://metallb.universe.tf/concepts/layer2/#comparison-to-keepalived)类似，不过 KeepAlived 通过 VRRP(Virtual Router Redundancy Protocol) 交换路由协议，而 metallb layer2 通过 gossip 协议（具体实现为 [memberlist](https://github.com/hashicorp/memberlist)）交换成员信息，并进行选举，其中成员是指 metallb 中用于响应 arp 请求的 speaker 节点，只有一个节点在工作，其余 standby。
+> LoadBalance service 一般用于集群外访问，如果是自己做测试，可以把 service 或者 pod port-forward 出来。在一些没有公有云基础设施的情况下，我们确实需要一个 LB 来帮我们分配 vip，比如在我们的自建机房。
 
-另外有一个使用场景上的区别是，metallb 依赖 K8s 集群，是为 K8s 量身定做的的。keepalived 则没有此限制。
+#### 对比 keepalived 
+在 layer2 工作模式下，其与 [KeepAlived](https://metallb.universe.tf/concepts/layer2/#comparison-to-keepalived)类似，不过 KeepAlived 通过 VRRP(Virtual Router Redundancy Protocol) 交换路由信息，而 metallb layer2 通过 gossip 协议（具体实现为 [memberlist](https://github.com/hashicorp/memberlist)）交换成员信息，并进行选举，其中成员是指 metallb 中用于响应 arp 请求的 speaker 节点，只有选出的 leader 节点在工作，其余 standby。
+
+另外有一个使用场景上的区别是，metallb 依赖 K8s 集群，是为 K8s 量身定做的。keepalived 则没有此限制。
 
 ### 安装
 通过下面命令安装 metallb，并验证所有 pod 是否正常 Running。
@@ -46,9 +48,7 @@ speaker-x5tbp                 1/1     Running   0          46m
 ```
 
 ### 配置 ip 池
-external ip 池通过 configmap 的形式进行配置，分配的 ip 段位 `192.168.31.210-192.168.31.220`，这个 ip 段是我家里的路由器的 ip 段的一部分，我家里的路由器 ip 子网位 `192.168.31.1/24`，要保证这个 ip 段不会被分配到其他设备，这个可以登录路由器修改 dhcp 的ip分配范围，其实大可不必，家里没有这么多设备需要 ip。
-
-> 最新版的 metallb 好像不是通过 cm 配置了，后面再研究下怎么使用。另外使用过程中发现一个问题，metallb 会记录 service 的 ip 分配历史，如果之前分配过一个 ip，但是又想重新分配一个，这个时候好像得重启 metallb 的 controller，不然总是分配之前分配过的 ip.
+external ip 池通过 configmap 的形式进行配置，分配的 ip 段为 `192.168.31.210-192.168.31.220`，这个 ip 段是我家里的路由器的 ip 段的一部分，我家里的路由器 ip 子网为 `192.168.31.1/24`，要保证这个 ip 段不会被分配到其他设备，这个可以登录路由器修改 dhcp 的 ip 分配范围，其实大可不必，家里没有这么多设备需要 ip。通过 kubectl apply -f 创建下面的 cm。
 
 ```yml
 apiVersion: v1
@@ -64,7 +64,6 @@ data:
       addresses:
       - 192.168.31.210-192.168.31.220
 ```
-通过 kubectl apply -f 创建上面的 cm。
 
 在高版本 metallb 中，需要使用下面命令创建 ip 池。在 kind 环境下首先需要确定 node 网段的 ip 范围，然后划出一个小网段，给 metallb 用。
 ```s
