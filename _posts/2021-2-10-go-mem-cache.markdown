@@ -158,7 +158,7 @@ func (c *cache) Get(k string) (interface{}, bool) {
 ```
 
 #### Save（备份到文件）
-go-cache 支持将所有缓存数据放到文件中，这里用到了 golang 中特有的编解码库 gob，gob 的作用跟 json 或者 protobuf 是一样的，不过跟 json 相比效率更高一点，因为是编码为二进制，当前就没有可读性。
+go-cache 支持将所有缓存数据放到文件中，这里用到了 golang 中特有的编解码库 gob，gob 的作用跟 json 或者 protobuf 是一样的，不过跟 json 相比效率更高一点，因为是编码为二进制，当然就没有可读性。
 ```go
 func (c *cache) Save(w io.Writer) (err error) {
 	enc := gob.NewEncoder(w)
