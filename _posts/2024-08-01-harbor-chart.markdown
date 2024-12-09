@@ -51,6 +51,12 @@ helm pull repoName/chartName
 
 # 创建一个新的 chart，包含默认的一些配置，（默认是 nginx 模板，需要我们自己修改）
 helm create aChartName
+
+# 更新本地 helm repo，只有更新本地 helm repo 之后，远端的最新的 helm chart 才能被搜索和使用
+helm repo update
+
+# 在所有本地已经添加的 repo 中搜索 chart
+helm search repo <chartName>
 ```
 
 
