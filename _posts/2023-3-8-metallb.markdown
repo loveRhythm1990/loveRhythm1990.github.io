@@ -12,7 +12,7 @@ tags:
 **文章目录**
 - [metallb 概述](#metallb-概述)
   - [对比 keepalived](#对比-keepalived)
-- [安装](#安装)
+- [安装(manifests)](#安装manifests)
 - [配置 ip 池](#配置-ip-池)
 - [配置服务，并测试](#配置服务并测试)
   - [集群内访问](#集群内访问)
@@ -20,7 +20,7 @@ tags:
 - [高级特性](#高级特性)
   - [多 service 共享 vip](#多-service-共享-vip)
   - [指定 vip](#指定-vip)
-  - [指定 ip 池](#指定-ip-池)
+  - [从指定 ip 池分配 ip](#从指定-ip-池分配-ip)
 - [局限性](#局限性)
 
 ### metallb 概述
@@ -33,7 +33,7 @@ tags:
 
 另外有一个使用场景上的区别是，metallb 依赖 K8s 集群，是为 K8s 量身定做的。keepalived 则没有此限制。
 
-### 安装
+### 安装(manifests)
 通过下面命令安装 metallb，并验证所有 pod 是否正常 Running。
 ```s
 kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.12.1/manifests/namespace.yaml
@@ -154,17 +154,18 @@ metallb 支持通过给 service 配置一些 annotation 来支持一些高级特
 ```yaml
 metallb.universe.tf/allow-shared-ip="${ipkey}"
 ```
-参考[ip-address-sharing](https://metallb.universe.tf/usage/#ip-address-sharing)
+参考 [ip-address-sharing](https://metallb.universe.tf/usage/#ip-address-sharing)
 
 #### 指定 vip
 通过下面 annotation 指定 vip，一般情况下，vip 是需要提前申请和划分的，指定 vip 是合理的。
 > 注意，这里的 vip 不一定是公网 ip，一般情况下，多个 vip 可以对应同一个公网 ip，并且通过端口来区分。
+
 ```yaml
 metallb.universe.tf/loadBalancerIPs="${ip}"
 ```
 参考[requesting-specific-ips](https://metallb.universe.tf/usage/#requesting-specific-ips)
 
-#### 指定 ip 池
+#### 从指定 ip 池分配 ip
 通过下面 annotation 指定 ip 池，当集群中存在多个 ip 池的时候，需要指定 ip 池。
 ```yaml
 metallb.universe.tf/address-pool="${pool}"
