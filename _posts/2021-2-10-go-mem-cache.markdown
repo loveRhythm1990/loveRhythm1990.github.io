@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "go-cache:一个简单内存cache设计"
+title:      "go-cache:一个简单内存 cache 设计"
 date:       2021-02-10 10:10:00
 author:     "weak old dog"
 header-img-credit: false
@@ -13,8 +13,8 @@ tags:
 - [实现细节](#实现细节)
 	- [数据结构](#数据结构)
 	- [初始化](#初始化)
-	- [Set/Add](#setadd)
-	- [Get](#get)
+	- [Set/Add/Get](#setaddget)
+	- [Save（备份到文件）](#save备份到文件)
 - [总结](#总结)
 
 
@@ -67,7 +67,7 @@ type janitor struct {
 
 其中 janitor 初始化的时候有个地方比较 trick，就是如何停止回收过期数据的 goroutine，janitor 中有个同步 channel `stop: make(chan bool)`，当这个 channel 可读的时候，则停止 goroutine。那什么时候这个 channel 可读呢？go-cache 调用了 `runtime.SetFinalizer(C, stopJanitor)` 方法，表示整个 Cache 没有人在用，在进行垃圾回收的时候，goroutine 就应该停止。
 
-一般来讲，我们应用在使用 cache 的时候，cache 的生命周期应该是跟应用一致的，这个时候可能不需要主动停止 goroutine（或者我们在应用停止的时候调用 stop），`runtime.SetFinalizer(C, stopJanitor)` 的作用应该是应用中的局部 cache，可能随时被释放，同时又避免了 goroutine 泄露。
+一般来讲，我们应用在使用 cache 的时候，cache 的生命周期应该是跟应用一致的，这个时候不需要主动停止 goroutine（或者我们在应用停止的时候调用 stop），`runtime.SetFinalizer(C, stopJanitor)` 的作用应该是应用中的局部 cache，当局部 cache 因为没有引用而被垃圾回收期回收时，就会调用 `stopJanitor`，避免了 goroutine 泄露。
 
 ```go
 func newCacheWithJanitor(de time.Duration, ci time.Duration, m map[string]Item) *Cache {
@@ -114,7 +114,7 @@ func newCache(de time.Duration, m map[string]Item) *cache {
 	return c
 }
 ```
-#### Set/Add
+#### Set/Add/Get
 Set 以及 Add 用来添加元素，其中语义不同，Set 用于添加或者替换，Add 则只用于添加，如果元素已经存在则报错。类似的情况还有 Replace，要求元素一定存在。
 
 有个细节可以注意一下，为了提高效率，Add 等方法没有使用 `defer` 关键字进行解锁。
@@ -132,8 +132,7 @@ func (c *cache) Add(k string, x interface{}, d time.Duration) error {
 }
 ```
 
-#### Get
-Get 用于不会报错，不管元素存不存在。具体有三种情况：
+Get 接口不会报错，有两个返回参数：1）cache value（不存在或者过期就返回 nil）；2）标识位，是否存在 key。具体有三种情况：
 1. 元素不存在，返回 nil, false。
 2. 元素存在，但是过期了，当做不存在处理，返回 nil, false。
 3. 元素存在，并且没有过期，返回 object, true。
@@ -155,6 +154,64 @@ func (c *cache) Get(k string) (interface{}, bool) {
 	}
 	c.mu.RUnlock()
 	return item.Object, true
+}
+```
+
+#### Save（备份到文件）
+go-cache 支持将所有缓存数据放到文件中，这里用到了 golang 中特有的编解码库 gob，gob 的作用跟 json 或者 protobuf 是一样的，不过跟 json 相比效率更高一点，因为是编码为二进制，当前就没有可读性。
+```go
+func (c *cache) Save(w io.Writer) (err error) {
+	enc := gob.NewEncoder(w)
+	defer func() {
+		if x := recover(); x != nil {
+			err = fmt.Errorf("Error registering item types with Gob library")
+		}
+	}()
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	for _, v := range c.items {
+		gob.Register(v.Object)
+	}
+	err = enc.Encode(&c.items)
+	return
+}
+```
+下面是使用 gob 编解码的示例，在使用 gob 编解码之前需要将所有要编解码的类型注册到 gob 中。初始化 encoder 需要一个 `io.Writer`，表示输出流，即编码之后要写到哪个地方；初始化 decoder 需要一个 `io.Reader`，表示要从哪里读字节流。
+```go
+const file = "/Users/cachefile.txt"
+type Foo struct {
+	Name string
+	ID   int
+}
+func main() {
+	f, err := os.Create(file)
+	lo.Must0(err) // "github.com/samber/lo"
+	defer func() { _ = f.Close() }()
+
+	cache := map[string]interface{}{}
+	cache["a"] = "a-value"
+	cache["b"] = Foo{"name", 1}
+
+	for _, v := range cache {
+		gob.Register(v)
+	}
+	encoder := gob.NewEncoder(f)
+	lo.Must0(encoder.Encode(cache))
+
+	// load from file
+	for k, v := range load(file) {
+		fmt.Printf("%s: %v\n", k, v)
+	}
+}
+
+func load(file string) map[string]interface{} {
+	f, err := os.Open(file)
+	lo.Must0(err)
+	defer func() { _ = f.Close() }()
+
+	cache := map[string]interface{}{}
+	lo.Must0(gob.NewDecoder(f).Decode(&cache))
+	return cache
 }
 ```
 
