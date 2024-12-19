@@ -60,7 +60,7 @@ type Manager interface {
 #### Cluster 接口
 Cluster 接口是 controllerruntime 实现的主要接口，包括缓存、client 等，其实现者是 cluster 结构体。下面接口中我们先关注两个接口：
 
-1）`GetClient()`：我们最常用的接口（或者说是必用），这个接口默认情况从缓存拿资源，如果资源的缓存不存在，则主动构建一个，这里的缓存是只 informercache。举例来说，如果我们通过下面的语句拿一个 StatefulSet，控制器发现没有缓存 StatefulSet 时，会在后台默认给我们生成一个，这个是按需生成的。
+1）`GetClient()`：我们最常用的接口（或者说是必用），这个接口默认情况从缓存拿资源，如果资源的缓存不存在，则主动构建一个，这里的缓存是指 informercache。举例来说，如果我们通过下面的语句拿一个 StatefulSet，控制器发现没有缓存 StatefulSet 时，会在后台默认给我们生成一个，即按需生成。
 ```go
 sts := &appsv1.StatefulSet{}
 if err := r.Client.Get(context.TODO(), types.NamespacedName{
@@ -170,7 +170,7 @@ func New(config *rest.Config, options Options) (c Client, err error) {
 }
 ```
 
-在 Cluster 接口的初始化时，生成两个两个 client：clientWriter 和 clientReader。后者的实现比较明确，是直接跟 K8s apiserver 交互的，不会走 cache。 我们重点看下 clientWriter 的实现。需要注意的是 clientWriter 最终赋值给了 cluster 的 client 字段，也是我们 Manager 接口 `GetClient()` 方法最终返回的字段。
+在 Cluster 接口的初始化时，生成两个两个 client：clientWriter 和 clientReader。后者的实现比较明确，是直接跟 K8s apiserver 交互的，不会走 cache（也就是说通过 clientReader 总是从 apiserver 读最新数据）。 我们重点看下 clientWriter 的实现。需要注意的是 clientWriter 最终赋值给了 cluster 的 client 字段，也是我们 Manager 接口 `GetClient()` 方法最终返回的字段。
 
 ```go
 // New constructs a brand new cluster.
