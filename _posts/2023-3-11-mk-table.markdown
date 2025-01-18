@@ -15,6 +15,7 @@ tags:
 - [mac快捷键](#mac快捷键)
 - [markdown 表情](#markdown-表情)
 - [Goland 试用](#goland-试用)
+- [为 git 配置代理](#为-git-配置代理)
 
 记录一些提升能效的快捷键、技巧等。
 
@@ -45,3 +46,15 @@ tags:
 然后到其网站复制一下体验码，复制到 Goland 中，然后就可以体验使用 Goland 了。其网站为：aHR0cHM6Ly8zLmpldGJyYS5pbi8=
 
 或者：aHR0cHM6Ly9qZXRicmEuaW4vcw==
+
+### 为 git 配置代理
+
+首先配置 http 代理
+git config --global --add http.proxy http://USERNAME:PASSWORD@PROXY_ADDRESS:PROXY_PORT
+git config --global --add https.proxy http://USERNAME:PASSWORD@PROXY_ADDRESS:PROXY_PORT
+
+然后将所有 git 协议换成 http 协议
+git config --global url."https://".insteadOf git://
+git config --global url."https://github.com/".insteadOf git@github.com: 
+
+(don't remove the final colon)
