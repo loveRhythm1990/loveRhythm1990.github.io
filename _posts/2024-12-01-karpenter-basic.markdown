@@ -97,10 +97,6 @@ spec:
       expireAfter: 720h | Never
       terminationGracePeriod: 48h
       requirements:
-        - key: "karpenter.k8s.aws/instance-category"
-          operator: In
-          values: ["c", "m", "r"]
-          minValues: 2
         - key: "karpenter.k8s.aws/instance-family"
           operator: In
           values: ["m5","m5d","c5","c5d","c4","r4"]
@@ -108,12 +104,6 @@ spec:
         - key: "karpenter.k8s.aws/instance-cpu"
           operator: In
           values: ["4", "8", "16", "32"]
-        - key: "karpenter.k8s.aws/instance-hypervisor"
-          operator: In
-          values: ["nitro"]
-        - key: "karpenter.k8s.aws/instance-generation"
-          operator: Gt
-          values: ["2"]
         - key: "topology.kubernetes.io/zone"
           operator: In
           values: ["us-west-2a", "us-west-2b"]
@@ -161,23 +151,24 @@ Karpenter 中的调度的概念跟 K8s 中的调度概念一致，不过在不�
 第三层是应用自身，根据已有节点池定义业务的调度属性，比如可用区，affinities 属性等。
 
 #### consolidate
-consolidate 是指将集群中资源利用率比较低的节点或者空闲的节点移除，以提高资源利用率和降低成本。consolidate 部分细节较多，这里只概述下大概流程和配置，算法部分后面计划单独介绍。
 
-Karpenter consolidate 的流程如下：
+按照官方文档[karpenter disruption: automated methods](https://karpenter.sh/v0.32/concepts/disruption/#automated-methods), karpenter 有四种自动删除节点的情况：
+* Expiration: 指在 NodePool cr 中指定了 `spec.disruption.expireAfter` 这种情况比较好处理。
+* Consolidation: 理解为 `整合`，是指自动删除闲置的 node 或者替换为更便宜的 node，以提高资源利用率和降低成本，这个是我们主要关注的内容。
+* Drift: 这个不太知道怎么翻译，是指 NodePool spec 变化的情况，比如节点池原来用 `c5.xlarge` 机型，修改之后改用 `c6.xlarge` 机型，此时需要将原来的 c5.xlarge 机型删除。
+* Interruption: 中断，是指节点异常退出的情况，比如 spot 实例被回收，Node 出现故障等。
 
-1）寻找一组可能被 consolidate 的节点，称为 candidate。如果节点上运行的 pod 含有 annotation `karpenter.sh/do-not-disrupt: "true"` 则不移除节点。
+上面四种情况都是通过 disruption 控制器来做的，karpenter disruption 控制器的工作流程如下：
 
-2）对于每个 candidate，检查移除节点是否会违背 NodePool 的 disruption method。如果是节点替换，则要对要迁移的 pod 进行模拟调度，因此可能会触发弹出新的节点。
+1. 寻找一组可能被 disruption 的节点，称为 candidate。如果节点上运行的 pod 含有 annotation `karpenter.sh/do-not-disrupt: "true"` 则不移除节点。
+2. 对于每个 candidate，如果上面还有 pod，则进行模拟调度，如果当前集群中的节点不能满足 pod，可能会触发弹出新的节点（replacement）。
+3. 对每个 candidate 添加污点 `karpenter.sh/disrupted:NoSchedule` 防止pod 调度过去。
+4. 对于需要进行节点置换的 pod，等待新的节点 ready，如果新节点弹出失败，则从第一步 1）重新开始。
+5. 删除 node，并等待优雅退出成功。其中驱逐 pod 是通过 K8s 的 [Eviciton API](https://kubernetes.io/docs/concepts/scheduling-eviction/api-eviction/) 进行的。
+6. 退出之后，重新从 1）开始。
 
-3）对每个 candidate 添加污点 `karpenter.sh/disrupted:NoSchedule` 防止pod 调度过去。
-
-4）对于需要进行节点置换的 pod，等待新的节点 ready，如果新节点弹出失败，则从第一步 1）重新开始。
-
-5）删除 node，并等待优雅退出成功。其中驱逐 pod 是通过 K8s 的 [Eviciton API](https://kubernetes.io/docs/concepts/scheduling-eviction/api-eviction/) 进行的。
-
-6）退出之后，重新从 1）开始。
-
-consolidate 的配置可以参考 [Karpenter: an introduction to the Disruption Budgets](https://itnext.io/karpenter-an-introduction-to-the-disruption-budgets-d8752378785e)，
+对于 consolidate 而言，又分为三种情况：1）闲置节点 consolidate；2）多节点替换为其他另一个节点（启发式的）；3）单节点替换为其他另一个节点。
+consolidate 的配置可以参考 [Karpenter: an introduction to the Disruption Budgets](https://itnext.io/karpenter-an-introduction-to-the-disruption-budgets-d8752378785e)，示例如下：
 ```yaml
   disruption:
     consolidationPolicy: WhenEmptyOrUnderutilized
