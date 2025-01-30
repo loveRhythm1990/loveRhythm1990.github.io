@@ -38,23 +38,13 @@ NodeClass 描述的是底层 infra 的一些信息，是跟供应商绑定的。
 // ECSNodeClassSpec is the top level specification for the AlibabaCloud Karpenter Provider.
 // This will contain the configuration necessary to launch instances in AlibabaCloud.
 type ECSNodeClassSpec struct {
-	// VSwitchSelectorTerms is a list of or vSwitch selector terms. The terms are ORed.
 	VSwitchSelectorTerms []VSwitchSelectorTerm `json:"vSwitchSelectorTerms" hash:"ignore"`
-	// VSwitchSelectionPolicy is the policy to select the vSwitch.
 	VSwitchSelectionPolicy string `json:"vSwitchSelectionPolicy,omitempty"`
-	// SecurityGroupSelectorTerms is a list of or security group selector terms. The terms are ORed.
 	SecurityGroupSelectorTerms []SecurityGroupSelectorTerm `json:"securityGroupSelectorTerms" hash:"ignore"`
-	// ImageSelectorTerms is a list of or image selector terms. The terms are ORed.
 	ImageSelectorTerms []ImageSelectorTerm `json:"imageSelectorTerms" hash:"ignore"`
-	// KubeletConfiguration defines args to be used when configuring kubelet on provisioned nodes.
-	// They are a vswitch of the upstream types, recognizing not all options may be supported.
-	// Wherever possible, the types and names should reflect the upstream kubelet types.
 	KubeletConfiguration *KubeletConfiguration `json:"kubeletConfiguration,omitempty"`
-	// SystemDisk to be applied to provisioned nodes.
 	SystemDisk *SystemDisk `json:"systemDisk,omitempty"`
-	// Tags to be applied on ecs resources like instances and launch templates.
 	Tags map[string]string `json:"tags,omitempty"`
-	// ResourceGroupID is the resource group id in ECS
 	ResourceGroupID string `json:"resourceGroupId,omitempty"`
 }
 ```
