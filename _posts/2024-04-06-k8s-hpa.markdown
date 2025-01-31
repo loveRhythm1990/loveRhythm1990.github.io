@@ -245,6 +245,24 @@ kubectl get --raw /apis/metrics.k8s.io/v1beta1/namespaces/default/pods/php-apach
     ]
 }
 ```
+metrics server 在安装时会通过一个名称为 `v1beta1.metrics.k8s.io` 的 apiservice 资源注册服务, metrics server 启动后，会周期性的向 kubelet 拉指标，但是其仅存储最近的两个指标点，并根据这个两个指标计算利用率。关于 metrics server 提供的 api 可以参考 [resource-metrics-api.md](https://github.com/kubernetes/design-proposals-archive/blob/main/instrumentation/resource-metrics-api.md)。
+```yaml
+apiVersion: apiregistration.k8s.io/v1
+kind: APIService
+metadata:
+  labels:
+    k8s-app: metrics-server
+  name: v1beta1.metrics.k8s.io
+spec:
+  group: metrics.k8s.io
+  groupPriorityMinimum: 100
+  insecureSkipTLSVerify: true
+  service:
+    name: metrics-server
+    namespace: kube-system
+  version: v1beta1
+  versionPriority: 100
+```
 
 #### 自定义指标(custom metrics)
 项目 [prometheus-adapter](https://github.com/kubernetes-sigs/prometheus-adapter) 提供了可用 hpa 使用的自定义 metrics。prometheus-adapter 是 metrics-server 的可替代品，如果集群中已经部署了 prometheus，那么可以不用部署 metrics-server，而是部署 prometheus-adapter，该组件可将 prometheus 收集的指标转换为 hpa 可使用的指标。
