@@ -5,7 +5,7 @@ date:       2024-12-01 10:10:00
 author:     "decent"
 header-img-credit: false
 tags:
-    - K8s生态
+    - 扩缩容
 ---
 
 **目录**
