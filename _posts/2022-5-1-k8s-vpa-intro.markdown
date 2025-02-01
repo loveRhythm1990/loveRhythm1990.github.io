@@ -209,7 +209,7 @@ status:
 另外 containerStatuses 中的 allocatedResources 表示实际分配给容器的资源。
 
 pod 运行之后，我们修改 cpu 试试，从 0.1c 改成 0.2c（通过 resize subresource 进行调整，如果提示没有 resize subresource，需要升级 kubectl）。
-```
+```s
 kubectl patch pod hamster-7db45fcd8c-pf8ts \
   --subresource resize \
   --patch '{"spec":{"containers":[{"name":"hamster", "resources":{"requests":{"cpu":"200m"}, "limits":{"cpu":"200m"}}}]}}'
