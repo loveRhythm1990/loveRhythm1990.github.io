@@ -8,6 +8,7 @@ tags:
     - 扩缩容
 ---
 
+**目录**
 - [vpa 概述](#vpa-概述)
 	- [四种工作模式](#四种工作模式)
 	- [组件与架构](#组件与架构)
@@ -15,6 +16,7 @@ tags:
 	- [vpa 安装](#vpa-安装)
 	- [部署测试 deployment](#部署测试-deployment)
 	- [验证扩容效果](#验证扩容效果)
+- [K8s 原生 pod 资源动态调整](#k8s-原生-pod-资源动态调整)
 - [参考](#参考)
 
 
@@ -141,10 +143,10 @@ done
 
 首先是 deployment 配置，原始 deployment 的资源配置如下，只配置了 request：
 ```yaml
-        resources:
-          requests:
-            cpu: 100m
-            memory: 50Mi
+    resources:
+      requests:
+        cpu: 100m
+        memory: 50Mi
 ```
 然后是 vpa 的配置，vpa 的配置我们看上一小节的配置，配置了最小和最大配置。
 
@@ -156,6 +158,63 @@ done
         memory: 262144k
 ```
 
+### K8s 原生 pod 资源动态调整
+在 K8s 1.27 之后，支持 pod 资源的动态调整，可以参考 [Resize CPU and Memory Resources assigned to Containers](https://kubernetes.io/docs/tasks/configure-pod-container/resize-container-resources/)，不过截止 v1.32 该feature gate 是 alpha 状态，也就是默认没有启用。在 kind 环境下，使用下面配置开启 vpa 相关 feature gate:
+```yaml
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+featureGates:
+  "InPlacePodVerticalScaling": true
+  "InPlacePodVerticalScalingAllocatedStatus": true
+  "InPlacePodVerticalScalingExclusiveCPUs": true
+```
+然后使用命令 `kind create cluster --config=kind.yaml` 创建集群。
+
+首先看一下在启用动态 resize 之后，创建一个 pod 配置都有哪些变化，还是上面的 hamster deploy，创建之后跟 resize 相关的配置如下：
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+spec:
+  containers:
+  - args:
+    name: hamster
+    resizePolicy:
+    - resourceName: cpu
+      restartPolicy: NotRequired
+    - resourceName: memory
+      restartPolicy: NotRequired
+    resources:
+      requests:
+        cpu: 100m
+        memory: 50Mi
+status:
+  containerStatuses:
+  - allocatedResources:
+      cpu: 100m
+      memory: 50Mi
+    image: registry.k8s.io/ubuntu-slim:0.14
+    name: hamster
+    ready: true
+    resources:
+      requests:
+        cpu: 100m
+        memory: 50Mi
+    restartCount: 0
+```
+可以看到在 spec 以及 status 部分都新增了一部分配置，其中 restartPolicy 是指资源修改后，要不要重启 container，有两种配置：
+* NotRequired: 动态调整不重启容器，如果是调整 cpu 资源，应用是不需要调整的，一般会自动使用更多的 cpu 资源。
+* RestartContainer: 重启容器，并在重启后使用新的资源配置，如果是内存资源，一般是需要调整的，不过应用如果自己管理使用的内存，也可以不用重启容器，比如调整之后给正在运行的应用发送 rpc 请求，使其动态感知到内存资源有所变化。
+
+另外 containerStatuses 中的 allocatedResources 表示实际分配给容器的资源。
+
+pod 运行之后，我们修改 cpu 试试，从 0.1c 改成 0.2c（通过 resize subresource 进行调整，如果提示没有 resize subresource，需要升级 kubectl）。
+```
+kubectl patch pod hamster-7db45fcd8c-pf8ts \
+  --subresource resize \
+  --patch '{"spec":{"containers":[{"name":"hamster", "resources":{"requests":{"cpu":"200m"}, "limits":{"cpu":"200m"}}}]}}'
+```
+修改之后，可以看到 spec 中的 resources 部分以及 containerStatuses 部分都调整为 0.2c 了。
 
 ### 参考
 滴滴写的 [深入理解 VPA Recommender](https://www.infoq.cn/article/z40lmwmtoyvecq6tpoik)
