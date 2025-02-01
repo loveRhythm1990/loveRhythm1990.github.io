@@ -26,7 +26,8 @@ vpa 有四种工作方式，通过 vpa cr 的 `updateMode: Auto` 字段来定义
 * Auto: vpa 会在 pod 创建的时候通过 webhook 修改 pod 的资源请求；pod 正在运行时，updater 组件也会把 pod evicted，并在创建时重新配置资源请求。在当前实现中，Auto 的工作模式跟 Recreate 是一致的，不过当原地升级（in-place update）支持之后，推荐使用 Auto 模式。
 * Recreate: 如 Auto，当正在运行的 pod 有新的推荐值时，会被 evicted 并重新设置资源 request。
 * Initial: 仅仅在 pod 创建的时候修改资源，不会 evicted。
-* Off: 不会修改资源请求值，仅仅把推荐值写到 vpa cr 的 status 中，比如：
+* Off: 不会修改资源请求值，仅仅把推荐值写到 vpa cr 的 status 中，比如
+  
   ```yaml
   status:
   conditions:
@@ -57,12 +58,12 @@ vpa 包含三个组件：Recommender、Updater、Admission Plugin，整体相对
 * Admission Plugin: 当 pod 创建的时候，通过 webHook 修改 pod 的 resource 配置。
 
 vpa 的架构和设计思路可以参考 [vertical-pod-autoscaler.md](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md).
-![java-javascript](/pics/vpa-architecture.png){:height="60%" width="60%"}
+![java-javascript](/pics/vpa-architecture.png){:height="50%" width="50%"}
 
 ### 安装与测试
 首先通过示例看一下 vpa 的安装与使用，走通 happy pass 流程。
 #### vpa 安装
-将 virtical-pod-autoscaler 项目拷贝下来，通过项目目录下的 vpa-up.sh 脚本安装 vpa。
+vpa 组件以来 metrics-server 提供资源利用指标，在部署 vpa 部署之前需要先部署 metrics-server。将 virtical-pod-autoscaler 项目拷贝下来，通过项目目录下的 vpa-up.sh 脚本安装 vpa。
 ```s
 ./hack/vpa-up.sh
 ```
@@ -85,22 +86,7 @@ vpa-updater-6b8fdf7df4-99ngv                 1/1     Running   0              96
 kubectl create -f examples/hamster.yaml
 ```
 
-其中 VerticalPodAutoscaler 资源的定义如下，部分字段解释如下：
-* recommenders: 使用的 recommender 列表，当集群中部署有多个 recommender 的时候，可以选择其中一个或多个使用，一般不同 recommender 有不同的配置参数。可以在 recommender 启动时指定名字以及相关参数。
-  ```s
-  I0501 09:46:30.085527       1 flags.go:57] FLAG: --recommendation-lower-bound-cpu-percentile="0.5"
-  I0501 09:46:30.085530       1 flags.go:57] FLAG: --recommendation-lower-bound-memory-percentile="0.5"
-  I0501 09:46:30.085532       1 flags.go:57] FLAG: --recommendation-margin-fraction="0.15"
-  I0501 09:46:30.085535       1 flags.go:57] FLAG: --recommendation-upper-bound-cpu-percentile="0.95"
-  I0501 09:46:30.085538       1 flags.go:57] FLAG: --recommendation-upper-bound-memory-percentile="0.95"
-  I0501 09:46:30.085540       1 flags.go:57] FLAG: --recommender-interval="1m0s"
-  I0501 09:46:30.085569       1 flags.go:57] FLAG: --recommender-name="default"
-  ``` 
-* targetRef: 跟 hpa 一样，指定作用的控制器对象。
-* containerName: 指定作用的容器名字，`*` 表示没有专门配置扩容策略的容器，这里可以看作是所有容器。
-* minAllowed/maxAllowed: 所能使用资源的区间范围，pod 的资源 limit 不能超过这个值。 
-* updatePolicy：工作模式，vpa 一共有四种工作方式：Auto/Recreate/Initial/Off，默认是 Auto 模式。
-
+其中 VerticalPodAutoscaler crd 资源的定义如下:
 ```yaml
 apiVersion: "autoscaling.k8s.io/v1"
 kind: VerticalPodAutoscaler
@@ -126,7 +112,23 @@ spec:
           memory: 500Mi
         controlledResources: ["cpu", "memory"]
 ```
-deployment 的配置比较简单，其使用的 ubuntu 镜像，所运行的命令如下，含义如下：持续运行 `yes` 命令 0.5 秒钟，然后 sleep 0.5 秒钟。造成的现象就是该容器会使用 0.5 个 cpu，因此也会触发 vpc 扩容容器。
+vpa cr 资源的部分字段解释如下：
+* recommenders: 使用的 recommender 列表，当集群中部署有多个 recommender 的时候，可以选择其中一个或多个使用，一般不同 recommender 有不同的配置参数。可以在 recommender 启动时指定名字以及相关参数。
+  ```s
+  I0501 09:46:30.085527       1 flags.go:57] FLAG: --recommendation-lower-bound-cpu-percentile="0.5"
+  I0501 09:46:30.085530       1 flags.go:57] FLAG: --recommendation-lower-bound-memory-percentile="0.5"
+  I0501 09:46:30.085532       1 flags.go:57] FLAG: --recommendation-margin-fraction="0.15"
+  I0501 09:46:30.085535       1 flags.go:57] FLAG: --recommendation-upper-bound-cpu-percentile="0.95"
+  I0501 09:46:30.085538       1 flags.go:57] FLAG: --recommendation-upper-bound-memory-percentile="0.95"
+  I0501 09:46:30.085540       1 flags.go:57] FLAG: --recommender-interval="1m0s"
+  I0501 09:46:30.085569       1 flags.go:57] FLAG: --recommender-name="default"
+  ``` 
+* targetRef: 跟 hpa 一样，指定作用的控制器对象。
+* containerName: 指定作用的容器名字，`*` 表示没有专门配置扩容策略的容器，这里可以看作是所有容器。
+* minAllowed/maxAllowed: 所能使用资源的区间范围，pod 的资源 limit 不能超过这个值。 
+* updatePolicy：工作模式，vpa 一共有四种工作方式：Auto/Recreate/Initial/Off，默认是 Auto 模式。
+
+deployment 测试应用的配置比较简单，其使用的 ubuntu 镜像，所运行的脚本命令如下，含义为：持续运行 `yes` 命令 0.5 秒钟（该命令会持续打印字符 `y` 到标准输出，直到 ctrl-c 或者设置 timeout 值），然后 sleep 0.5 秒钟。该 shell 命令造成的现象就是该容器会使用 0.5 个 cpu，但是在 deployment 的配置中，只给了 0.1 个 cpu，因此预期会触发容器扩容。
 ```s
 while true; do
     timeout 0.5s yes >/dev/null
