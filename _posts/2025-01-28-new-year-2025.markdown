@@ -68,7 +68,7 @@ tags:
 ### 2025-02-04
 今天小舅子本来说要来我们家里住一段时间，床都铺好了（虽然铺在客厅里了，我现在还不舍得让出自己的房间），但是他转头去浦东面试找工作了，面试通过了，工资不高 5000 左右，先干一段时间看看吧。
 
-这几天打游戏非常糟心，我王者荣耀被禁赛了，因为经常挂机，我一气之下就卸载了。皇室战争今天早上我经历了 15 连败，我差不多是九年的老玩家了，非常心痛，一起之下卸载了。
+这几天打游戏非常糟心，我王者荣耀被禁赛了，因为经常挂机，我一气之下就卸载了。皇室战争今天早上我经历了 15 连败，我差不多是九年的老玩家了，非常心痛，一气之下卸载了。
 
 我想起一款游戏叫斗地主，我从微信下载下来玩了几局，一开始体验还不错，不亦乐乎，玩大了之后，发现不太对劲，我欢乐豆豆输光了，我开始看广告挣欢乐豆，挣了几次之后又输光了，我又充了 9 快钱的，我又输光了。原因是这款游戏牌面的概率跟现实差距非常大，有时候地主几把就把牌出光了，看得我目瞪口呆，什么顺子、连对、炸弹，尤其是每次都有炸弹，这个不合常理。
 
@@ -78,6 +78,7 @@ type Card struct {
 	value int
 	count int
 }
+
 var (
 	cardsMap = map[string]Card{
 		"3":  {value: 3, count: 4},
@@ -116,13 +117,15 @@ func main() {
 	var player [3][17]string
 	for i := 0; i < 17; i++ {
 		for j := 0; j < 3; j++ {
-			player[j][i] = pickOneFromSlice(&allCards, &selected)
+			player[j][i] = pickOne(&allCards, &selected)
 		}
 	}
 
 	fmt.Printf("底牌:[")
 	for i, token := range selected {
-		if !token { fmt.Printf("%s ", allCards[i]) }
+		if !token {
+			fmt.Printf("%s ", allCards[i])
+		}
 	}
 	fmt.Printf("]\n")
 
@@ -135,7 +138,7 @@ func main() {
 	}
 }
 
-func pickOneFromSlice(cards *[54]string, selected *[54]bool) string {
+func pickOne(cards *[54]string, selected *[54]bool) string {
 	i := rand.Intn(len(cards))
 	for selected[i] {
 		i = (i + 1) % len(cards)
