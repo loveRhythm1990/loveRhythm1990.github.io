@@ -148,7 +148,7 @@ nodepool 控制器在 reconcile 的时候会调用这个方法，除了这个方
 func (c *Controller) Reconcile(ctx context.Context, nodeClaim *v1.NodeClaim) (reconcile.Result, error) {
 	// ...
 
-    reconcilers := []nodeClaimReconciler{
+	reconcilers := []nodeClaimReconciler{
 		c.drift,
 		c.consolidation,
 	}
@@ -187,18 +187,18 @@ func SimulateScheduling(ctx context.Context,
 	provisioner *provisioning.Provisioner,
 	candidates ...*Candidate) (pscheduling.Results, error) {
     
-    // ...
-    // 初始化调度器来调度上面的 pods
+	// ...
+	// 初始化调度器来调度上面的 pods
 	scheduler, err := provisioner.NewScheduler(log.IntoContext(ctx, operatorlogging.NopLogger), pods, stateNodes)
 	if err != nil {
 		return pscheduling.Results{}, fmt.Errorf("creating scheduler, %w", err)
 	}
 
-    // 调度 pods
+	// 调度 pods
 	results := scheduler.Solve(log.IntoContext(ctx, operatorlogging.NopLogger), pods).TruncateInstanceTypes(pscheduling.MaxInstanceTypes)
 	
-    // ...
-    return results, nil
+	// ...
+	return results, nil
 }
 ```
 在模拟调度之后，disrupt 控制器需要确认，有没有新的 nodeclaim 需要确创建，以及考虑新的 nodeclaim 的收费类型（是不是 spot 实例），收费价格等，这些比较细节，咱不展开描述。
