@@ -18,6 +18,7 @@ tags:
 - [单例控制器](#单例控制器)
   - [初始化控制器](#初始化控制器)
   - [singleton source 实现](#singleton-source-实现)
+- [总结](#总结)
 
 
 ### 什么时候触发 node 弹出
@@ -56,11 +57,11 @@ type Results struct {
 	PodErrors     map[*corev1.Pod]error
 }
 func (s *Scheduler) Solve(ctx context.Context, pods []*corev1.Pod) Results {
-    // 缓存待调度的 pod 的资源请求
+	// 缓存待调度的 pod 的资源请求
 	for _, p := range pods {
 		s.cachedPodRequests[p.UID] = resources.RequestsForPods(p)
 	}
-    // 构建待调度 pod 队列，按照 cpu 和 memory 资源请求降序排列
+	// 构建待调度 pod 队列，按照 cpu 和 memory 资源请求降序排列
 	q := NewQueue(pods, s.cachedPodRequests)
 
 	for {
@@ -111,10 +112,10 @@ func (s *Scheduler) add(ctx context.Context, pod *corev1.Pod) error {
 		instanceTypes := nodeClaimTemplate.InstanceTypeOptions
 		// if limits have been applied to the nodepool, ensure we filter instance types to avoid violating those limits
 		if remaining, ok := s.remainingResources[nodeClaimTemplate.NodePoolName]; ok {
-            // 确保机型有足够的资源容纳 pod
+			// 确保机型有足够的资源容纳 pod
 		}
 		nodeClaim := NewNodeClaim(nodeClaimTemplate, s.topology, s.daemonOverhead[nodeClaimTemplate], instanceTypes)
-        // 确认是否满足 pod 调度约束
+		// 确认是否满足 pod 调度约束
 		if err := nodeClaim.Add(pod, s.cachedPodRequests[pod.UID]); err != nil {
 			continue
 		}
@@ -261,3 +262,7 @@ func Source() source.Source {
 	})
 }
 ```
+### 总结
+浏览量一下 karpenter 中的一些实现方式，细节部分没有深入探究，大致对设计这样一个成本系统（提高资源使用率、或者替换为成本较低的机器）中需要注意的问题有所了解。
+
+个人感觉 karpenter 总体代码质量还算挺高的，也有一些比较好的设计模式，后面有机会会继续研究一下。 
