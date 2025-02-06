@@ -22,17 +22,17 @@ tags:
 
 
 ### 什么时候触发 node 弹出
-文档中的描述是 `Watching for pods that the Kubernetes scheduler has marked as unschedulable`，那么会是一个 pod pending 之后马上 nodeclaim 创建吗？答案是否定的，karpenter 具体是通过一个 batch 来聚合需要调度的 pod，batch 有两个参数（后面是默认值）：
+文档中的描述是 `Watching for pods that the Kubernetes scheduler has marked as unschedulable`，那么会是一个 pod pending 之后马上创建 nodeclaim 吗？答案是否定的，karpenter 具体是通过一个 batch 来聚合需要调度的 pod，batch 有两个参数（后面是默认值）：
 ```s
 BATCH_MAX_DURATION: 10*time.Second
 BATCH_IDLE_DURATION: time.Second
 ```
-具体工作过程是：发现一个 pod pending 之后，等一秒钟，如果一秒之内还有 pod pending，则聚合这个 pod，如果等的过程超过了 10s 钟，则结束此次 batch，如果两个 pod 间隔过程超过了 1s，同样会结束 batch。
+具体工作过程是：发现一个 pod pending 之后，等一秒钟，如果一秒之内还有 pod pending，则聚合这个 pod，如果等的过程超过了 10s 钟，则结束此次 batch；如果两个 pending pod 间隔过程超过了 1s，同样会结束 batch。
 
 ### 调度大概过程
-karpenter 中，会有两种场景触发调度：1.集群中有 pod pending 的时候；2.当有节点需要 consolidate 的时候。每次触发调度的是，都会初始化一个新的 scheduler，类似于  Kubernetes 中给集群状态做一个快照。
+karpenter 中，会有两种场景触发调度：1.集群中有 pod pending 的时候；2.当有节点需要 consolidate 的时候。每次触发调度时，都会初始化一个新的 scheduler，类似于  Kubernetes 调度器中给集群状态做一个快照。
 
-调度问题基本上就是装箱问题，将一组 pod 调度到一组节点上，其中`一组节点`是指下面的 existingNodes，待调度的 pod 是以参数传递给 scheduler 的。其余参数一般是对集群状态的缓存。
+调度基本上就是装箱问题，将一组 pod 调度到一组节点上，在 karpenter 中`一组节点`是指下面的 existingNodes，待调度的 pod 是以参数传递给 scheduler 的。其余参数一般是对集群状态的缓存。
 
 ```go
 type Scheduler struct {
@@ -87,7 +87,7 @@ func (s *Scheduler) Solve(ctx context.Context, pods []*corev1.Pod) Results {
 }
 ```
 
-下面是具体调度单个 pod，步骤整体有三个：1.看当前已存在节点是否满足 pod 调度约束（包括资源约束、拓扑调度约束等）；2.查看此轮调度过程新建的的 nodeclaim 是否满足调度约束，因为有可能一次调度多个 pod，所以可能之前新建过 nodeclaim 了；3.新建一个 nodeclaim，并确保新建的 nodeclaim 能满足当前 pod。
+下面是具体调度单个 pod，整体有三步：1.看当前已存在节点是否满足 pod 调度约束（包括资源约束、拓扑调度约束等）；2.查看此轮调度过程新建的 nodeclaim 是否满足调度约束，因为有可能一次调度多个 pod，所以可能之前已经新建过 nodeclaim 了；3.新建一个 nodeclaim，并确保新建的 nodeclaim 能满足当前 pod 的调度约束。
 
 ```go
 func (s *Scheduler) add(ctx context.Context, pod *corev1.Pod) error {
@@ -129,18 +129,21 @@ func (s *Scheduler) add(ctx context.Context, pod *corev1.Pod) error {
 ```
 
 ### 节点 consolidate
-consolidate 是指 karpenter 将闲置节点或者资源使用率比较少的节点移除，可能会触发 pod 的重新调度，以及新节点的弹出。
+consolidate 是指 karpenter 将闲置节点或者资源使用率比较少的节点移除，可能会触发 pod 的重新调度，以及新节点的弹出（节点置换）。
 
 不同于通过资源使用率来定义资源使用率比较低的节点（比如阿里云是这么做的），karpenter 的做法是将节点上的 pod 重新调度到已有的节点，或者新建一台价格比较低的节点，不过总体感觉来说，效果如何需要实践证明。
 
 #### 关键因素：consolidatable condition
 主要是看 condition `Consolidatable` 是否为 true，这个条件为 true 的主要条件是，当前时间已经过了 nodepool 中配置的 consolidateAfter 时间，节点初始化时间距离当前时间超过了这个时间，则把这个 condition 设置为 true。
+
+这个字段是给节点配置一个保护时间，在保护时间内是不允许发生节点整合的，同样如果没有配置这个字段，也不会发生节点整合。
+
 ```yaml
 spec:
   disruption:
     consolidateAfter: 1m | Never 
 ```
-在实现上，karpenter 通过一个单独的控制器 Consolidation 来设置这个 condition，严格来说不是一个控制器或者说是一个子控制器，因为这个 Consolidation 控制器虽然有 Reconcile 方法，但是没有实现 controllerruntime 的 Reconcile 接口，该控制器的 Reconcile 方法是在 nodeclaim disrupt 控制器中调用的。
+在实现上 karpenter 通过一个单独的控制器 Consolidation 来设置这个 condition，严格来说不是一个控制器（或者说是一个子控制器），因为这个 Consolidation 控制器虽然有 Reconcile 方法，但是没有实现 controllerruntime 的 Reconcile 接口，该控制器的 Reconcile 方法是在 nodeclaim disrupt 控制器中调用的。
 
 Consolidation 控制器位于 pkg/controllers/nodeclaim/disruption/consolidation.go，该控制器只做一件事，就是设置 `Consolidatable` condition，该控制器会将 nodepool requeue，requeue 的时间是就是设置的 consolidateAfter 时间，也就是说会及时将条件设置为 true。
 
@@ -165,7 +168,7 @@ func (c *Controller) Reconcile(ctx context.Context, nodeClaim *v1.NodeClaim) (re
 }
 ```
 #### Empty 节点 consolidate
-disruption 控制器主要通过 ShouldDisrupt 方法来判断要不要进行 consolidate，empty 节点的方法如下，有两个条件：1）上一小节的 consolidatable condition 为 true；2）节点上没有可 reschedulable 的 pods，指除 static、daemonset 以外的 pod。 
+disruption 控制器主要通过 ShouldDisrupt 方法来判断要不要进行 consolidate，empty 节点的方法如下，有两个条件满足后可进行整合：1）上一小节的 consolidatable condition 为 true；2）节点上没有可 reschedulable 的 pods，指除 static、daemonset 以外的 pod。 
 ```go
 func (e *Emptiness) ShouldDisrupt(_ context.Context, c *Candidate) bool {
 	if c.nodePool.Spec.Disruption.ConsolidateAfter.Duration == nil {
@@ -177,7 +180,7 @@ func (e *Emptiness) ShouldDisrupt(_ context.Context, c *Candidate) bool {
 ```
 
 #### 单节点重调度
-单节点重调度是指 singlenodeconsolidation，在对单个节点进行 consolidation 时，首先要将该节点上的 pod 进行模拟调度 `SimulateScheduling`，看看该节点上的 pod 是否能调度到已有的 node，或者需要新启动一个 nodeclaim。
+单节点重调度是指 singlenodeconsolidation，在对单个节点进行 consolidation 时，首先要将该节点上的 pod 进行模拟调度 `SimulateScheduling`，看看该节点上的 pod 是否能调度到已有的 node，或者是否需要新启动一个 nodeclaim。
 
 该调度模型中，待调度的 pod 有：1）candidate 节点上的 pod，2）正在 deleting 的节点上的 pod，3）集群中当前 pending 的 pod。调度的目标机器为不在 condidate 集合中的其他机器。
 
@@ -207,7 +210,7 @@ func SimulateScheduling(ctx context.Context,
 karpenter 除了 singlenodeconsolidation 还有 multinodeconsolidation，总体过程类似，condidate 从一个 node 变成了多个 node。目前来看 karpenter 在调度时，基本没考虑资源使用率，而主要考虑是不是过了在 nodepool 中指定的 consolidateAfter 时间，在重调度算法层面，也只是遍历 condidate 进行调度（启发式算法）。
 
 ### 单例控制器
-单例控制器是 karpenter 中一个经常使用的设计模式，普通控制器是基于事件来 reconcile 对象，比如 pod 控制器会根据增删改事件来触发 reconcile。单例控制器的事件源是自定义事件源，并且只会触发一个事件，那么只有一个事件，那 reconcile 只执行一次吗？不是的，因为这个对象在一直被 requeue，只有两种情况：1.因为发生错误被 requeue；2.主动返回 requeue，并指定 requeue 的时间，在总体实现效果上，像一个带有 sleep 的 for 循环。
+单例控制器是 karpenter 中一个经常使用的设计模式，普通控制器是基于事件来 reconcile 对象，比如 pod 控制器会根据增删改事件来触发 reconcile。单例控制器的事件源是自定义事件源，并且只会触发一个事件，只有一个事件，那 reconcile 只执行一次吗？不是的，因为这个对象在一直被 requeue，只会发生两种情况：1.因为发生错误被 requeue；2.主动返回 requeue，并指定 requeue 的时间。在总体实现效果上，单例控制器像一个带有 sleep 的 for 循环。
 
 #### 初始化控制器
 初始化一个单例控制器代码如下，其中 `singleton.Source()` 实现了 controllerruntime 中的 TypedSource，`singleton.AsReconciler(p)` 则实现了 TypedReconciler 接口，即带有泛型的 Reconciler。
