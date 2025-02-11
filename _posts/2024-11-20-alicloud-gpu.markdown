@@ -78,9 +78,9 @@ ai 套件是免费使用的，但是依赖的其他资源可能会收费，比�
 业务如果需要使用 GPU，需要在资源的 limits 中声明 GPU 资源。
 
 ```yaml
-        resources:
-          limits:
-            aliyun.com/gpu-mem: 3 # 设置GPU显存大小。
+  resources:
+    limits:
+      aliyun.com/gpu-mem: 3 # 设置GPU显存大小。
 ```
 
 ### 3. GPU 调度
@@ -116,7 +116,7 @@ NUMA 拓扑调度参考文档《[启用NUMA拓扑感知调度](https://help.aliy
 
 gpu 监控总体跟节点 cpu/memory 监控类似，阿里云给出的示意图如下。
 
-![java-javascript](/pics/aliyuncs-gpu-monitor.jpg)
+![java-javascript](/pics/aliyuncs-gpu-monitor.jpg){:height="80%" width="80%"}
 
 如果不使用阿里云的 gpu 监控，我们也可以自己部署 DCGM 来实现 gpu 的监控。NVIDIA提供的项目为 [DCGM exporter](https://github.com/NVIDIA/dcgm-exporter)。DCGM exporter 依赖 DCGM 来提供监控指标，如果我们部署 DCGM exporter 来监控 gpu，需要注意是否跟阿里云的 DCGM 兼容，（或者需要注意阿里云是否直接部署 DCGM ?）。
 
@@ -259,5 +259,5 @@ NVIDIA operator 支持两种方式共享 GPU，分别是 [Time-Slicing GPUs in K
 [HAMi](https://github.com/Project-HAMi/HAMi/blob/master/README_cn.md)  Kubernetes 社区中异构设备管理开源项目。它可以管理不同类型的异构设备（如 NVIDIA GPU、华为 NPU、寒武纪 MLU、DCU 等），实现异构设备在 Pod 之间的共享。HAMi 旨在消除不同异构设备之间的差异，为用户提供统一的管理接口，无需对应用程序进行任何修改。
 
 同时支持通过调度策略在不同 pod 之间共享 gpu，支持的的共享策略有：1）通过设置核心使用率（百分比），进行设备的部分分配；2）通过设置显存（单位：MB），进行设备的部分分配；3）预计在 2.5 版本之后对 NVIDIA A100 （以及更新的 gpu卡）进行动态 MIG（Multi-Instance GPU） 分片。
-![java-javascript](/pics/hami-arch.png)
+![java-javascript](/pics/hami-arch.png){:height="80%" width="80%"}
 
