@@ -10,12 +10,12 @@ tags:
 
 **目录**
 - [vpa 概述](#vpa-概述)
-	- [四种工作模式](#四种工作模式)
-	- [组件与架构](#组件与架构)
+  - [四种工作模式](#四种工作模式)
+  - [组件与架构](#组件与架构)
 - [安装与测试](#安装与测试)
-	- [vpa 安装](#vpa-安装)
-	- [部署测试 deployment](#部署测试-deployment)
-	- [验证扩容效果](#验证扩容效果)
+  - [vpa 安装](#vpa-安装)
+  - [部署测试 deployment](#部署测试-deployment)
+  - [验证扩容效果](#验证扩容效果)
 - [K8s 原生 pod 资源动态调整](#k8s-原生-pod-资源动态调整)
 - [参考](#参考)
 
@@ -65,7 +65,7 @@ vpa 的架构和设计思路可以参考 [vertical-pod-autoscaler.md](https://gi
 ### 安装与测试
 首先通过示例看一下 vpa 的安装与使用，走通 happy pass 流程。
 #### vpa 安装
-vpa 组件以来 metrics-server 提供资源利用指标，在部署 vpa 部署之前需要先部署 metrics-server。将 virtical-pod-autoscaler 项目拷贝下来，通过项目目录下的 vpa-up.sh 脚本安装 vpa。
+vpa 组件需要 metrics-server 提供资源利用指标，在部署 vpa 部署之前需要先部署 metrics-server。将 virtical-pod-autoscaler 项目拷贝下来，通过项目目录下的 vpa-up.sh 脚本安装 vpa。
 ```s
 ./hack/vpa-up.sh
 ```
@@ -159,7 +159,7 @@ done
 ```
 
 ### K8s 原生 pod 资源动态调整
-在 K8s 1.27 之后，支持 pod 资源的动态调整，可以参考 [Resize CPU and Memory Resources assigned to Containers](https://kubernetes.io/docs/tasks/configure-pod-container/resize-container-resources/)，不过截止 v1.32 该feature gate 是 alpha 状态，也就是默认没有启用。在 kind 环境下，使用下面配置开启 vpa 相关 feature gate:
+在 K8s 1.27 之后，支持 pod 资源的动态调整，可以参考 [Resize CPU and Memory Resources assigned to Containers](https://kubernetes.io/docs/tasks/configure-pod-container/resize-container-resources/)，不过截止 v1.32 该 feature gate 是 alpha 状态，也就是默认没有启用。在 kind 环境下，使用下面配置开启 vpa 相关 feature gate:
 ```yaml
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
