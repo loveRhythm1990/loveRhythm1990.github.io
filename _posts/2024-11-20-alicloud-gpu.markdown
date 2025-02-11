@@ -13,8 +13,8 @@ tags:
 - [2. 使用及使用约束](#2-使用及使用约束)
   - [2.1 安装 ai 套件](#21-安装-ai-套件)
   - [2.2 创建节点池](#22-创建节点池)
-  - [2.3 业务 pod 声明 GPU 资源](#23-业务-pod-声明-gpu-资源)
-- [3. GPU 调度](#3-gpu-调度)
+  - [2.3 业务 pod 声明 gpu 资源](#23-业务-pod-声明-gpu-资源)
+- [3. gpu 调度](#3-gpu-调度)
   - [3.1 显存与算力调度](#31-显存与算力调度)
   - [3.2 NUMA 拓扑调度](#32-numa-拓扑调度)
 - [4. 监控](#4-监控)
@@ -47,7 +47,7 @@ tags:
 
 #### 2.1 安装 ai 套件
 
-ack ai 套件主要用来协助 GPU 的调度，集群中要使用 GPU 资源，首先要安装 ai 套件，主要是 《[ack-ai-installer](https://help.aliyun.com/zh/ack/cloud-native-ai-suite/product-overview/ack-ai-installer?spm=a2c4g.11186623.help-menu-85222.d_0_2_1.5ee3432feINQIE&scm=20140722.H_2361883._.OR_help-T_cn~zh-V_1)》，这个在 ack 的应用市场一键安装就可以了，具体可参考下面的 `应用测试` 章节。
+ack ai 套件主要用来协助 gpu 的调度，集群中要使用 gpu 资源，首先要安装 ai 套件，主要是 《[ack-ai-installer](https://help.aliyun.com/zh/ack/cloud-native-ai-suite/product-overview/ack-ai-installer?spm=a2c4g.11186623.help-menu-85222.d_0_2_1.5ee3432feINQIE&scm=20140722.H_2361883._.OR_help-T_cn~zh-V_1)》，这个在 ack 的应用市场一键安装就可以了，具体可参考下面的 `应用测试` 章节。
 
 安装 ai 套件会安装阿里云的 cgpu 组件，从目前阿里云的文档《[什么是GPU容器共享技术cGPU](https://help.aliyun.com/zh/egs/what-is-cgpu?spm=a2c4g.11186623.4.8.294246085ivFg2&scm=20140722.H_203715._.ID_203715-OR_rec-V_1)》来看，cgpu 是一种容器运行时，同时也是支持 gpu 共享的关键技术，感觉跟 NVIDIA 的 [nvidia-container-toolkit](https://github.com/NVIDIA/nvidia-container-toolkit) 定位是一样的。
 
@@ -55,7 +55,7 @@ ai 套件是免费使用的，但是依赖的其他资源可能会收费，比�
 
 #### 2.2 创建节点池
 
-当需要使用 GPU 机器的时候，只需要创建一个 GPU 节点池就可以了，创建节点池的过程跟普通 GPU 节点池一致，但是要选择 GPU 实例，阿里云支持 GPU 的机型列表为 《[ACK 支持的 GPU 实例规格族](https://help.aliyun.com/zh/ack/ack-managed-and-ack-dedicated/user-guide/gpu-accelerated-ecs-instance-types-supported-by-ack?spm=a2c4g.11186623.help-menu-85222.d_2_13_1.7e8350d963zMXa&scm=20140722.H_444369._.OR_help-T_cn~zh-V_1)》。
+当需要使用 gpu 机器的时候，只需要创建一个 gpu 节点池就可以了，创建节点池的过程跟普通 gpu 节点池一致，但是要选择 gpu 实例，阿里云支持 gpu 的机型列表为 《[ACK 支持的 GPU 实例规格族](https://help.aliyun.com/zh/ack/ack-managed-and-ack-dedicated/user-guide/gpu-accelerated-ecs-instance-types-supported-by-ack?spm=a2c4g.11186623.help-menu-85222.d_2_13_1.7e8350d963zMXa&scm=20140722.H_444369._.OR_help-T_cn~zh-V_1)》。
 
 当创建完节点池后，节点池中的节点会有可分配的 GPU 资源 `aliyun.com/gpu-count` 以及 `aliyun.com/gpu-mem`。
 
@@ -73,40 +73,40 @@ ai 套件是免费使用的，但是依赖的其他资源可能会收费，比�
     pods: "13"
 ```
 
-#### 2.3 业务 pod 声明 GPU 资源 
+#### 2.3 业务 pod 声明 gpu 资源 
 
-业务如果需要使用 GPU，需要在资源的 limits 中声明 GPU 资源。
+业务如果需要使用 gpu，需要在资源的 limits 中声明 gpu 资源。
 
 ```yaml
   resources:
     limits:
-      aliyun.com/gpu-mem: 3 # 设置GPU显存大小。
+      aliyun.com/gpu-mem: 3 # 设置 gpu 显存大小。
 ```
 
-### 3. GPU 调度
+### 3. gpu 调度
 
-阿里云中 GPU 的调度由 Kubernetes scheduler 和阿里云 ai 套件共同完成，基本上是开箱即用，不需要Kubernetes 运维管理员和应用开发者做额外的工作。
+阿里云中 gpu 的调度由 Kubernetes scheduler 和阿里云 ai 套件共同完成，基本上是开箱即用，不需要Kubernetes 运维管理员和应用开发者做额外的工作。
 
 #### 3.1 显存与算力调度
 
-阿里云 GPU 调度策略是通过给节点打上特定的 label 来声明的，因此一般在创建节点池的时候打上对应label，同时同一个节点池的节点使用同一种调度策略。阿里云有下面 label 及 value:
+阿里云 gpu 调度策略是通过给节点打上特定的 label 来声明的，因此一般在创建节点池的时候打上对应label，同时同一个节点池的节点使用同一种调度策略。阿里云有下面 label 及 value:
 
 * 标签 `ack.node.gpu.schedule`，对应下面几个 value:
-  * default（或者不含有 `ack.node.gpu.schedule`  label）: **独占 GPU 调度**，以单个 GPU 卡为最小单位分配 GPU 给 pod。
+  * default（或者不含有 `ack.node.gpu.schedule`  label）: **独占 gpu 调度**，以单个 gpu 卡为最小单位分配 gpu 给 pod。
   * cgpu: **显存隔离算力共享**， 在这种调度模式下， pod 可通过资源 `aliyun.com/gpu-mem` 申请一张卡的显存资源，但是 gpu 的算力是共享的。
   * core_mem: **显存和算力都隔离**，pod 可通过资源`aliyun.com/gpu-mem` `aliyun.com/gpu-count` 申请显存和算力资源，其中算力资源是一个百分比，表示使用一个单卡百分之多少的算力。
   * share: **显存隔离算力共享**，但是不需要安装 cgpu 服务，cgpu 是阿里云基于内核虚拟 gpu 隔离的容器共享技术。即多个容器共享一张 gpu 卡，从而实现业务的安全隔离，提高 gpu 硬件资源的利用率并降低使用成本。具体参考 《[通过Docker命令行使用cGPU服务](https://help.aliyun.com/zh/egs/developer-reference/use-docker-to-install-and-use-the-cgpu-component-of-kubergpu-products?spm=a2c4g.11186623.help-menu-155040.d_4_5_0.2bc9677f0uGRDS&scm=20140722.H_171786._.OR_help-T_cn~zh-V_1)》。
   * topology: gpu 拓扑感知调度，节点仍以单个 gpu 卡为最小划分单元，为 pod 分配 gpu 资源。每个 pod 分配到的 gpu 卡的数量考虑了 gpu 卡之间的通信带宽。比如如果申请了两个 gpu 卡，则调度时，会考虑将两个相邻的 gpu 卡一起分配给 pod，这样这两个卡通信带宽比较高。
   * mig: 动态开启 mig 功能，开启 mig 功能后，节点上报的不再是 gpu 卡的数量，而是 mig 实例数，pod 也以 mig 实例数来申请资源。这个需要硬件支持，需要 NVIDIA A100 及更新的卡才支持这个功能。
 * 标签 `ack.node.gpu.placement`，对应下面几个 value:
-  * spread: 该 value 仅在节点开启共享 gpu 调度的时候才有效，当节点上存在多张GPU卡时，该策略能够允许申请GPU资源的Pod打散在各GPU上
-  * binpack（没有 `ack.node.gpu.placement`的默认行为是 binpack）: 该 value 仅在节点开启共享 gpu 调度的时候才有效，该策略能够允许申请GPU资源的Pod先占满一张GPU卡，再占用另一张GPU卡，避免资源出现碎片。
+  * spread: 该 value 仅在节点开启共享 gpu 调度的时候才有效，当节点上存在多张 gpu 卡时，该策略能够允许申请 gpu 资源的 pod 打散在各 gpu 上
+  * binpack（没有 `ack.node.gpu.placement`的默认行为是 binpack）: 该 value 仅在节点开启共享 gpu 调度的时候才有效，该策略能够允许申请 gpu 资源的 pod 先占满一张 gpu 卡，再占用另一张 gpu 卡，避免资源出现碎片。
 
 #### 3.2 NUMA 拓扑调度
 
 NUMA 拓扑调度参考文档《[启用NUMA拓扑感知调度](https://help.aliyun.com/zh/ack/ack-managed-and-ack-dedicated/user-guide/enable-numa-topology-aware-scheduling?spm=a2c4g.11186623.help-menu-85222.d_2_13_7_4.6918a86f3Edxic&scm=20140722.H_2786724._.OR_help-T_cn~zh-V_1)》，区别于 gpu 拓扑调度，NUMA 拓扑调度关注 cpu 于 gpu 之间的通信，及 pod 分配 cpu 和 gpu 资源时，尽量不跨 NUMA，减少跨 NUMA 通信带来的代价。
 
-启用 NUMA 调度需要阿里云另一个组件 [ack-koorinator](https://help.aliyun.com/zh/ack/product-overview/ack-koordinator-fka-ack-slo-manager?spm=a2c4g.11186623.0.0.6f3d54a0dKGTtg) 协同支持，仅支持 GPU 计算型超级计算集群实例规格族 sccgn7ex 及灵骏节点。
+启用 NUMA 调度需要阿里云另一个组件 [ack-koorinator](https://help.aliyun.com/zh/ack/product-overview/ack-koordinator-fka-ack-slo-manager?spm=a2c4g.11186623.0.0.6f3d54a0dKGTtg) 协同支持，仅支持 gpu 计算型超级计算集群实例规格族 sccgn7ex 及灵骏节点。
 
 ### 4. 监控
 
@@ -214,13 +214,13 @@ spec:
 
 `inspect cgpu` 是阿里云提供的 kubectl 插件，用于查看集群内 gpu 的资源分配情况，mac 下的安装方式为：
 
-```sh
+```s
 wget http://aliacs-k8s-cn-beijing.oss-cn-beijing.aliyuncs.com/gpushare/kubectl-inspect-cgpu-darwin -O /usr/local/bin/kubectl-inspect-cgpu
 ```
 
 使用方式如下：
 
-```
+```s
 lr90@sj lr90 % KUBECONFIG=./kubeconfig kubectl inspect cgpu
 NAME                        IPADDRESS       GPU0(Allocated/Total)  GPU Memory(GiB)
 cn-hangzhou.10.207.173.253  10.207.173.253  3/15                   3/15
