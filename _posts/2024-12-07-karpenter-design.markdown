@@ -13,7 +13,7 @@ tags:
 - [调度大概过程](#调度大概过程)
 - [节点 consolidate](#节点-consolidate)
   - [关键因素：consolidatable condition](#关键因素consolidatable-condition)
-  - [Empty 节点 consolidate](#empty-节点-consolidate)
+  - [empty 节点 consolidate](#empty-节点-consolidate)
   - [单节点重调度](#单节点重调度)
 - [单例控制器](#单例控制器)
   - [初始化控制器](#初始化控制器)
@@ -167,7 +167,7 @@ func (c *Controller) Reconcile(ctx context.Context, nodeClaim *v1.NodeClaim) (re
 	return result.Min(results...), nil
 }
 ```
-#### Empty 节点 consolidate
+#### empty 节点 consolidate
 disruption 控制器主要通过 ShouldDisrupt 方法来判断要不要进行 consolidate，empty 节点的方法如下，有两个条件满足后可进行整合：1）上一小节的 consolidatable condition 为 true；2）节点上没有可 reschedulable 的 pods，指除 static、daemonset 以外的 pod。 
 ```go
 func (e *Emptiness) ShouldDisrupt(_ context.Context, c *Candidate) bool {
