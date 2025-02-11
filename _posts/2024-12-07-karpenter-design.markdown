@@ -27,7 +27,7 @@ tags:
 BATCH_MAX_DURATION: 10*time.Second
 BATCH_IDLE_DURATION: time.Second
 ```
-具体工作过程是：发现一个 pod pending 之后，等一秒钟，如果一秒之内还有 pod pending，则聚合这个 pod，如果等的过程超过了 10s 钟，则结束此次 batch；如果两个 pending pod 间隔过程超过了 1s，同样会结束 batch。
+具体工作过程是：发现一个 pod pending 之后，等一秒钟，如果一秒之内还有 pod pending，则聚合这个 pod，如果一个 batch 过程聚合 pending pod 的总时间超过了 10s 钟，则结束此次 batch；如果两个 pending pod 间隔过程超过了 1s，同样会结束 batch。后面 pending 的 pod 通过下一轮 batch 聚合。
 
 ### 调度大概过程
 karpenter 中，会有两种场景触发调度：1.集群中有 pod pending 的时候；2.当有节点需要 consolidate 的时候。每次触发调度时，都会初始化一个新的 scheduler，类似于  Kubernetes 调度器中给集群状态做一个快照。
