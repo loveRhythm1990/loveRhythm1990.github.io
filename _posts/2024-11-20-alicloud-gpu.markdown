@@ -102,6 +102,29 @@ ai 套件是免费使用的，但是依赖的其他资源可能会收费，比�
   * spread: 该 value 仅在节点开启共享 gpu 调度的时候才有效，当节点上存在多张 gpu 卡时，该策略能够允许申请 gpu 资源的 pod 打散在各 gpu 上
   * binpack（没有 `ack.node.gpu.placement`的默认行为是 binpack）: 该 value 仅在节点开启共享 gpu 调度的时候才有效，该策略能够允许申请 gpu 资源的 pod 先占满一张 gpu 卡，再占用另一张 gpu 卡，避免资源出现碎片。
 
+
+这部分内容主要参考阿里云文档《[GPU节点调度属性标签说明及标签值的切换方法](https://help.aliyun.com/zh/ack/ack-managed-and-ack-dedicated/user-guide/labels-used-by-ack-to-control-gpus?spm=a2c4g.11186623.0.nextDoc.36aa38f4EijHcN)》。
+
+**注意** 如果往 Kubernetes 集群中加入一台机器，而没有做任何配置，比如没有添加 `ack.node.gpu.schedule` label，那么 ack 集群默认执行的是独占 gpu 调度，参考《[使用Kubernetes默认GPU调度](https://help.aliyun.com/zh/ack/ack-managed-and-ack-dedicated/user-guide/use-gpu-scheduling-in-ack-clusters?spm=5176.smartservice_service_create_ticket_step_2.console-base_help.dexternal.3a7a43ecsrs6az)》，应用可以通过 `nvidia.com/gpu:1` 来申请资源，但是无法实现多个 pod 共享 gpu。
+
+阿里云的 cgpu 组件只在显存和算力需要隔离的时候才会部署，也就是标签 `ack.node.gpu.schedule` 的值为 `cgpu` 或者 `core_mem` 的时候才需要部署，这点从 ai 套件部署的 daemonset 中也能看出来。
+```s
+lr90@sj % kubectl get daemonset -n kube-system --kubeconfig ./kubeconfig
+cgpu-core-installer              0         0         0       0            0           ack.node.gpu.schedule=core_mem   7h41m
+cgpu-installer                   0         0         0       0            0           ack.node.gpu.schedule=cgpu       7h41m
+gpushare-core-device-plugin-ds   0         0         0       0            0           <none>                           7h41m
+gpushare-device-plugin-ds        0         0         0       0            0           <none>                           7h41m
+gpushare-mps-device-plugin-ds    0         0         0       0            0           <none>                           7h41m
+gputopo-device-plugin-ds         0         0         0       0            0           ack.node.gpu.schedule=topology   7h41m
+migparted-device-plugin          0         0         0       0            0           <none>                           7h41m
+nvidia-device-plugin-recover     0         0         0       0            0           ack.node.gpu.schedule=default    7h41m
+```
+
+集群中部署 cgpu 之后，可以通过 cgpu 插件来查看集群中 gpu 的使用情况，其命令如下，cgpu 插件的安装方式参考《[步骤四：安装和使用GPU资源查询工具 cgpu](https://help.aliyun.com/zh/ack/ack-managed-and-ack-dedicated/user-guide/install-and-use-ack-ai-installer-and-the-gpu-inspection-tool?spm=5176.smartservice_service_create_ticket_step_2.console-base_help.dexternal.3a7a43ecsrs6az)》。
+```s
+KUBECONFIG=./kubeconfig kubectl inspect cgpu
+```
+
 #### 3.2 NUMA 拓扑调度
 
 NUMA 拓扑调度参考文档《[启用NUMA拓扑感知调度](https://help.aliyun.com/zh/ack/ack-managed-and-ack-dedicated/user-guide/enable-numa-topology-aware-scheduling?spm=a2c4g.11186623.help-menu-85222.d_2_13_7_4.6918a86f3Edxic&scm=20140722.H_2786724._.OR_help-T_cn~zh-V_1)》，区别于 gpu 拓扑调度，NUMA 拓扑调度关注 cpu 于 gpu 之间的通信，及 pod 分配 cpu 和 gpu 资源时，尽量不跨 NUMA，减少跨 NUMA 通信带来的代价。
