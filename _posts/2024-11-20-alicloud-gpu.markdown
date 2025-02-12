@@ -120,11 +120,6 @@ migparted-device-plugin          0         0         0       0            0     
 nvidia-device-plugin-recover     0         0         0       0            0           ack.node.gpu.schedule=default    7h41m
 ```
 
-集群中部署 cgpu 之后，可以通过 cgpu 插件来查看集群中 gpu 的使用情况，其命令如下，cgpu 插件的安装方式参考《[步骤四：安装和使用GPU资源查询工具 cgpu](https://help.aliyun.com/zh/ack/ack-managed-and-ack-dedicated/user-guide/install-and-use-ack-ai-installer-and-the-gpu-inspection-tool?spm=5176.smartservice_service_create_ticket_step_2.console-base_help.dexternal.3a7a43ecsrs6az)》。
-```s
-KUBECONFIG=./kubeconfig kubectl inspect cgpu
-```
-
 #### 3.2 NUMA 拓扑调度
 
 NUMA 拓扑调度参考文档《[启用NUMA拓扑感知调度](https://help.aliyun.com/zh/ack/ack-managed-and-ack-dedicated/user-guide/enable-numa-topology-aware-scheduling?spm=a2c4g.11186623.help-menu-85222.d_2_13_7_4.6918a86f3Edxic&scm=20140722.H_2786724._.OR_help-T_cn~zh-V_1)》，区别于 gpu 拓扑调度，NUMA 拓扑调度关注 cpu 于 gpu 之间的通信，及 pod 分配 cpu 和 gpu 资源时，尽量不跨 NUMA，减少跨 NUMA 通信带来的代价。
