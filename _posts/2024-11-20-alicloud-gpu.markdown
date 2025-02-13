@@ -135,19 +135,6 @@ NUMA 拓扑调度参考文档《[启用NUMA拓扑感知调度](https://help.aliy
 
 开启 gpu 监控需要开启阿里云的 ARMS（Application Real-Time Monitoring Service） 服务，阿里云的 ARMS 服务涵盖了 Prometheus/Grafana，目前看跟我们的 ob 监控服务有重合。参考《[什么是应用实时监控服务ARMS？](https://help.aliyun.com/zh/arms/product-overview/what-is-arms?spm=a2c4g.11186623.help-menu-34364.d_0_1.76963e10hpGFG7)》。
 
-gpu 监控总体跟节点 cpu/memory 监控类似，阿里云给出的示意图如下。
-
-![java-javascript](/pics/aliyuncs-gpu-monitor.jpg){:height="80%" width="80%"}
-
-如果不使用阿里云的 gpu 监控，我们也可以自己部署 DCGM 来实现 gpu 的监控。NVIDIA提供的项目为 [DCGM exporter](https://github.com/NVIDIA/dcgm-exporter)。DCGM exporter 依赖 DCGM 来提供监控指标，如果我们部署 DCGM exporter 来监控 gpu，需要注意是否跟阿里云的 DCGM 兼容，（或者需要注意阿里云是否直接部署 DCGM ?）。
-
-dcgm-exporter 暴露的 gpu 指标有：
-* gpu 利用率：当前计算单元的使用百分比。
-* 内存使用：包括显存的使用量、总大小、空闲量。
-* gpu 温度：监控 gpu 的温度对于预防过热和性能下降（降频）非常重要。如果温度过高，可能导致 gpu 降频，影响性能。
-* gpu 当前的功耗：耗电量。
-* 其他
-
 #### 4.2 基于 nvidia-smi 的社区方案
 如果集群节点没有部署 DCGM，可以基于社区的 [nvidia_gpu_exporter](https://github.com/utkuozdemir/nvidia_gpu_exporter) 来监控 gpu，该项目比较简单，只依靠 nvidia-smi 命令实现监控，并提供了 grafana dashbroad，总体来说部署和使用都比较简单。
 
@@ -189,6 +176,8 @@ volumeMounts:
   - name: libnvidia-ml-so-1
     mountPath: /usr/lib/x86_64-linux-gnu/libnvidia-ml.so.1
 ```
+
+另外也可以部署 [DCGM exporter](https://github.com/NVIDIA/dcgm-exporter) 来实现 gpu 监控，不过其往往作为 gpu operator 的一部分进行安装。
 
 ### 5. RDMA
 
@@ -298,10 +287,10 @@ Allocated/Total GPU Memory In Cluster:
 
 [nvidia-smi](https://docs.nvidia.com/deploy/nvidia-smi/index.html)是一个命令行工具，用于监控和管理 NVIDIA GPU设备的状态。它通常用于 NVIDIA 驱动程序安装之后，帮助用户检查 GPU 的健康状况、性能、温度、功耗等信息，以及管理和控制 GPU 设备。
 
-![java-javascript](/pics/aliyuncs-gpu-smi.png)
+![java-javascript](/pics/aliyuncs-gpu-smi.png){:height="70%" width="70%"}
 
 从上面输出可以看出，该容器内只有 3072MiB 显存。这一点从容器的日志中也能看出来。
-![java-javascript](/pics/aliyuncs-gpu-mem.png)
+![java-javascript](/pics/aliyuncs-gpu-mem.png){:height="70%" width="70%"}
 
 ### 7. 开源社区方案
 
