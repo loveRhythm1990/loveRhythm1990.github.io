@@ -206,13 +206,13 @@ eRDMA 是免费的，依赖的 ENI 是收费的。
 #### 6.1 前置条件
 
 在 ack 集群配置中，部署 ai 套件，支持 gpu 调度。
-![java-javascript](/pics/aliyuncs-gpu-ai-installer.png)
+![java-javascript](/pics/aliyuncs-gpu-ai-installer.png){:height="70%" width="70%"}
 
 #### 6.2 创建 gpu 节点池
 
 使用 gpu 机型 `ecs.gn6i-c4g1.xlarge` 创建节点池，同时因为要测试`显存隔离算力共享`调度模式，在创建节点池的时候，需要配置 label: `ack.node.gpu.schedule=cgpu`。
 
-![java-javascript](/pics/aliyuncs-gpu-pool.png)
+![java-javascript](/pics/aliyuncs-gpu-pool.png){:height="70%" width="70%"}
 
 查看节点可分配资源：
 
@@ -287,10 +287,10 @@ Allocated/Total GPU Memory In Cluster:
 
 [nvidia-smi](https://docs.nvidia.com/deploy/nvidia-smi/index.html)是一个命令行工具，用于监控和管理 NVIDIA GPU设备的状态。它通常用于 NVIDIA 驱动程序安装之后，帮助用户检查 GPU 的健康状况、性能、温度、功耗等信息，以及管理和控制 GPU 设备。
 
-![java-javascript](/pics/aliyuncs-gpu-smi.png){:height="70%" width="70%"}
+![java-javascript](/pics/aliyuncs-gpu-smi.png){:height="80%" width="80%"}
 
 从上面输出可以看出，该容器内只有 3072MiB 显存。这一点从容器的日志中也能看出来。
-![java-javascript](/pics/aliyuncs-gpu-mem.png){:height="70%" width="70%"}
+![java-javascript](/pics/aliyuncs-gpu-mem.png){:height="80%" width="80%"}
 
 ### 7. 开源社区方案
 
