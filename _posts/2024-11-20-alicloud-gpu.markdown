@@ -51,7 +51,18 @@ ack ai 套件主要用来协助 gpu 的调度，集群中要使用 gpu 资源，
 
 安装 ai 套件会安装阿里云的 cgpu 组件，从目前阿里云的文档《[什么是GPU容器共享技术cGPU](https://help.aliyun.com/zh/egs/what-is-cgpu?spm=a2c4g.11186623.4.8.294246085ivFg2&scm=20140722.H_203715._.ID_203715-OR_rec-V_1)》来看，cgpu 是一种容器运行时，同时也是支持 gpu 共享的关键技术，感觉跟 NVIDIA 的 [nvidia-container-toolkit](https://github.com/NVIDIA/nvidia-container-toolkit) 定位是一样的。
 
-ai 套件是免费使用的，但是依赖的其他资源可能会收费，比如云盘。
+ai 套件是免费使用的，但是依赖的其他资源可能会收费，比如云盘。ai 套件主要包括一组 daemonset，基本组件如下，其中负责共享与隔离的 daemonset 的在节点部署上是互斥的(基于 `ack.node.gpu.schedule` 标签，此标签的含义参考本文 gpu 调度部分)。
+```s
+lr90@sj % kubectl get daemonset -n kube-system --kubeconfig ./kubeconfig
+cgpu-core-installer              0         0         0       0            0           ack.node.gpu.schedule=core_mem   7h41m
+cgpu-installer                   0         0         0       0            0           ack.node.gpu.schedule=cgpu       7h41m
+gpushare-core-device-plugin-ds   0         0         0       0            0           <none>                           7h41m
+gpushare-device-plugin-ds        0         0         0       0            0           <none>                           7h41m
+gpushare-mps-device-plugin-ds    0         0         0       0            0           <none>                           7h41m
+gputopo-device-plugin-ds         0         0         0       0            0           ack.node.gpu.schedule=topology   7h41m
+migparted-device-plugin          0         0         0       0            0           <none>                           7h41m
+nvidia-device-plugin-recover     0         0         0       0            0           ack.node.gpu.schedule=default    7h41m
+```
 
 #### 2.2 创建节点池
 
@@ -108,17 +119,6 @@ ai 套件是免费使用的，但是依赖的其他资源可能会收费，比�
 **注意** 如果往 Kubernetes 集群中加入一台机器，而没有做任何配置，比如没有添加 `ack.node.gpu.schedule` label，那么 ack 集群默认执行的是独占 gpu 调度，参考《[使用Kubernetes默认GPU调度](https://help.aliyun.com/zh/ack/ack-managed-and-ack-dedicated/user-guide/use-gpu-scheduling-in-ack-clusters?spm=5176.smartservice_service_create_ticket_step_2.console-base_help.dexternal.3a7a43ecsrs6az)》，应用可以通过 `nvidia.com/gpu:1` 来申请资源，但是无法实现多个 pod 共享 gpu。
 
 阿里云的 cgpu 组件只在显存和算力需要隔离的时候才会部署，也就是标签 `ack.node.gpu.schedule` 的值为 `cgpu` 或者 `core_mem` 的时候才需要部署，这点从 ai 套件部署的 daemonset 中也能看出来。
-```s
-lr90@sj % kubectl get daemonset -n kube-system --kubeconfig ./kubeconfig
-cgpu-core-installer              0         0         0       0            0           ack.node.gpu.schedule=core_mem   7h41m
-cgpu-installer                   0         0         0       0            0           ack.node.gpu.schedule=cgpu       7h41m
-gpushare-core-device-plugin-ds   0         0         0       0            0           <none>                           7h41m
-gpushare-device-plugin-ds        0         0         0       0            0           <none>                           7h41m
-gpushare-mps-device-plugin-ds    0         0         0       0            0           <none>                           7h41m
-gputopo-device-plugin-ds         0         0         0       0            0           ack.node.gpu.schedule=topology   7h41m
-migparted-device-plugin          0         0         0       0            0           <none>                           7h41m
-nvidia-device-plugin-recover     0         0         0       0            0           ack.node.gpu.schedule=default    7h41m
-```
 
 #### 3.2 NUMA 拓扑调度
 
