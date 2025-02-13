@@ -18,6 +18,8 @@ tags:
   - [3.1 显存与算力调度](#31-显存与算力调度)
   - [3.2 NUMA 拓扑调度](#32-numa-拓扑调度)
 - [4. 监控](#4-监控)
+  - [4.1 阿里云监控方案](#41-阿里云监控方案)
+  - [4.2 基于 nvidia-smi 的社区方案](#42-基于-nvidia-smi-的社区方案)
 - [5. RDMA](#5-rdma)
   - [5.1 条件约束](#51-条件约束)
   - [5.2 使用](#52-使用)
@@ -128,7 +130,8 @@ NUMA 拓扑调度参考文档《[启用NUMA拓扑感知调度](https://help.aliy
 
 ### 4. 监控
 
-阿里云的对于 gpu 的监控也是 NVIDIA 的 [DCGM(Data Center GPU Manager)](https://docs.nvidia.com/datacenter/dcgm/latest/index.html) 来做的。DCGM 是 NVIDIA 提供的一种用于监控、管理和优化数据中心中 NVIDIA GPU 设备的工具和框架。DCGM 的主要目标是简化数据中心中大规模 GPU 集群的管理，提供有关 GPU 的详细信息、健康状况、性能统计以及故障诊断等关键数据。
+#### 4.1 阿里云监控方案
+阿里云的对于 gpu 的监控基于 NVIDIA 的 [DCGM(Data Center GPU Manager)](https://docs.nvidia.com/datacenter/dcgm/latest/index.html) 来做的。DCGM 是 NVIDIA 提供的一种用于监控、管理和优化数据中心中 NVIDIA GPU 设备的工具和框架。DCGM 的主要目标是简化数据中心中大规模 GPU 集群的管理，提供有关 GPU 的详细信息、健康状况、性能统计以及故障诊断等关键数据。
 
 开启 gpu 监控需要开启阿里云的 ARMS（Application Real-Time Monitoring Service） 服务，阿里云的 ARMS 服务涵盖了 Prometheus/Grafana，目前看跟我们的 ob 监控服务有重合。参考《[什么是应用实时监控服务ARMS？](https://help.aliyun.com/zh/arms/product-overview/what-is-arms?spm=a2c4g.11186623.help-menu-34364.d_0_1.76963e10hpGFG7)》。
 
@@ -144,6 +147,48 @@ dcgm-exporter 暴露的 gpu 指标有：
 * gpu 温度：监控 gpu 的温度对于预防过热和性能下降（降频）非常重要。如果温度过高，可能导致 gpu 降频，影响性能。
 * gpu 当前的功耗：耗电量。
 * 其他
+
+#### 4.2 基于 nvidia-smi 的社区方案
+如果集群节点没有部署 DCGM，可以基于社区的 [nvidia_gpu_exporter](https://github.com/utkuozdemir/nvidia_gpu_exporter) 来监控 gpu，该项目比较简单，只依靠 nvidia-smi 命令实现监控，并提供了 grafana dashbroad，总体来说部署和使用都比较简单。
+
+通过 helm 进行安装：
+```s
+helm repo add utkuozdemir https://utkuozdemir.org/helm-charts
+helm install my-release utkuozdemir/nvidia-gpu-exporter
+```
+**不过一般情况下不能使用默认的 values 进行安装**，默认 values 文件是针对 Ubuntu 环境的，在 centos 环境下，需要修改动态库的挂载路径：
+```yaml
+volumes:
+  - name: nvidiactl
+    hostPath:
+      path: /dev/nvidiactl
+  - name: nvidia0
+    hostPath:
+      path: /dev/nvidia0
+  - name: nvidia-smi
+    hostPath:
+      path: /usr/bin/nvidia-smi
+  - name: libnvidia-ml-so   # 注意：改这两个挂载项
+    hostPath:
+      path: /usr/lib64/libnvidia-ml.so
+  - name: libnvidia-ml-so-1
+    hostPath:
+      path: /usr/lib64/libnvidia-ml.so.1
+
+# -- The container mount configurations for the volumes
+# @default -- see [values.yaml](values.yaml)
+volumeMounts:
+  - name: nvidiactl
+    mountPath: /dev/nvidiactl
+  - name: nvidia0
+    mountPath: /dev/nvidia0
+  - name: nvidia-smi
+    mountPath: /usr/bin/nvidia-smi
+  - name: libnvidia-ml-so
+    mountPath: /usr/lib/x86_64-linux-gnu/libnvidia-ml.so
+  - name: libnvidia-ml-so-1
+    mountPath: /usr/lib/x86_64-linux-gnu/libnvidia-ml.so.1
+```
 
 ### 5. RDMA
 
