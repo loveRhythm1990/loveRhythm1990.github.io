@@ -176,6 +176,9 @@ volumeMounts:
   - name: libnvidia-ml-so-1
     mountPath: /usr/lib/x86_64-linux-gnu/libnvidia-ml.so.1
 ```
+这个监控展示如下面所示，感觉能满足大部分需求
+![java-javascript](/pics/gpu-monitor.png){:height="70%" width="70%"}
+
 
 另外也可以部署 [DCGM exporter](https://github.com/NVIDIA/dcgm-exporter) 来实现 gpu 监控，不过其往往作为 gpu operator 的一部分进行安装。
 
