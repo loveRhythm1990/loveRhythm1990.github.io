@@ -128,6 +128,31 @@ NUMA 拓扑调度参考文档《[启用NUMA拓扑感知调度](https://help.aliy
 
 启用 NUMA 调度需要阿里云另一个组件 [ack-koorinator](https://help.aliyun.com/zh/ack/product-overview/ack-koordinator-fka-ack-slo-manager?spm=a2c4g.11186623.0.0.6f3d54a0dKGTtg) 协同支持，仅支持 gpu 计算型超级计算集群实例规格族 sccgn7ex 及灵骏节点。
 
+**K8s 原生拓扑调度**：
+
+K8s 基于节点中的 [Topology Manager](https://kubernetes.io/docs/tasks/administer-cluster/topology-manager/) 原生支持拓扑感知调度，该控制器收集各个 hint provider 提供的调度建议综合一个最佳的调度策略，然后分配资源给 pod。如果节点资源不能满足 pod 资源需求，则 admit pod 失败，比如会有 `TopologyAffinityError`，`AdmissionError` 报错。
+
+目前 K8s 内置的 hint provider 有[cpu-manager](https://kubernetes.io/docs/tasks/administer-cluster/cpu-management-policies/)、[memory-manager](https://kubernetes.io/docs/tasks/administer-cluster/memory-manager/)等，对于 cpu-manager 我们比较熟知的是其在 static 策略下，对 guaranteed pod 提供的绑核功能。而 memory-manager 则可以将 pod 的内存申请放置在同一个 numa 上。以 memory-manager 为例，其工作过程如下：
+![java-javascript](/pics/memory-manager-diagram.svg){:height="80%" width="80%"}
+
+原生 topology manager 只是专注当个节点的资源分配，在调度器层面只知道 cpu、gpu 是否已经分配，无法感知到拓扑（gpu 编号等），阿里云环境基于 ack-koordinator 组件中的 ack-koordlet 支持拓扑上报到调度器，在调度 pod 时，需要在 annotation 中添加配置：
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    cpuset-scheduler: required                           # 启用绑定CPU
+    scheduling.alibabacloud.com/numa-topology-spec: |    # 表明此Pod的NUMA拓扑需求
+      {
+        "numaTopologyPolicy": "SingleNUMANode",
+        "singleNUMANodeExclusive": "Preferred",
+      }
+```
+跟 topology manager 类似，阿里云支持的调度策略有：
+* SingleNUMANode：pod 调度时 cpu 与设备需要放置在相同 numa 下，如果没有满足条件的节点，pod 将无法被调度。
+* Restricted：pod 调度时 cpu 与设备需要放置在相同的 **numa 集合**下，如果没有满足条件的节点，pod 将无法被调度。
+* BestEffort：pod 调度时尽量将 cpu 与设备放置在相同 numa 下，如果没有节点满足这一条件，则选择最优节点进行放置。
+
 ### 4. 监控
 
 #### 4.1 阿里云监控方案
