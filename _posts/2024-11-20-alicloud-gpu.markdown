@@ -153,6 +153,7 @@ metadata:
 * Restricted：pod 调度时 cpu 与设备需要放置在相同的 **numa 集合**下，如果没有满足条件的节点，pod 将无法被调度。
 * BestEffort：pod 调度时尽量将 cpu 与设备放置在相同 numa 下，如果没有节点满足这一条件，则选择最优节点进行放置。
 
+参考《[详解如何将CPU Manager做到游刃有余](https://www.cnblogs.com/v-fan/p/16397899.html)》
 ### 4. 监控
 
 #### 4.1 阿里云监控方案
