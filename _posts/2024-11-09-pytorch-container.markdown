@@ -260,22 +260,22 @@ Result of Addition: tensor([5., 7., 9.], device='cuda:0')
 
 | **类别**                     | **字段**                     | **说明**                                                                 |
 |------------------------------|------------------------------|-------------------------------------------------------------------------|
-| **版本和驱动信息** | `NVIDIA-SMI`                | 当前使用的 NVIDIA 驱动版本。                                             |
-|                              | `Driver Version`            | NVIDIA 显卡驱动的版本号。                                               |
-|                              | `CUDA Version`              | 当前支持的 CUDA 版本号。                                                |
-| **GPU 信息**                 | `GPU`                       | 显示 GPU 的编号。例如 `0` 表示系统中第一个 GPU。                         |
-|                              | `Name`                      | 显示 GPU 的型号。例如 `Tesla K80`。                                     |
-|                              | `Persistence-M`             | 显示 GPU 持久模式（Persistence Mode）状态。通常是 `Off`，表示 GPU 在空闲时会进入省电模式。 |
-|                              | `Bus-Id`                    | GPU 的 PCI 总线 ID，用于识别 GPU 的物理位置。                           |
-|                              | `Disp.A`                    | 显示是否有显示输出（Display Active）。通常是 `Off`，表示 GPU 没有直接连接显示器。 |
-|                              | `Volatile Uncorr. ECC`      | 显示是否存在非易失性、不可纠正的 ECC 错误（错误检查和纠正码）。通常是 `0`，表示没有错误。 |
-| **温度、风扇、功耗、性能** | `Fan`                       | 显示 GPU 风扇的转速（如果有的话）。例如 `N/A` 表示没有风扇数据。         |
-|                              | `Temp`                      | 显示 GPU 当前的温度（单位：摄氏度）。                                   |
-|                              | `Perf`                      | 显示 GPU 当前的性能状态（Performance State）。`P8` 是最低的性能状态，`P0` 是最高性能状态。 |
-|                              | `Pwr:Usage/Cap`             | 显示 GPU 当前功耗与最大功耗的比率。例如 `30W / 149W` 表示当前功耗为 30 瓦，最大支持功耗为 149 瓦。 |
-| **显存使用情况**             | `Memory-Usage`              | 显示显存的使用情况。例如 `0MiB / 11441MiB` 表示当前显存使用为 0MB，总共可用 11441MB。 |
-|                              | `GPU-Util`                  | 显示 GPU 的利用率（使用百分比）。如果是 `0%`，表示 GPU 当前没有进行计算任务。 |
-|                              | `Compute M.`                | 显示 GPU 是否处于计算模式。一般为 `Default`。                           |
+| **版本和驱动信息** | NVIDIA-SMI                | 当前使用的 NVIDIA 驱动版本。                                             |
+|                              | Driver Version            | NVIDIA 显卡驱动的版本号。                                               |
+|                              | CUDA Version              | 当前支持的 CUDA 版本号。                                                |
+| **GPU 信息**                 | GPU                       | 显示 GPU 的编号。例如 `0` 表示系统中第一个 GPU。                         |
+|                              | Name                      | 显示 GPU 的型号。例如 `Tesla K80`。                                     |
+|                              | Persistence-M             | 显示 GPU 持久模式（Persistence Mode）状态。通常是 `Off`，表示 GPU 在空闲时会进入省电模式。 |
+|                              | Bus-Id                    | GPU 的 PCI 总线 ID，用于识别 GPU 的物理位置。                           |
+|                              | Disp.A                    | 显示是否有显示输出（Display Active）。通常是 `Off`，表示 GPU 没有直接连接显示器。 |
+|                              | Volatile Uncorr. ECC      | 显示是否存在非易失性、不可纠正的 ECC 错误（错误检查和纠正码）。通常是 `0`，表示没有错误。 |
+| **温度、风扇、功耗、性能**     | Fan                       | 显示 GPU 风扇的转速（如果有的话）。例如 `N/A` 表示没有风扇数据。         |
+|                              | Temp                      | 显示 GPU 当前的温度（单位：摄氏度）。                                   |
+|                              | Perf                      | 显示 GPU 当前的性能状态（Performance State）。`P8` 是最低的性能状态，`P0` 是最高性能状态。 |
+|                              | Pwr:Usage/Cap             | 显示 GPU 当前功耗与最大功耗的比率。例如 `30W / 149W` 表示当前功耗为 30 瓦，最大支持功耗为 149 瓦。 |
+| **显存使用情况**             | Memory-Usage              | 显示显存的使用情况。例如 `0MiB / 11441MiB` 表示当前显存使用为 0MB，总共可用 11441MB。 |
+|                              | GPU-Util                  | 显示 GPU 的利用率（使用百分比）。如果是 `0%`，表示 GPU 当前没有进行计算任务。 |
+|                              | Compute M.                | 显示 GPU 是否处于计算模式。一般为 `Default`。                           |
 
 
 常用的 `nvidia-smi` 命令选项：
