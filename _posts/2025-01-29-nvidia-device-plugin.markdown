@@ -28,19 +28,8 @@ tags:
 2. kubelet 向 kube-apiserver 上报并被 kube-scheduler 监听，从而执行调度决策。
 3. kubelet 通过 allocate 接口指示 device plugin 分配外部资源。
 
-整体工作过程图如下，图片来自《[Kubernetes 1.26: Device Manager graduates to GA](https://kubernetes.io/blog/2022/12/19/devicemanager-ga/)》。
+整体工作过程图如下，图片来自《[Kubernetes 1.26: Device Manager graduates to GA](https://kubernetes.io/blog/2022/12/19/devicemanager-ga/)》。下面图中右边框里五个灰色的接口是 device plugin 需要实现的接口，其中只有 ListAndWatch 以及 Allocate 是必选的。
 ![java-javascript](/pics/deviceplugin-framework-overview.svg){:height="50%" width="50%"}
-
-其中，device plugin 实现需要实现的接口如下，只有 ListAndWatch 以及 Allocate 是必选的。
-```s
-service DevicePlugin {
-      rpc GetDevicePluginOptions(Empty) returns (DevicePluginOptions) {}
-      rpc ListAndWatch(Empty) returns (stream ListAndWatchResponse) {}
-      rpc Allocate(AllocateRequest) returns (AllocateResponse) {}
-      rpc GetPreferredAllocation(PreferredAllocationRequest) returns (PreferredAllocationResponse) {}
-      rpc PreStartContainer(PreStartContainerRequest) returns (PreStartContainerResponse) {}
-}
-```
 
 #### nvidia 实现
 [nvidia-device-plugin](https://github.com/NVIDIA/k8s-device-plugin) 是 nvidia 为在 Kubernetes 集群中使用 gpu 提供的 plugin。这里重点关注下 Allocate 方法的实现。
