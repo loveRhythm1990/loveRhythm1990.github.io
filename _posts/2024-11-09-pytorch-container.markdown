@@ -5,7 +5,7 @@ date:       2024-11-09 10:10:00
 author:     "decent"
 header-img-credit: false
 tags:
-    - gpu
+    - gpu调度
 ---
 
 **目录**
