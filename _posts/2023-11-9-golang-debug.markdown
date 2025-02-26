@@ -50,6 +50,7 @@ curl http://localhost:6060/debug/pprof/goroutine\?debug\=1 -o goroutinedebug1
 查看 profile 时，可以使用 `-http=:8081` 在本地启动一个 profile web 服务器，此时可以在浏览器页面查看 profile 信息，浏览器中的信息较为丰富，比如可以查看火焰图。
 ```s
 go tool pprof -http=:8081 ./profile
+go tool pprof -http=:8081 ./heap
 go tool pprof -http=:8081 ./main ./goroutinedebug1
 go tool pprof -http=:8081 http://localhost:6060/debug/pprof/goroutine -o goroutines
 ```
