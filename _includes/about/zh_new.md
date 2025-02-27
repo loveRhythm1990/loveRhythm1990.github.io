@@ -7,7 +7,7 @@
 
 --《The Shawshank Redemption》
 
-
-![java-javascript](/pics/xiaoshenke.webp){:height="50%" width="50%"}
-
 ---
+<!--
+![java-javascript](/pics/xiaoshenke.webp){:height="50%" width="50%"}
+-->
