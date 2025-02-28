@@ -10,14 +10,14 @@ tags:
 
 **目录**
 - [device plugin 概述](#device-plugin-概述)
-	- [nvidia 实现](#nvidia-实现)
+  - [nvidia 实现](#nvidia-实现)
 - [部署安装](#部署安装)
-	- [前置条件 nvidia-toolkit](#前置条件-nvidia-toolkit)
-	- [通过 helm 安装](#通过-helm-安装)
+  - [前置条件 nvidia-toolkit](#前置条件-nvidia-toolkit)
+  - [通过 helm 安装](#通过-helm-安装)
 - [配置共享 gpu](#配置共享-gpu)
-	- [Time-Slicing](#time-slicing)
-	- [MPS(Multi-Process Service)](#mpsmulti-process-service)
-	- [MIG(Multi-Instance GPUs)](#migmulti-instance-gpus)
+  - [Time-Slicing](#time-slicing)
+  - [MPS(Multi-Process Service)](#mpsmulti-process-service)
+  - [MIG(Multi-Instance GPUs)](#migmulti-instance-gpus)
 - [总结](#总结)
 
 

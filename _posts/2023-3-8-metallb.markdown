@@ -150,7 +150,7 @@ decent@Mac ansible % curl 192.168.31.211
 ### 高级特性
 metallb 支持通过给 service 配置一些 annotation 来支持一些高级特性。
 #### 多 service 共享 vip
-多个 LoadBalance 类型的 service 可以共享一个 vip。这时 service 需要配置一个 metallb 的 annotation，并且共享 service 的 ipkey 配置必须是一样的。同时共享 vip 的时候，service 的 externalTrafficPolicy 必须为 Cluster。
+多个 LoadBalance 类型的 service 可以共享一个 vip。这时 service 需要配置一个 metallb 的 annotation，并且共享 service 的 ipkey 配置必须是一样的。同时共享 vip 的时候，service 的 externalTrafficPolicy 必须为 Cluster，并且不同的 service 要使用不同的端口。
 ```yaml
 metallb.universe.tf/allow-shared-ip="${ipkey}"
 ```
