@@ -63,6 +63,11 @@ tags:
 |回到上一次光标位置| ctrl + - (减号)|
 |前进到下一个光标的位置| ctrl + shift + -|
 
+gitlens 快捷键，这个是自定义快捷键（Toggel line blame）：
+
+| 功能      | 快捷键 |
+| ----------- | ----------- |
+| 查看(关闭)行注释   | cmd + shift + b  |
 
 ### goland 试用
 从 jetbra 官方网站下载最新版，从 Russia 老哥那里下载一个 jetbra.zip 压缩包，解压之后，script 目录下面有一个 `install.sh` 脚本，执行一下。
