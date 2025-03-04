@@ -169,7 +169,7 @@ metadata:
 helm repo add utkuozdemir https://utkuozdemir.org/helm-charts
 helm install my-release utkuozdemir/nvidia-gpu-exporter
 ```
-**不过一般情况下不能使用默认的 values 进行安装**，默认 values 文件是针对 Ubuntu 环境的，在 centos 环境下，需要修改动态库的挂载路径：
+**不过一般情况下不能使用默认的 values 进行安装**，默认 values 文件是针对 Ubuntu 环境的，在 centos 环境下，需要修改动态库的挂载路径，下面是已经修改好的，Ubuntu 环境下直接用原来的 chart 就可以。
 ```yaml
 volumes:
   - name: nvidiactl
