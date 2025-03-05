@@ -9,7 +9,6 @@ tags:
 ---
 
 **目录**
-- [概述](#概述)
 - [pprof 分析](#pprof-分析)
   - [采集与分析](#采集与分析)
   - [pyroscope 持续分析](#pyroscope-持续分析)
@@ -20,10 +19,8 @@ tags:
 - [automaxprocs 自动配置 GOMAXPROCS](#automaxprocs-自动配置-gomaxprocs)
 - [参考](#参考)
 
-### 概述
-本文积累一些 golang 性能分析的经验，不定期修改和删除。
+
 ### pprof 分析
-pprof 是 golang 中最常用的分析性能问题的方式。
 #### 采集与分析
 如果要在浏览器中查看可视化界面，需要安装 graphviz，mac 安装方式为 `brew install graphviz`。收集 metrics 的指标命令如下。
 ```s
