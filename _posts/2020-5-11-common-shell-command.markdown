@@ -25,6 +25,7 @@ tags:
 - [查看文件被哪个进程占用](#查看文件被哪个进程占用)
 - [set -euxo pipefail](#set--euxo-pipefail)
 - [Mac as Proxy](#mac-as-proxy)
+- [kubectl label 作为单独一列](#kubectl-label-作为单独一列)
 - [参考](#参考)
 
 工作中经常涉及一些运维操作，一些shell命令用过了就会忘，以后有shell命令都会放在这里。
@@ -292,6 +293,12 @@ decent@mac% ~/Downloads/image.sh docker.io/istio/examples-bookinfo-details-v1:1.
 python3 -m pip install --user ansible
 ```
 如果上面安装的时候下载很慢，可以通过设置`https_proxy`的方式加速，当然你得先有proxy。
+
+###### kubectl label 作为单独一列
+在查看 pod 信息时，有时候希望将某个 label 的值作为单独的一列显示出来，比如显示 `lr90.io/label-name` label 的值，可以使用下面命令：
+```s
+kubectl get pods -n lr90-test --kubeconfig ./unit-kubeconfig -o wide -L lr90.io/label-name
+```
 
 ###### 参考
 [AWK 简明教程](https://coolshell.cn/articles/9070.html)
