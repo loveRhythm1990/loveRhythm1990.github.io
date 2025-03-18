@@ -65,6 +65,8 @@ func (plugin *nvidiaDevicePlugin) Allocate(ctx context.Context, reqs *pluginapi.
           "MG_PARSE_SERVICE_PORT_8000_TCP_PROTO=tcp",
 ```
 
+在一些场景中，我们需要限制暴露到 Kubernetes 集群中的 gpu 卡数，或者只将特定的卡暴露给 Kubernetes 集群中，剩下的卡供主机上的其他服务使用，此时我们仍然通过刚给 nvidia-device-plugin daemonset 配置环境变量 NVIDIA_VISIBLE_DEVICES 来实现，因为 nvidia-container-runtime 能拦截 nvidia-device-plugin daemonset pod 的创建，在看到这个环境变量之后，会限制 daemonset pod 所能看到的 gpu 卡，因此 daemonset pod 就认为机器上只有这些卡，跟把 daemonset pod 当做 gpu 应用一样。
+
 ### 部署安装
 #### 前置条件 nvidia-toolkit
 nvidia plugin 不会在节点上安装 nvidia 驱动以及配置容器运行时，这个需要开发人员提前配置好，（nvidia operator 会做这些事情，因此 operator 看上去是更好的实践）。目前的约束条件有：
