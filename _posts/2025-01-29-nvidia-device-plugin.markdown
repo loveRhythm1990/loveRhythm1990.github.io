@@ -228,15 +228,31 @@ func NewAnnotatedID(id string, replica int) AnnotatedID {
 
 
 #### MPS(Multi-Process Service)
-启用 MPS 需要 gpu 节点上启动 mps server，可通过命令 [nvidia-cuda-mps-control](https://man.archlinux.org/man/extra/nvidia-utils/nvidia-cuda-mps-control.1.en) 来实现。
+nvidia mps 是一种用于优化多进程共享 gpu 资源的技术。它的主要目的是提高 gpu 的利用率和吞吐量，特别是在多进程、多任务场景下（如深度学习推理、科学计算等），mps 的核心思想是将多个进程的 gpu 任务合并到一个上下文中执行，从而减少上下文切换开销并提高 gpu 利用率。mps 对应用开发者是透明的，应用开发者只需要使用标准的 cuda api 编程即可。
+
+启用 mps 需要在 gpu 节点上启动 mps server，可通过命令 [nvidia-cuda-mps-control](https://man.archlinux.org/man/extra/nvidia-utils/nvidia-cuda-mps-control.1.en) 来实现。
 ```s
 [root@iZbp18oviqo0duk6ssk60gZ ~]# nvidia-cuda-mps-control
 Cannot find MPS control daemon process
 
-# ps -ef | grep mps
-
-# 以 daemon 形式启动 mps server
+# 以 daemon 形式启动 mps server，ps -ef | grep mps
 # nvidia-cuda-mps-control -d
+```
+在 nvidia-device-plugin 的实现中，也是通过这个 binary 来启动 mps daemon 的。
+```go 
+// cmd/mps-control-daemon/mps/daemon.go
+const (
+	mpsControlBin = "nvidia-cuda-mps-control"
+)
+
+// Start starts the MPS deamon as a background process.
+func (d *Daemon) Start() error {
+
+	// 启动 mps daemon
+	mpsDaemon := exec.Command(mpsControlBin, "-d")
+
+	return nil
+}
 ```
 
 使用 mps 的方式跟使用 time-slicing 的方式基本一致，需要配置配置文件中的 mps 部分，配置 replicas:10 之后，上报的 gpu 资源将是原来的 10 倍。
@@ -250,13 +266,13 @@ sharing:
       replicas: 10
 ```
 
-mps 的隔离效果优于 time-slicing，但是在 nvidia-device-plugin 中还是 alpha 状态。具体看 v0.15.0 的 [release node](https://github.com/NVIDIA/k8s-device-plugin/releases/tag/v0.15.0)。
+mps 的隔离效果优于 time-slicing（time-slicing 没有实现隔离），但其实现比较复杂，在 nvidia-device-plugin 中还是 alpha 状态。具体看 v0.15.0 的 [release node](https://github.com/NVIDIA/k8s-device-plugin/releases/tag/v0.15.0)。
 
 mps 的官方文档为 [Multi-Process Service](https://docs.nvidia.com/deploy/mps/index.html)，比较详细。
 
 #### MIG(Multi-Instance GPUs)
 
-mig 是从安倍(Ampere，2020 年)架构开始支持的，具体是从 A100/A30 开始支持，A10 虽然是 Ampere 架构，但是不支持 mig。可以通过下面命令（-q 查看详情）查看 gpu 是否支持 mig，如果 mig mode 是 N/A 则表示不支持 mig。
+mig 是从安培(Ampere，2020 年)架构开始支持的，具体是从 A100/A30 开始支持，A10 虽然是 Ampere 架构，但是不支持 mig。可以通过下面命令（-q 查看详情）查看 gpu 是否支持 mig，如果 mig mode 是 N/A 则表示不支持 mig。
 ```s
 nvidia-smi -q | grep "Mig Mode"
 # 输出示例：
