@@ -8,6 +8,13 @@ tags:
     - Golang
 ---
 
+**目录**
+- [客户端设置超时示例](#客户端设置超时示例)
+- [抓包分析 tcp 断开过程](#抓包分析-tcp-断开过程)
+- [通过 ctx.Done() 感知客户端断开连接](#通过-ctxdone-感知客户端断开连接)
+
+
+### 客户端设置超时示例
 使用`Context`限制 Http 请求的超时时间。客户端代码如下。这里设置的超时时间是1秒钟，过了一秒钟，如果服务端还没有返回请求，则客户端主动发送 `fin` 报文断开请求。
 ```go
 func main() {
@@ -43,6 +50,9 @@ func main() {
 	log.Fatal(http.ListenAndServe(":8888", router))
 }
 ```
+
+### 抓包分析 tcp 断开过程
+
 整个过程的报文交互如下，客户端使用的端口为 58188，服务端使用的端口为 8888，刚开始的三行为 tcp 建立连接的过程。连接建立之后的交互如下：
 1. 客户端 15：31 发送 Http Get 请求，报文的大小为 95，下一个报文序号为 96，点开 `GET / HTTP /1.1` 查看 TCP 报文详情。
     ![java-javascript](/img/in-post/common/detail_tcp.png)
@@ -89,6 +99,30 @@ func Hello(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 	io.Copy(os.Stdout, resp.Body)
 ```
+
+### 通过 ctx.Done() 感知客户端断开连接
+client 超时的时候，会发送 fin 报文给 server，利用这点服务端可以感知到连接断开，并停止业务处理。具体来说，是需要检查 request 中的 ctx 是不是 Done()。服务端代码如下：
+```go
+func Index(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	ctx := r.Context()
+	fmt.Println("start to handle request...", time.Now().Format("2006-01-02 15:04:05"))
+
+	select {
+	case <-time.After(5 * time.Second):
+		fmt.Fprintln(w, "请求处理完成")
+	case <-ctx.Done():
+		fmt.Println("客户端断开，停止处理", time.Now().Format("2006-01-02 15:04:05"))
+		return
+	}
+}
+```
+正常情况下 select 语句会阻塞，要么等到 5 秒处理超时，或者等到客户端的 ctx Done()。如果我们设置了客户端超时是 2s，那么服务端会打印日志，表示连接断开：
+```s
+lr90@sj init-test % go run "/Users/lr90/go/src/github.com/init-test/http/server/server.go"
+start to handle request... 2025-03-22 13:27:32
+客户端断开，停止处理 2025-03-22 13:27:34
+```
+因此在服务端编程的时候，需要使用 request ctx 作为基础 context，并检查 <-ctx.Done() 是否成立。
 
 参考：
 
