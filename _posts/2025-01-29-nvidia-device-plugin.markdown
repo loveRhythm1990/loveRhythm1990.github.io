@@ -80,7 +80,7 @@ func (plugin *nvidiaDevicePlugin) updateResponseForDeviceListEnvVar(
 }
 ```
 
-在 containerd 环境下，可以通过 crictl inspect 命令查看容器所使用的 gpu 编号。plugin 将设备编号返回给 kubelet 之后，后者会将环境变量配置到容器的运行时配置中，容器运行时在看到环境变量之后，会将对应 gpu 设备挂载到容器内部。这里的容器运行时是指 `nvidia-container-runtime`，它是 runc 的一个 warpper，负责拦截请求，并将设备挂载到容器内部。
+在 containerd 环境下，可以通过 crictl inspect 命令查看容器所使用的 gpu 编号。plugin 将设备编号返回给 kubelet 之后，后者会将环境变量配置到容器的运行时配置中，容器运行时 nvidia-container-runtime 在看到环境变量之后，会将对应 gpu 设备挂载到容器内部。nvidia-container-runtime 是 runc 的一个 warpper，负责拦截请求，并将设备挂载到容器内部。或者也可以直接 exec 到容器内部查看这个环境变量。
 ```s
 [root@iZbp1gc07an180eleh2t4cZ ~]# crictl inspect 687872d09953d | grep -C 1 NVIDIA_VISIBLE_DEVICES
         {
