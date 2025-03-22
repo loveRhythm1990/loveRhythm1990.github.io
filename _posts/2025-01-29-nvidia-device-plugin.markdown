@@ -34,7 +34,9 @@ tags:
 #### nvidia 实现
 [nvidia-device-plugin](https://github.com/NVIDIA/k8s-device-plugin) 是 nvidia 为在 Kubernetes 集群中使用 gpu 提供的 plugin。这里重点关注下 Allocate 方法的实现。
 
-在该方法中，通过 DEVICE_LIST_STRATEGY（nvidia plugin 可配置参数）返回设备标志，主要有两种方式：env、mounts，对于 env 的方式，需要配置环境变量：`NVIDIA_VISIBLE_DEVICES=0`，这里的 `0` 是 gpu 编号，还有一种策略是填 uuid，由环境变量 DEVICE_ID_STRATEGY 控制使用编号还是 uuid。对于 mounts 则表明容器需要挂载的 gpu 设备。nvidia 的主要实现在 getAllocateResponse 方法中，这里不再赘述。
+在该方法中，通过 DEVICE_LIST_STRATEGY（nvidia plugin 可配置参数）返回设备标志，主要有两种方式：env、mounts，对于 env 的方式，需要配置环境变量：`NVIDIA_VISIBLE_DEVICES=0`，这里的 `0` 是 gpu 编号，如果有多个设备设备之间需要使用逗号隔开，如`0,1,2`；还有一种策略是填 uuid，由环境变量 DEVICE_ID_STRATEGY 控制使用编号还是 uuid。对于 mounts 则表明容器需要挂载的 gpu 设备。nvidia 的主要实现在 getAllocateResponse 方法中。
+
+在 device-plugin 配置 NVIDIA_VISIBLE_DEVICES 环境变量之后，容器运行时 nvidia-container-runtime 会根据此环境变量将特定 gpu 设备挂载到容器中，因此应用只能看到特定的设备。
 
 ```go
 func (plugin *nvidiaDevicePlugin) Allocate(ctx context.Context, reqs *pluginapi.AllocateRequest) (*pluginapi.AllocateResponse, error) {
@@ -50,6 +52,31 @@ func (plugin *nvidiaDevicePlugin) Allocate(ctx context.Context, reqs *pluginapi.
 		responses.ContainerResponses = append(responses.ContainerResponses, response)
 	}
 	return &responses, nil
+}
+
+func (plugin *nvidiaDevicePlugin) getAllocateResponse(requestIds []string) (
+  *pluginapi.ContainerAllocateResponse, error) {
+	
+  deviceIDs := plugin.deviceIDsFromAnnotatedDeviceIDs(requestIds)
+
+	// Create an empty response that will be updated as required below.
+	response := &pluginapi.ContainerAllocateResponse{
+		Envs: make(map[string]string),
+	}
+	// 新增一个环境变量：NVIDIA_VISIBLE_DEVICES
+	if plugin.deviceListStrategies.Includes(spec.DeviceListStrategyEnvVar) {
+		plugin.updateResponseForDeviceListEnvVar(response, deviceIDs...)
+		plugin.updateResponseForImexChannelsEnvVar(response)
+	}
+
+	return response, nil
+}
+
+// 新增环境变量的方法
+func (plugin *nvidiaDevicePlugin) updateResponseForDeviceListEnvVar(
+  response *pluginapi.ContainerAllocateResponse, deviceIDs ...string) {
+	
+  response.Envs[deviceListEnvVar] = strings.Join(deviceIDs, ",")
 }
 ```
 
@@ -140,6 +167,65 @@ data:
         - name: nvidia.com/gpu
           replicas: 5 
 ```
+
+nvidia-device-plugin time slice 的实现跟在主机上直接使用 gpu 类似，仅仅是为了突破 K8s scheduler 的限制，因此没有做额外的隔离，以及优先级等（比如获得更多的时间片，这是无法做到的）。这一点在看完 device plugin 的实现之后就了解了。
+
+在 device plugin 中，主要是通过 [https://github.com/NVIDIA/go-nvml](https://github.com/NVIDIA/go-nvml) 库来获取 gpu 信息，这是一个用 cgo 把 c 封装起来的一个项目。对应的在 kubelet 实现中，也是通过 NVMLResourceManager 来管理 gpu 资源。在其初始化方法 NewNVMLResourceManagers 中，会构建一个 DeviceMap，在构建这个 map 的时候，会根据倍数将设备翻倍，分到同一个 gpu 的应用就会共享此 gpu。
+
+```go
+// internal/rm/nvml_manager.go
+func NewNVMLResourceManagers(infolib info.Interface, 
+nvmllib nvml.Interface, 
+devicelib device.Interface, 
+config *spec.Config) ([]ResourceManager, error) {
+	
+  ret := nvmllib.Init()
+	if ret != nvml.SUCCESS {
+		return nil, fmt.Errorf("failed to initialize NVML: %v", ret)
+	}
+	// 构建
+	deviceMap, err := NewDeviceMap(infolib, devicelib, config)
+	if err != nil {
+		return nil, fmt.Errorf("error building device map: %v", err)
+	}
+
+	// 省去了一些代码
+	return rms, nil
+}
+```
+设备翻倍的大致代码如下，其中每个虚拟设备的编号由 NewAnnotatedID 生成，在 allocate 设备时，会再根据这个标号拿到真正的设备 ID。
+```go
+func updateDeviceMapWithReplicas(replicatedResources *spec.ReplicatedResources, 
+oDevices DeviceMap) (DeviceMap, error) {
+	devices := make(DeviceMap)
+
+	// Walk shared Resources and update devices in the device map as appropriate.
+	for _, resource := range replicatedResources.Resources {
+		r := resource
+		// Get the IDs of the devices we want to replicate from oDevices
+		ids, err := oDevices.getIDsOfDevicesToReplicate(&r)
+
+		for _, id := range ids {
+
+			// 针对每一个 replica 生成一个新的设备
+			for i := 0; i < r.Replicas; i++ {
+				annotatedID := string(NewAnnotatedID(id, i))
+				replicatedDevice := *(oDevices[r.Name][id])
+				replicatedDevice.ID = annotatedID
+				replicatedDevice.Replicas = r.Replicas
+				devices.insert(name, &replicatedDevice)
+			}
+		}
+	}
+
+	return devices, nil
+}
+
+func NewAnnotatedID(id string, replica int) AnnotatedID {
+	return AnnotatedID(fmt.Sprintf("%s::%d", id, replica))
+}
+```
+
 
 #### MPS(Multi-Process Service)
 启用 MPS 需要 gpu 节点上启动 mps server，可通过命令 [nvidia-cuda-mps-control](https://man.archlinux.org/man/extra/nvidia-utils/nvidia-cuda-mps-control.1.en) 来实现。
