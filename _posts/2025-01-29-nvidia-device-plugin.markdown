@@ -143,9 +143,9 @@ helm upgrade -i nvdp nvdp/nvidia-device-plugin \
 ### 配置共享 gpu
 该部分内容介绍通过 nvidia-device-plugin 多 pod 共享一张 gpu 卡的几种方式。
 #### Time-Slicing
-time-slicing 是以时间分片的方式共享 gpu。以下面配置为例，通过 `replicas: 5` 将一个 gpu 划分为 5 个时间片，假设节点原来有 2 个 gpu 卡，则现在有 2*5=10 个，即上报给 kubelet 的资源为 `nvidia.com/gpu.shared=10`，这里为什么是 nvidia.com/gpu.shared 而不是 nvidia.com/gpu，是因为下面配置了 `renameByDefault: true`。
+time-slicing 是以时间分片的方式共享 gpu（跟非 K8s 环境下使用 gpu 的行为一致）。以下面配置为例，通过 `replicas: 5` 将一个 gpu 虚拟为 5 个 gpu，假设节点原来有 2 个 gpu 卡，则现在有 2*5=10 个，即上报给 kubelet 的资源为 `nvidia.com/gpu.shared=10`，这里为什么是 nvidia.com/gpu.shared 而不是 nvidia.com/gpu，是因为下面配置了 `renameByDefault: true`，即重命名虚拟后的资源。
 
-同时还有一个配置项比较重要 `failRequestsGreaterThanOne: true`，这个配置项的含义是，如果配置的 nvidia.com/gpu.shared 或者 nvidia.com/gpu 大于 1，则会失败，也就是说，在这种配置下，只允许容器配置一个 gpu 分片，关于为什么这么做 [With CUDA Time-Slicing](https://github.com/NVIDIA/k8s-device-plugin?tab=readme-ov-file#with-cuda-time-slicing) 文档有说明，当配置多个时间片时，并不能保证每个 client 有更好的优先级，因此最佳实践就是设置为 1。
+同时还有一个配置项比较重要 `failRequestsGreaterThanOne: true`，这个配置项的含义是，如果 pod 在资源申请的时候配置的 nvidia.com/gpu.shared 或者 nvidia.com/gpu 大于 1，则创建时会失败，也就是说，在这种配置下，只允许容器配置一个 gpu 分片，关于为什么这么做 [With CUDA Time-Slicing](https://github.com/NVIDIA/k8s-device-plugin?tab=readme-ov-file#with-cuda-time-slicing) 文档有说明，当配置多个时间片时，并不能保证每个 client 有更好的优先级，因此最佳实践就是设置为 1。
 
 device plugin 需要挂载下面 configmap，并配置启动参数：--config=/etc/nvidia/config.yaml。
 ```yaml
