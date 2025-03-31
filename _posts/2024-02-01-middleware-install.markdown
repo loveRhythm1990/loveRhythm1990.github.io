@@ -12,8 +12,8 @@ tags:
 - [minio](#minio)
 - [mysql](#mysql)
 - [rocketmq](#rocketmq)
-	- [安装 nameserver](#安装-nameserver)
-	- [安装 dashbroad](#安装-dashbroad)
+  - [安装 nameserver](#安装-nameserver)
+  - [安装 dashbroad](#安装-dashbroad)
 
 
 经常部署一些中间件用于**测试**，记录一些常用中间件的部署方式。
@@ -109,3 +109,41 @@ spec:
         ports:
         - containerPort: 8080
 ```
+
+这里顺便介绍一下通过 binary 在本地部署 rocketmq 的方式，参考 rocketmq 的官方文档[本地部署 RocketMQ](https://rocketmq.apache.org/zh/docs/quickStart/01quickstart).
+
+1. 下载二进制文件 `https://dist.apache.org/repos/dist/release/rocketmq/5.3.1/rocketmq-all-5.3.1-bin-release.zip`，下载后解压。
+2. 启动 nameserver。启动成功之后，nameserver 监听在 127.0.0.1:9876 地址。
+   ```s
+   cd rocketmq-all-5.3.1-bin-release
+   bin/mqnamesrv
+   ```
+3. 通过 local 模式部署 broker 和 proxy.
+   ```s
+   bin/mqbroker -n localhost:9876 --enable-proxy
+   ```
+4. 使用工具创建 topic，替换 test-topic 为希望的 topic 名字。
+   ```s
+   export NAMESRV_ADDR=localhost:9876
+  
+   # 创建一个 topic
+   bin/mqadmin updateTopic -c DefaultCluster -t test-topic -r 8 -w 8
+
+   # 查看 topic 列表
+   bin/mqadmin topicList
+
+   # 查看 topic 详情
+   bin/mqadmin topicStatus -n <NameServer> -t <Topic名称>
+
+   # 查看状态
+   bin/mqadmin consumerStatus -g <ConsumerGroup名称> 
+
+   # 查看消息积压队列
+   bin/mqadmin consumerProgress -g <ConsumerGroup名称> 
+
+   # 删除 topic
+   bin/mqadmin deleteTopic -n 127.0.0.1:9876 -c DefaultCluster -t "%DLQ%YourGroup"
+   ```
+
+
+> proxy 需要监听 8080 端口，mac 电脑查看 8080 端口被谁占用的命令为： lsof -i :8080
