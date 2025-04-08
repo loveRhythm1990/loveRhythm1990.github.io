@@ -81,7 +81,7 @@ spec:
       team: frontend
 ```
 测试用用产生的指标如下，其中 instance="10.244.0.14:8080" 表示的是 pod 的 ip 以及端口。
-```json
+```plaintext
 http_requests_total{
 	code="200",
 	container="example-app",
@@ -128,7 +128,7 @@ spec:
 ### 指标数据存储
 #### 数据目录结构
 默认情况下，prometheus 的指标数据是存储在本地磁盘中的，数据目录是 /prometheus（或者是 /data），其目录结构如下。每隔两个小时，prometheus 会将采集的指标归档为一个目录，如下的 01JR7YGGGDDT5PZYP689PWCEZD，在这个目录中，有一些文件，其中：meta.json 存储的是元数据，包括该 block的开始时间、结束时间、时序数量、采样次数等；chunks 是指标按 512M 分组的一个的一个 segment；tombstones 是通过 api 被逻辑删除的采样；index 是采样指标的索引，用来查找 chunks 中的数据。
-```s
+```plaintext
 /prometheus $ tree
 .
 ├── 01JR7QMRYQ4MDK4J1QV57JWFC2
