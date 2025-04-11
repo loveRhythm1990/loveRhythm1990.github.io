@@ -10,18 +10,20 @@ tags:
 
 **目录**
 - [operator 部署及冒烟测试](#operator-部署及冒烟测试)
-	- [部署 prometheus stack](#部署-prometheus-stack)
-	- [部署测试组件](#部署测试组件)
+  - [部署 prometheus stack](#部署-prometheus-stack)
+  - [部署测试组件](#部署测试组件)
 - [指标拉取配置](#指标拉取配置)
-	- [servicemonitor relabel](#servicemonitor-relabel)
-	- [其他 scrape 配置](#其他-scrape-配置)
+  - [servicemonitor relabel](#servicemonitor-relabel)
+  - [其他 scrape 配置](#其他-scrape-配置)
 - [指标数据存储](#指标数据存储)
-	- [数据目录结构](#数据目录结构)
-	- [磁盘数据量预测](#磁盘数据量预测)
-	- [tsdb status](#tsdb-status)
+  - [数据目录结构](#数据目录结构)
+  - [磁盘数据量预测](#磁盘数据量预测)
+  - [tsdb status](#tsdb-status)
 - [附录](#附录)
-	- [prometheus 测试应用](#prometheus-测试应用)
-	- [tsdb-status 输出示例](#tsdb-status-输出示例)
+  - [prometheus 测试应用](#prometheus-测试应用)
+  - [tsdb-status 输出示例](#tsdb-status-输出示例)
+  - [promtool analyze 输出](#promtool-analyze-输出)
+  - [wal 目录结构](#wal-目录结构)
 
 
 ### operator 部署及冒烟测试
@@ -81,7 +83,7 @@ spec:
       team: frontend
 ```
 测试用用产生的指标如下，其中 instance="10.244.0.14:8080" 表示的是 pod 的 ip 以及端口。
-```html
+```yaml
 http_requests_total{
 	code="200",
 	container="example-app",
@@ -128,8 +130,8 @@ spec:
 ### 指标数据存储
 #### 数据目录结构
 默认情况下，prometheus 的指标数据是存储在本地磁盘中的，数据目录是 /prometheus（或者是 /data），其目录结构如下。每隔两个小时，prometheus 会将采集的指标归档为一个目录，如下的 01JR7YGGGDDT5PZYP689PWCEZD，在这个目录中，有一些文件，其中：meta.json 存储的是元数据，包括该 block的开始时间、结束时间、时序数量、采样次数等；chunks 是指标按 512M 分组的一个的一个 segment；tombstones 是通过 api 被逻辑删除的采样；index 是采样指标的索引，用来查找 chunks 中的数据。
-```html
-/prometheus $ tree
+```yaml
+/prometheus $ 
 .
 ├── 01JR7QMRYQ4MDK4J1QV57JWFC2
 ├── 01JR7YGFRQ3KZST9XHX457PBTV
@@ -175,7 +177,7 @@ Forwarding from [::1]:9090 -> 9090
 curl http://localhost:9090/api/v1/status/tsdb
 ```
 输出解释如下：
-* headStats: TSDB head block 的状态，包括：numSeries:指标时序的数量；chunkCount: chunk 的数量，一个 head block 包含 120 个采样点，大概占用 1.5KB 空间，可以根据此数据大概估计下 headblock 的内存使用； minTime/maxTime: headblock 开始/结束时间（毫秒时间戳）。
+* headStats: TSDB head block 的状态，包括：numSeries:指标时序的数量；**chunkCount: chunk 的数量，一个 head block chunk 包含 120 个采样点，大概占用 1.5KB 空间，可以根据此数据大概估计下 headblock 的内存使用(以及 prometheus 内存使用量)**； minTime/maxTime: headblock 开始/结束时间（毫秒时间戳）。
 * seriesCountByMetricName: 按指标名称统计的序列数（包含所有block），是全局数据，不仅仅是 head block。
 * labelValueCountByLabelName: 按指标名统计的时序数量。
 * memoryInBytesByLabelName: 标签名称的内存占用。
@@ -404,4 +406,175 @@ spec:
     ]
   }
 }
+```
+
+#### promtool analyze 输出
+使用 `promtool tsdb analyze ./` 命令可以分析某一个 block 的时序情况，默认是最近的一个 block，其输出如下。通过 `promtool tsdb list ./prometheus` 可以查看所有的 block 列表，并会列出每个 block 的开始时间、结束时间、指标数等。
+
+analyze 的输出总体跟 `curl http://localhost:9090/api/v1/status/tsdb` 一致，只不过前者是 headblock，后者是具体某一个压缩到磁盘上的 block。
+```s
+/prometheus $ promtool tsdb analyze ./
+Block ID: 01JRGYY32CQ7R3KK5T7V6ZECC0
+Duration: 5h59m59.993s
+Series: 2157655
+Label names: 299
+Postings (unique label pairs): 22630
+Postings entries (total label pairs): 34891393
+
+Label pairs most involved in churning:
+666707 job=kubernetes-service-endpoints
+619624 lifecycle_apps_kruise_io_state=Normal
+240355 matrixorigin_io_component=LogSet
+224689 namespace=mo-checkin-regression-21639
+222948 namespace=mo-cus-reg
+222775 matrixorigin_io_namespace=mo-checkin-regression-21639
+222775 matrixorigin_io_cluster=mo-checkin-regression
+221313 matrixorigin_io_namespace=mo-cus-reg
+221313 matrixorigin_io_cluster=mo-customer-test
+208924 matrixorigin_io_component=CNSet
+176433 namespace=mo-search-nightly-b209783e7-20250410
+175535 matrixorigin_io_cluster=nightly-regression-dis
+174522 matrixorigin_io_namespace=mo-search-nightly-b209783e7-20250410
+161779 matrixorigin_io_instance=mo-checkin-regression
+153154 matrixorigin_io_instance=mo-customer-test
+95765 matrixorigin_io_instance=nightly-regression-dis
+90306 service=mo-customer-test-log-metric
+86171 matrixorigin_io_component=DNSet
+84454 controller_revision_hash=mo-customer-test-log-7ccfbf468f
+84172 matrixorigin_io_component=ProxySet
+
+Label names most involved in churning:
+732177 __name__
+731892 namespace
+731420 instance
+731357 service
+731357 job
+726282 node
+704448 pod
+655139 controller_revision_hash
+621355 le
+619624 matrixorigin_io_instance
+619624 matrixorigin_io_cluster
+619624 matrixorigin_io_component
+619624 matrixorigin_io_namespace
+619624 lifecycle_apps_kruise_io_state
+356795 type
+326527 statefulset_kubernetes_io_pod_name
+304661 pod_template_hash
+293096 apps_kruise_io_cloneset_instance_id
+208924 matrixone_cloud_cn_uuid
+100018 label
+
+Most common label pairs:
+1754818 job=kubernetes-service-endpoints
+1515944 lifecycle_apps_kruise_io_state=Normal
+854946 matrixorigin_io_cluster=nightly-regression-dis
+601184 matrixorigin_io_component=LogSet
+583457 matrixorigin_io_component=CNSet
+466659 matrixorigin_io_instance=nightly-regression-dis
+423796 namespace=mo-cus-reg
+420522 matrixorigin_io_namespace=mo-cus-reg
+420522 matrixorigin_io_cluster=mo-customer-test
+388307 service=nightly-regression-dis-tp-cn
+388287 matrixorigin_io_instance=nightly-regression-dis-tp
+343553 service=nightly-regression-dis-log-metric
+300211 service=mo-ob-opensource-tke-kube-kubelet
+300206 job=kubelet
+300206 endpoint=https-metrics
+291194 matrixorigin_io_instance=mo-customer-test
+264058 namespace=kube-system
+242530 namespace=mo-checkin-regression-21639
+240476 matrixorigin_io_namespace=mo-checkin-regression-21639
+240476 matrixorigin_io_cluster=mo-checkin-regression
+
+Label names with highest cumulative label value length:
+315982 id
+143647 name
+117214 mountpoint
+103990 path
+87318 container_id
+62497 __name__
+39672 uid
+25846 pod
+18432 pod_uid
+16509 type
+10711 resource
+10370 address
+9654 image_id
+7416 rule_group
+5789 owner_name
+5556 le
+5110 ip
+5039 pod_ip
+4933 instance
+4668 resource_prefix
+
+Highest cardinality labels:
+3051 id
+2567 name
+1744 __name__
+1134 container_id
+1102 uid
+996 path
+994 mountpoint
+989 pod
+678 type
+610 address
+512 pod_uid
+462 le
+431 resource
+402 ip
+395 pod_ip
+357 device
+319 interface
+302 lease
+298 lease_holder
+280 instance
+
+Highest cardinality metric names:
+185000 mo_txn_statement_duration_seconds_bucket
+125800 mo_fs_read_write_duration_bucket
+88800 mo_task_short_duration_seconds_bucket
+88800 mo_logtail_update_partition_duration_seconds_bucket
+81400 mo_frontend_accept_connection_duration_bucket
+59200 mo_frontend_create_account_duration_bucket
+59200 mo_task_mo_table_stats_duration_bucket
+59200 mo_frontend_resolve_duration_bucket
+51800 mo_txn_tn_side_duration_seconds_bucket
+38628 mo_rpc_write_latency_duration_seconds_bucket
+38628 mo_rpc_write_duration_seconds_bucket
+37000 mo_frontend_pub_sub_duration_bucket
+37000 mo_task_transfer_duration_bucket
+37000 mo_txn_commit_duration_seconds_bucket
+37000 mo_fs_s3_conn_duration_seconds_bucket
+29600 mo_logtail_apply_duration_seconds_bucket
+29600 mo_txn_unlock_duration_seconds_bucket
+29600 mo_frontend_cdc_duration_bucket
+24960 kube_resourcequota
+23384 mo_rpc_backend_done_duration_seconds_bucket
+```
+
+#### wal 目录结构
+下面 wal 的总大小大概约 2GB，如果 wal 目录过大，可能导致 prometheus 在重启后重放 wal 时 oom。
+```s
+/prometheus/wal $ du -sh ./*
+128.0M	./00060295
+128.0M	./00060296
+127.9M	./00060297
+127.7M	./00060298
+128.0M	./00060299
+127.9M	./00060300
+128.0M	./00060301
+67.3M	./00060302
+128.0M	./00060303
+127.9M	./00060304
+127.9M	./00060305
+128.0M	./00060306
+128.0M	./00060307
+128.0M	./00060308
+128.0M	./00060309
+127.8M	./00060310
+128.0M	./00060311
+120.4M	./00060312
+68.3M	./checkpoint.00060294
 ```
