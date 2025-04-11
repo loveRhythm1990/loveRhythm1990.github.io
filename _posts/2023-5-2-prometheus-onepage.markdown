@@ -176,11 +176,11 @@ Forwarding from [::1]:9090 -> 9090
 
 curl http://localhost:9090/api/v1/status/tsdb
 ```
-输出解释如下：
+通过 tsdb status 的输出，我们可以分析出监控系统中的高基数 label。输出解释如下：
 * headStats: TSDB head block 的状态，包括：numSeries:指标时序的数量；**chunkCount: chunk 的数量，一个 head block chunk 包含 120 个采样点，大概占用 1.5KB 空间，可以根据此数据大概估计下 headblock 的内存使用(以及 prometheus 内存使用量)**； minTime/maxTime: headblock 开始/结束时间（毫秒时间戳）。
-* seriesCountByMetricName: 按指标名称统计的序列数（包含所有block），是全局数据，不仅仅是 head block。
+* seriesCountByMetricName: 按指标名称统计的序列数（包含所有block），是全局数据，不仅仅是 head block，**通过这个字段的输出，我们可以看出哪些 metrics 指标的时序数列最多**。
 * labelValueCountByLabelName: 按指标名统计的时序数量。
-* memoryInBytesByLabelName: 标签名称的内存占用。
+* memoryInBytesByLabelName: 标签名称的内存占用，我们可以通过这个字段分析哪些 label 占用了最多的内存，从而可以考虑要不要合并或者删除这个 label。
 * seriesCountByLabelPair: 按标签键值对统计的序列数。
 
 tsdb status 能帮我们大概了解 headblock 的状态，以及整个 tsdb 指标统计数据，能够帮我们分析高基数 metric 以及高基数 label。
