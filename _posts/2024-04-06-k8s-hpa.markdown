@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "在 K8s 中使用原生 hpa 进行应用扩缩容"
+title:      "K8s hpa 自动扩缩容概览与使用（一）"
 date:       2024-04-06 10:10:00
 author:     "decent"
 header-img-credit: false
@@ -20,17 +20,19 @@ tags:
   - [默认行为(default behavior)](#默认行为default-behavior)
 - [hpa 指标](#hpa-指标)
   - [metrics server](#metrics-server)
-  - [自定义指标(custom metrics)](#自定义指标custom-metrics)
+  - [prometheus-adapter](#prometheus-adapter)
 
 
 ### K8s 原生 hpa 
-K8s 原生 hpa 的文档为 [Horizontal Pod Autoscaling](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/)。
-hpa 依赖 [metrics server](https://github.com/kubernetes-sigs/metrics-server)提供指标（或者 prometheus-adapter），安装方式为
+K8s 原生 hpa 的文档为 [Horizontal Pod Autoscaling](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/)。hpa 是 Kubernetes 默认支持的应用自动扩缩容的一种方式。
+
+hpa 依赖 [metrics server](https://github.com/kubernetes-sigs/metrics-server) 或者 [prometheus-adapter](https://github.com/kubernetes-sigs/prometheus-adapter) 提供指标，前者安装方式为
 ```sh
 kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
 # 非安全模式，否则可能无法启动
 kubectl patch -n kube-system deployment metrics-server --type=json \
   -p '[{"op":"add","path":"/spec/template/spec/containers/0/args/-","value":"--kubelet-insecure-tls"}]'
+
 # 安装完成之后，可以使用 top 命令查看 pod cpu 利用率。
 kubectl top pod local-path-provisioner-684f458cdd-r2j5q -n local-path-storage
 ```
@@ -211,7 +213,9 @@ spec:
   versionPriority: 100
 ```
 
-除了 `metrics.k8s.io` api, hpa 还支持自定以 api `custom.metrics.k8s.io` 以及外部metrics api `external.metrics.k8s.io`，metrics-server 没有提供后面两种 apiservices，不过其替代品 metrics。prometheus-adapter 实现了，后者可以将 prometheus 的指标转换为 hpa 能认识的指标。
+除了 `metrics.k8s.io` api, hpa 还支持自定以 api `custom.metrics.k8s.io` 以及外部 metrics api `external.metrics.k8s.io`，metrics-server 没有提供后面两种 apiservices。prometheus-adapter 实现了 `custom.metrics.k8s.io`，后者可以将 prometheus 的指标转换为 hpa 能认识的指标，需要定义 prometheus adapter rule，将对 custom.metrics.k8s.io api 的查询转换为对 prometheus metrics 的查询。
+
+另外开源社区 [keda](https://github.com/kedacore/keda) 实现了 `external.metrics.k8s.io`，关于 keda 会有专门文章介绍。
 
 #### metrics server
 集群部署 metrics server 之后，可以通过 metrics server 提供的内存和 cpu 指标来进行扩缩容。我们可以通过下面命令了解 metrics server 给我们提供的 api：
@@ -264,8 +268,43 @@ spec:
   versionPriority: 100
 ```
 
-#### 自定义指标(custom metrics)
-项目 [prometheus-adapter](https://github.com/kubernetes-sigs/prometheus-adapter) 提供了可用 hpa 使用的自定义 metrics。prometheus-adapter 是 metrics-server 的可替代品，如果集群中已经部署了 prometheus，那么可以不用部署 metrics-server，而是部署 prometheus-adapter，该组件可将 prometheus 收集的指标转换为 hpa 可使用的指标。
+#### prometheus-adapter
+项目 [prometheus-adapter](https://github.com/kubernetes-sigs/prometheus-adapter) 提供了可用 hpa 使用的自定义 metrics，其实现了 `custom.metrics.k8s.io`。如果集群中已经部署了 prometheus，那么可以不用部署 metrics-server，而是部署 prometheus-adapter，该组件可将 prometheus 收集的指标转换为 hpa 可使用的指标（包括 pod 的 cpu 和内存利用率等）。
+
+在 hpa 中，支持将 metricstype 设置为 `Pods`，即通过 pod 的自定义指标来进行扩缩容，在下面配置中，期望将 http_requests_per_second 监控指标的平均值设置为 100。那 hpa 如何获取这个指标值呢？需要通过 prometheus adapter 来进行。
+```yaml
+metrics:
+- type: Pods
+  pods:
+    metric:
+      name: http_requests_per_second  # 自定义指标名称
+    target:
+      type: AverageValue
+      averageValue: 100  # 目标每秒 100 请求
+```
+为了获取上述监控指标的值，我们需要定义 adapter 的 rule，将 `custom.metrics.k8s.io` 转换为对 prometheus 监控指标的查询。
+```yaml
+# prometheus-adapter-values.yaml
+rules:
+  default: false
+  custom:
+  - seriesQuery: 'http_requests_total{namespace!="",pod!=""}'
+    resources:
+      overrides:
+        namespace: {resource: "namespace"}
+        pod: {resource: "pod"}
+    name:
+      matches: "^(.*)_total"
+      as: "${1}_per_second"
+    metricsQuery: 'sum(rate(<<.Series>>{<<.LabelMatchers>>}[2m])) by (<<.GroupBy>>)'
+```
+
+在上面配置中，通过 name 中的 matches 以及 as 将 http_requests_total 命名为 http_requests_per_second，并通过 metricsQuery 给出了查询表达式。其中 `<<.Series>>`: 会被替换为原始指标名 http_requests_total；`<<.LabelMatchers>>` 会被替换为来自 hpa 请求的标签匹配条件；`<<.GroupBy>>`: 会被替换为分组标签，这里是 `pod` 和 `namespace`。
+
+其中，hpa 是通过类似下面服务查询 http_requests_per_second 监控指标的。
+```s
+kubectl get --raw "/apis/custom.metrics.k8s.io/v1beta1/namespaces/default/pods/*/http_requests_per_second" | jq .
+```
 
 文章《[Kubernetes自定义指标HPA](https://system51.github.io/2021/12/22/custom-metrics-hpa/)》写的很细致，值得学习。
 
