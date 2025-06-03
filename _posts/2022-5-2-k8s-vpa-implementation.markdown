@@ -146,4 +146,4 @@ func (container *ContainerState) RecordOOM(timestamp time.Time, requestedMemory 
 ### 其他
 
 与 hpa 的结合：最好不要作用于同一个资源 https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md#combining-vertical-and-horizontal-scaling。
-vpa 适用于有状态一个能用，hpa 适用于无状态应用。
+vpa 适用于有状态一个应用，hpa 适用于无状态应用。
