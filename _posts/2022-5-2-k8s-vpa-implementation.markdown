@@ -65,6 +65,7 @@ type Histogram interface {
 #### 半衰指数直方图
 
 半衰指数直方图是直方图的 pro 版本，有两个主要特性：
+
 1）bucket 大小按照 ratio 指数增加
 
 假设第一个 bucket 的大小为 `firstBucketSize`，bucket 增长比例为 ratio，那么第 n 个 bucket 的大小为 `firstBucketSize * ratio^n`。与线性直方图类似，计算分位点以及找出采样点的 bucket 操作也是通过累加 bucket 进行的，不过这里涉及到一些数学公式，课本上学的数学终于用上了！
