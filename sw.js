@@ -11,7 +11,8 @@
 // A namespace can prevent potential name conflicts and mis-deletion.
 const CACHE_NAMESPACE = 'main-'
 
-const CACHE = CACHE_NAMESPACE + 'precache-then-runtime';
+// Bump this string whenever precached assets (CSS/JS shell) change materially — drops stale SW caches.
+const CACHE = CACHE_NAMESPACE + 'precache-then-runtime-v2';
 const PRECACHE_LIST = [
   "./",
   "./offline.html",
@@ -35,7 +36,7 @@ const HOSTNAME_WHITELIST = [
   "yanshuo.io",
   "cdnjs.cloudflare.com"
 ]
-const DEPRECATED_CACHES = ['precache-v1', 'runtime', 'main-precache-v1', 'main-runtime']
+const DEPRECATED_CACHES = ['precache-v1', 'runtime', 'main-precache-v1', 'main-runtime', 'main-precache-then-runtime']
 
 
 // The Util Function to hack URLs of intercepted requests
@@ -117,14 +118,16 @@ self.addEventListener('install', e => {
  *  waitUntil(): activating ====> activated
  */
 self.addEventListener('activate', event => {
-  // delete old deprecated caches.
-  caches.keys().then(cacheNames => Promise.all(
-    cacheNames
-      .filter(cacheName => DEPRECATED_CACHES.includes(cacheName))
-      .map(cacheName => caches.delete(cacheName))
-  ))
+  event.waitUntil(
+    caches.keys().then(cacheNames => Promise.all(
+      cacheNames
+        .filter(cacheName =>
+          DEPRECATED_CACHES.includes(cacheName) ||
+          (cacheName.startsWith(CACHE_NAMESPACE) && cacheName !== CACHE))
+        .map(cacheName => caches.delete(cacheName))
+    )).then(() => self.clients.claim())
+  )
   console.log('service worker activated.')
-  event.waitUntil(self.clients.claim());
 });
 
 

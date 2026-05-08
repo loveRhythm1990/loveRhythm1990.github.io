@@ -8,6 +8,9 @@ keyword: "OD"
 url: "https://"              # your host, for absolute URL
 baseurl: ""                             # for example, '/blog' if your blog hosted on 'host/blog'
 
+# Optional: manual cache-bust suffix for CSS/JS (?v=...). Leave unset to use Jekyll build time (recommended).
+# asset_version: "20260508a"
+
 # Publish posts or collection documents with a future date.
 future: true
 
@@ -26,7 +29,20 @@ facebook_username:  _
 highlighter: rouge
 permalink: pretty
 paginate: 10
-exclude: ["less","node_modules","Gruntfile.js","package.json","README.md","README.zh.md"]
+exclude:
+  - less
+  - node_modules
+  - Gruntfile.js
+  - package.json
+  - package-lock.json
+  - README.md
+  - README.zh.md
+  - CLAUDE.md
+  - .claude.json
+  - temp
+  - .cursor
+  - .vscode
+  - .idea
 anchorjs: true                          # if you want to customize anchor. check out line:181 of `post.html`
 # If you have timezone issue (e.g. #68) in China, uncomment to use this:
 #timezone: CN  
@@ -124,3 +140,29 @@ friends: [
         href: "http://dhong.co"
     }
 ]
+
+# Tag → header gradient color mapping
+# Each value is the "start" color; a darker shade is auto-derived in intro-header.html
+tag-colors:
+  K8s:          "#326CE5"   # Kubernetes 官方蓝
+  Golang:       "#00ACD7"   # Go 官方青
+  Etcd:         "#419EDA"   # etcd 蓝
+  网络:         "#0277BD"   # 网络 深蓝
+  存储:         "#5D4037"   # 存储 棕
+  Linux:        "#BF360C"   # Linux 橙红
+  Docker:       "#2496ED"   # Docker 官方蓝
+  运维:         "#546E7A"   # 运维 钢青
+  监控:         "#00897B"   # 监控 青绿
+  设计模式:     "#6A1B9A"   # 设计模式 紫
+  数据结构/算法: "#283593"  # 算法 深蓝
+  分布式:       "#1565C0"   # 分布式 蓝
+  gRPC:         "#244C5A"   # gRPC 深青
+  Istio:        "#466BB0"   # Istio 蓝
+  Operator:     "#E65100"   # Operator 橙
+  K8s生态:      "#1976D2"   # K8s 生态 蓝
+  扩缩容:       "#2E7D32"   # 扩缩容 绿
+  cicd:         "#6D4C41"   # CI/CD 棕
+  数据库:       "#1A237E"   # 数据库 深蓝
+  boltdb:       "#4E342E"   # boltdb 深棕
+  gpu调度:      "#4527A0"   # GPU 深紫
+  随笔:         "#37474F"   # 随笔 深灰蓝

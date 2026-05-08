@@ -253,14 +253,15 @@ pre.highlight {
     border-radius: 0px;
   }
 }
-/* Landscape phones and down */
-@media (max-width: 480px) { 
+/* Narrow phones: keep blocks inside the content column to avoid horizontal scroll */
+@media (max-width: 480px) {
   .highlighter-rouge .highlight {
-    margin-left: -15px;
-    margin-right: -15px;
-    border-radius: 0px;
+    border-radius: 4px;
     td.rouge-gutter {
       width: 46px;
+    }
+    pre {
+      font-size: 13px;
     }
   }
 }

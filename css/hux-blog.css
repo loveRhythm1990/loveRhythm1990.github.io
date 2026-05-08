@@ -504,7 +504,7 @@ pre.highlight {
   border-radius: 6px;
 }
 .highlighter-rouge .highlight pre {
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.5;
   color: #555;
   background: transparent;
@@ -543,15 +543,16 @@ pre.highlight {
   text-align: right;
   border-radius: 0px;
 }
-/* Landscape phones and down */
+/* Narrow phones: keep blocks inside the content column to avoid horizontal scroll */
 @media (max-width: 480px) {
   .highlighter-rouge .highlight {
-    margin-left: -15px;
-    margin-right: -15px;
-    border-radius: 0px;
+    border-radius: 4px;
   }
   .highlighter-rouge .highlight td.rouge-gutter {
     width: 46px;
+  }
+  .highlighter-rouge .highlight pre {
+    font-size: 13px;
   }
 }
 body {
@@ -979,8 +980,11 @@ samp {
   }
 }
 .intro-header {
-  background: no-repeat center center;
-  background-color: #cccccc;
+  position: relative;
+  background-color: #0097b8;
+  background-image: linear-gradient(165deg, #0097b8 0%, #0085a1 42%, #006d85 100%);
+  background-repeat: no-repeat;
+  background-position: center center;
   background-attachment: scroll;
   -webkit-background-size: cover;
   -moz-background-size: cover;
@@ -995,7 +999,7 @@ samp {
 .intro-header.style-text .site-heading,
 .intro-header.style-text .post-heading,
 .intro-header.style-text .page-heading {
-  padding: 35px 0 15px;
+  padding: 62px 0 20px;
   color: #404040;
 }
 .intro-header.style-text .site-heading .subheading,
@@ -1023,22 +1027,22 @@ samp {
 .intro-header .site-heading,
 .intro-header .post-heading,
 .intro-header .page-heading {
-  padding: 35px 0 15px;
+  padding: 60px 0 12px;
   color: white;
 }
 @media only screen and (min-width: 768px) {
   .intro-header .site-heading,
   .intro-header .post-heading,
   .intro-header .page-heading {
-    padding: 50px 0;
+    padding: 68px 0 18px;
   }
 }
 .intro-header .site-heading {
-  padding: 45px 0 70px;
+  padding: 60px 0 12px;
 }
 @media only screen and (min-width: 768px) {
   .intro-header .site-heading {
-    padding: 50px 0;
+    padding: 68px 0 20px;
   }
 }
 .intro-header .site-heading,
@@ -1048,7 +1052,7 @@ samp {
 .intro-header .site-heading h1,
 .intro-header .page-heading h1 {
   margin-top: 0;
-  font-size: 50px;
+  font-size: 25px;
 }
 .intro-header .site-heading .subheading,
 .intro-header .page-heading .subheading {
@@ -1067,12 +1071,12 @@ samp {
 @media only screen and (min-width: 768px) {
   .intro-header .site-heading h1,
   .intro-header .page-heading h1 {
-    font-size: 80px;
+    font-size: 42px;
   }
 }
 .intro-header .post-heading h1 {
-  font-size: 27px;
-  margin-bottom: 20px;
+  font-size: 22px;
+  margin-bottom: 8px;
 }
 .intro-header .post-heading .subheading,
 .intro-header .post-heading .meta {
@@ -1103,13 +1107,13 @@ samp {
 }
 @media only screen and (min-width: 768px) {
   .intro-header .post-heading h1 {
-    font-size: 55px;
+    font-size: 32px;
   }
   .intro-header .post-heading .subheading {
-    font-size: 30px;
+    font-size: 22px;
   }
   .intro-header .post-heading .meta {
-    font-size: 30px;
+    font-size: 20px;
   }
 }
 .intro-header .header-img-credit {
@@ -1657,4 +1661,150 @@ img::-moz-selection {
 .MathJax_SVG_Display {
   overflow: auto;
   -webkit-overflow-scrolling: touch;
+}
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+body {
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+}
+.navbar-fixed-top.navbar-custom {
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+}
+.container,
+.container-fluid {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+@media screen and (min-width: 768px) {
+  .container {
+    width: 100%;
+    max-width: min(1170px, 94vw);
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+@media screen and (max-width: 767px) {
+  .container {
+    padding-left: max(15px, env(safe-area-inset-left, 0px));
+    padding-right: max(15px, env(safe-area-inset-right, 0px));
+  }
+}
+.post-container,
+.postlist-container {
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+@supports (overflow-wrap: anywhere) {
+  .post-container,
+  .postlist-container {
+    overflow-wrap: anywhere;
+  }
+}
+.post-container pre,
+.postlist-container pre {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.post-container .highlighter-rouge,
+.postlist-container .highlighter-rouge {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.post-container > table,
+.postlist-container > table {
+  display: block;
+  width: 100% !important;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  box-sizing: border-box;
+}
+.post-container iframe:not([width="0"]):not([height="0"]),
+.postlist-container iframe:not([width="0"]):not([height="0"]) {
+  max-width: 100%;
+}
+.intro-header h1,
+.intro-header .subheading,
+.intro-header .meta {
+  overflow-wrap: break-word;
+  max-width: 100%;
+}
+.intro-header {
+  width: 100%;
+}
+.intro-header .container {
+  position: relative;
+  z-index: 1;
+}
+@media screen and (max-width: 767px) {
+  .intro-header .site-heading,
+  .intro-header .post-heading,
+  .intro-header .page-heading {
+    padding-top: 60px;
+    padding-bottom: 12px;
+  }
+  .intro-header .site-heading {
+    padding: 60px 0 12px;
+  }
+  .intro-header .post-heading h1 {
+    font-size: 18px;
+    line-height: 1.35;
+    margin-bottom: 4px;
+  }
+  .intro-header .site-heading h1,
+  .intro-header .page-heading h1 {
+    font-size: 18px;
+    line-height: 1.3;
+  }
+  .intro-header.style-text .site-heading,
+  .intro-header.style-text .post-heading,
+  .intro-header.style-text .page-heading {
+    padding-top: 60px;
+    padding-bottom: 12px;
+  }
+}
+@media only screen and (max-width: 767px) {
+  .navbar-default .navbar-collapse {
+    width: auto;
+    min-width: 170px;
+    max-width: min(280px, calc(100vw - 16px - env(safe-area-inset-right, 0px)));
+  }
+}
+@media screen and (max-width: 480px) {
+  ul.pager {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  ul.pager li {
+    width: 100% !important;
+    float: none !important;
+    display: block;
+  }
+  ul.pager li > a,
+  ul.pager li > span {
+    width: 100%;
+    box-sizing: border-box;
+    display: block;
+    text-align: center;
+  }
+}
+#gitalk-container {
+  max-width: 100%;
+  overflow-x: auto;
+  box-sizing: border-box;
+}
+footer .copyright {
+  overflow-wrap: anywhere;
+}
+footer .copyright iframe {
+  max-width: min(100%, 110px);
+  box-sizing: border-box;
+}
+footer {
+  padding-bottom: calc(65px + env(safe-area-inset-bottom, 0px));
 }

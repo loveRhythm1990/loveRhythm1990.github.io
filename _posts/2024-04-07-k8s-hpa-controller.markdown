@@ -11,12 +11,13 @@ tags:
 **目录**
 - [概述](#概述)
 - [参数配置](#参数配置)
-  - [horizontal-pod-autoscaler-sync-period](#horizontal-pod-autoscaler-sync-period)
-  - [horizontal-pod-autoscaler-initial-readiness-delay](#horizontal-pod-autoscaler-initial-readiness-delay)
+	- [horizontal-pod-autoscaler-sync-period](#horizontal-pod-autoscaler-sync-period)
+	- [horizontal-pod-autoscaler-initial-readiness-delay](#horizontal-pod-autoscaler-initial-readiness-delay)
 - [计算 desiredReplica](#计算-desiredreplica)
 - [stabilizationWindowSeconds 配置](#stabilizationwindowseconds-配置)
+- [容忍度 tolerance](#容忍度-tolerance)
 - [附录](#附录)
-  - [hpa 配置示例](#hpa-配置示例)
+	- [hpa 配置示例](#hpa-配置示例)
 
 ### 概述
 在 K8s hpa 中，官方文档往往不能将问题解释清楚，需要的时候去研究一下源码实现，本文对 hpa 整体代码进行概览，并只关注核心逻辑（如：不关注控制器初始化）。
@@ -46,6 +47,7 @@ func NewFixedItemIntervalRateLimiter(interval time.Duration) workqueue.TypedRate
 	}
 }
 ```
+TODO: 这里的 key 是不是永远不会从队列中删除，也是无限循环
 
 #### horizontal-pod-autoscaler-initial-readiness-delay
 这个参数与参数 `horizontal-pod-autoscaler-cpu-initialization-period` 作用类似，用于判断一个 pod 是不是 Ready，如果一个 pod 正在初始化，则避免使用这个 pod 的监控指标数据，以免带来误差，因为  pod 在启动阶段的负载不具有参考性。
@@ -235,6 +237,9 @@ func (a *HorizontalController) stabilizeRecommendationWithBehaviors(args Normali
 	return recommendation, reason, message
 }
 ```
+
+### 容忍度 tolerance
+
 
 ### 附录
 #### hpa 配置示例

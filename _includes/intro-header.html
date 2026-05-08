@@ -3,11 +3,25 @@
     @param {boolean} short
 {% endcomment %}
 
+{% comment %} Resolve header background: explicit css > tag color > site default {% endcomment %}
+{% if page.header-bg-css %}
+  {% assign _header_bg = page.header-bg-css %}
+{% elsif page.tags and page.tags.size > 0 %}
+  {% assign _first_tag = page.tags[0] %}
+  {% assign _tag_color = site.tag-colors[_first_tag] %}
+  {% if _tag_color %}
+    {% assign _header_bg = _tag_color %}
+  {% endif %}
+{% endif %}
+
 {% if include.type == 'post' %}
 <style type="text/css">
     header.intro-header{
         position: relative;
-        background: {{ page.header-bg-css }};
+        {% if _header_bg %}
+        background-color: {{ _header_bg }};
+        background-image: linear-gradient(150deg, {{ _header_bg }}, rgba(0,0,0,0.35));
+        {% endif %}
     }
 
     {% if page.header-mask %}
@@ -24,7 +38,9 @@
 {% else %}
 <header class="intro-header" >
 {% endif %}
+    {% if page.header-mask %}
     <div class="header-mask"></div>
+    {% endif %}
     {% if page.header-img-credit %}
     <div class="header-img-credit">
         Image by <a href="//{{page.header-img-credit-href}}">{{page.header-img-credit}}</a>
@@ -67,7 +83,7 @@
         border: 0;
     }
 </style>
-<header class="intro-header" >
+<header class="intro-header intro-header-fullbleed" >
     <iframe src="{{page.iframe}}"></iframe>
     <!-- keep for SEO -->
     <div class="container">
@@ -94,7 +110,11 @@
 {% endif %}
 
 {% if include.type == 'page' %}
+{% if _header_bg %}
+<header class="intro-header" style="background-color:{{ _header_bg }};background-image:linear-gradient(150deg,{{ _header_bg }},rgba(0,0,0,0.35));">
+{% else %}
 <header class="intro-header" style="background-image: url('{{ site.baseurl }}/{% if page.header-img %}{{ page.header-img }}{% else %}{{ site.header-img }}{% endif %}')">
+{% endif %}
   <div class="container">
     <div class="row">
       <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">

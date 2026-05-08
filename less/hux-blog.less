@@ -479,7 +479,7 @@ samp {
     .site-heading,
     .post-heading,
     .page-heading {
-      padding: 85px 0 20px;
+      padding: 62px 0 20px;
       color: @gray-dark;
       .subheading{
         margin-bottom: 15px;
@@ -496,11 +496,20 @@ samp {
       }
     }
   }
-  background: no-repeat center center;
-  background-color: @gray;
+  position: relative;
+  background-color: @intro-header-bg;
+  // No lighten() at top — avoids milky / 灰白 band on LCD
+  background-image: linear-gradient(
+    165deg,
+    @intro-header-bg 0%,
+    @intro-header-bg-mid 42%,
+    @intro-header-bg-end 100%
+  );
+  background-repeat: no-repeat;
+  background-position: center center;
   background-attachment: scroll;
   .background-cover;
-  // NOTE: Background images are set within the HTML using inline CSS!
+  // NOTE: Page posts set background-image inline; custom post.header-bg-css overrides in intro-header.html
   margin-bottom: 0px; /* 0 on mobile, modify by Hux */
   @media only screen and (min-width: 768px) {
     margin-bottom: 20px; /* response on desktop */
@@ -508,17 +517,16 @@ samp {
   .site-heading,
   .post-heading,
   .page-heading {
-    padding: 85px 0 55px;
+    padding: 60px 0 12px;
     color: white;
     @media only screen and (min-width: 768px) {
-      padding: 150px 0;
+      padding: 68px 0 18px;
     }
   }
-  // masterialize
   .site-heading {
-    padding: 95px 0 70px;
+    padding: 60px 0 12px;
     @media only screen and (min-width: 768px) {
-      padding: 150px 0;
+      padding: 68px 0 20px;
     }
   }
   .site-heading,
@@ -538,14 +546,14 @@ samp {
     }
     @media only screen and (min-width: 768px) {
       h1 {
-        font-size: 80px;
+        font-size: 42px;
       }
     }
   }
   .post-heading {
     h1 {
-      font-size: 30px;
-      margin-bottom: 15px;
+      font-size: 22px;
+      margin-bottom: 8px;
     }
     .subheading,
     .meta {
@@ -571,10 +579,10 @@ samp {
     }
     @media only screen and (min-width: 768px) {
       h1 {
-        font-size: 55px;
+        font-size: 32px;
       }
       .subheading {
-        font-size: 30px;
+        font-size: 22px;
       }
       .meta {
         font-size: 20px;
@@ -1173,3 +1181,5 @@ img::-moz-selection {
   overflow: auto;
   -webkit-overflow-scrolling: touch;
 }
+
+@import "responsive.less";
