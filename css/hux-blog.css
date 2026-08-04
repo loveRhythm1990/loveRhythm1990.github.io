@@ -1885,7 +1885,7 @@ img::-moz-selection {
   }
   .post-toc-side .post-toc {
     position: sticky;
-    top: 80px;
+    top: var(--toc-rail-top, 80px);
     margin: 10px 0 0;
     transform: translateZ(0);
     backface-visibility: hidden;
@@ -1893,7 +1893,7 @@ img::-moz-selection {
     background: none;
     border-left: 1px solid #e3e7ea;
     border-radius: 0;
-    max-height: calc(100vh - 80px - 30px);
+    max-height: calc(100vh - var(--toc-rail-top, 80px) - 30px);
     overflow-y: auto;
     overscroll-behavior: contain;
   }
@@ -1956,7 +1956,7 @@ img::-moz-selection {
   }
   .post-toc-side .post-toc {
     position: fixed;
-    top: 80px;
+    top: var(--toc-rail-top, 80px);
     left: max(12px, env(safe-area-inset-left, 0px));
     width: min(150px, calc((100vw - min(1170px, 94vw)) / 2 - 16px));
     margin: 0;

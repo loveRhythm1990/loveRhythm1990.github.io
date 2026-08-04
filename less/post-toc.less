@@ -9,7 +9,8 @@
 // Scoped under the two containers rather than written bare, so it outranks the
 // generic list rules inside .post-container.
 
-@toc-rail-top: 80px;
+@toc-rail-top: 80px; // CSS fallback; js/post-toc.js sets --toc-rail-top from the hero bottom
+@toc-rail-gap: 16px;
 @toc-rail-width: 150px;
 // Pin the rail into the viewport's left gutter once the centred container leaves
 // ~100px there; below this the col-lg-2 sticky column is used instead.
@@ -122,7 +123,7 @@
   .post-toc-side {
     .post-toc {
       position: sticky;
-      top: @toc-rail-top;
+      top: var(--toc-rail-top, @toc-rail-top);
       margin: 10px 0 0;
       // Promote to its own layer so sticky/fixed positioning does not repaint
       // with the article on every scroll frame.
@@ -136,7 +137,7 @@
       border-radius: 0;
       // Long posts can out-run the viewport; scroll inside the rail instead of
       // letting it run off screen.
-      max-height: ~"calc(100vh - @{toc-rail-top} - 30px)";
+      max-height: ~"calc(100vh - var(--toc-rail-top, @{toc-rail-top}) - 30px)";
       overflow-y: auto;
       overscroll-behavior: contain;
     }
@@ -224,7 +225,7 @@
 
   .post-toc-side .post-toc {
     position: fixed;
-    top: @toc-rail-top;
+    top: var(--toc-rail-top, @toc-rail-top);
     left: ~"max(12px, env(safe-area-inset-left, 0px))";
     width: ~"min(@{toc-rail-width}, calc((100vw - min(1170px, 94vw)) / 2 - 16px))";
     margin: 0;

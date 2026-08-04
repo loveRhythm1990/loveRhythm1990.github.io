@@ -25,6 +25,8 @@
     // Matches @toc-rail-top in less/post-toc.less. Headings above this viewport
     // line count as read; kept a little below the rail's own top offset.
     var LINE = 100;
+    var FALLBACK_TOP = 80;
+    var RAIL_GAP = 16;
 
     var current = null;
     var queued = false;
@@ -32,6 +34,19 @@
 
     // Below 1200px the rail is display:none and the in-flow card is shown instead.
     var wide = window.matchMedia('(min-width: 1200px)');
+
+    function placeRail() {
+        var top = FALLBACK_TOP;
+        var header = document.querySelector('.intro-header');
+        if (header) {
+            top = Math.max(
+                FALLBACK_TOP,
+                Math.ceil(header.getBoundingClientRect().bottom) + RAIL_GAP
+            );
+        }
+        document.documentElement.style.setProperty('--toc-rail-top', top + 'px');
+        LINE = top + 20;
+    }
 
     function measureTops() {
         // Document Y of each heading — refreshed on load/resize/font settle only.
@@ -73,6 +88,7 @@
     }
 
     function onResize() {
+        placeRail();
         measureTops();
         schedule();
     }
@@ -81,11 +97,13 @@
         if (wide.matches) {
             window.addEventListener('scroll', schedule, { passive: true });
             window.addEventListener('resize', onResize);
+            placeRail();
             measureTops();
             update();
         } else {
             window.removeEventListener('scroll', schedule);
             window.removeEventListener('resize', onResize);
+            document.documentElement.style.removeProperty('--toc-rail-top');
             if (current) {
                 current.item.classList.remove('active');
                 current = null;
