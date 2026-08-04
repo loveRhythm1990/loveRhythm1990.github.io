@@ -481,6 +481,9 @@ samp {
     .page-heading {
       padding: 62px 0 20px;
       color: @gray-dark;
+      // Dark text on the white page — the shadow used over tinted headers would
+      // just look smudged here
+      text-shadow: none;
       .subheading{
         margin-bottom: 15px;
       }
@@ -497,14 +500,33 @@ samp {
     }
   }
   position: relative;
-  background-color: @intro-header-bg;
-  // No lighten() at top — avoids milky / 灰白 band on LCD
-  background-image: linear-gradient(
-    165deg,
-    @intro-header-bg 0%,
-    @intro-header-bg-mid 42%,
-    @intro-header-bg-end 100%
-  );
+  // --hero is set inline by intro-header.html from the post's tag colour; it
+  // falls back to the brand teal for posts without a mapped tag.
+  background-color: var(--hero, @intro-header-bg);
+
+  // Fallback for browsers without color-mix(). Tinted toward a deep blue rather
+  // than pure black — mixing toward black in sRGB is what made the old header
+  // look washed-out and grey.
+  background-image:
+    linear-gradient(to bottom, rgba(3, 10, 20, 0.3) 0%, rgba(3, 10, 20, 0.1) 52%, rgba(3, 10, 20, 0) 78%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(3, 18, 31, 0.34));
+
+  // Preferred rendering, in layer order: a top scrim that keeps the overlaying
+  // navbar's white text legible even on the brightest tag colours, a glow kept
+  // to the bottom-right so it never sits under the navbar, and the main gradient
+  // whose dark end is derived in oklab so it darkens without losing saturation.
+  background-image:
+    linear-gradient(to bottom, rgba(3, 10, 20, 0.3) 0%, rgba(3, 10, 20, 0.1) 52%, rgba(3, 10, 20, 0) 78%),
+    radial-gradient(
+      85% 130% at 88% 118%,
+      color-mix(in oklab, var(--hero, @intro-header-bg), white 14%) 0%,
+      transparent 62%
+    ),
+    linear-gradient(
+      135deg,
+      var(--hero, @intro-header-bg),
+      color-mix(in oklab, var(--hero, @intro-header-bg), #06121f 32%)
+    );
   background-repeat: no-repeat;
   background-position: center center;
   background-attachment: scroll;
@@ -519,6 +541,9 @@ samp {
   .page-heading {
     padding: 60px 0 12px;
     color: white;
+    // Lifts the title off the lighter tag colours (Golang/Etcd/Docker sit around
+    // 3:1 against white on their own)
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
     @media only screen and (min-width: 768px) {
       padding: 68px 0 18px;
     }

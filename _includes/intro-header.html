@@ -3,7 +3,9 @@
     @param {boolean} short
 {% endcomment %}
 
-{% comment %} Resolve header background: explicit css > tag color > site default {% endcomment %}
+{% comment %} Resolve header background: explicit css > tag color > site default.
+   Cleared first so a value can never carry over from an earlier render. {% endcomment %}
+{% assign _header_bg = nil %}
 {% if page.header-bg-css %}
   {% assign _header_bg = page.header-bg-css %}
 {% elsif page.tags and page.tags.size > 0 %}
@@ -14,29 +16,26 @@
   {% endif %}
 {% endif %}
 
+{% comment %}
+    The gradient itself lives in less/hux-blog.less; only the base hue is passed
+    in, as --hero. That keeps the layering (scrim, glow, oklab dark end) in one
+    place instead of duplicated across the three header types below.
+{% endcomment %}
 {% if include.type == 'post' %}
+{% if page.header-mask %}
 <style type="text/css">
-    header.intro-header{
-        position: relative;
-        {% if _header_bg %}
-        background-color: {{ _header_bg }};
-        background-image: linear-gradient(150deg, {{ _header_bg }}, rgba(0,0,0,0.35));
-        {% endif %}
-    }
-
-    {% if page.header-mask %}
     header.intro-header .header-mask{
         width: 100%;
         height: 100%;
         position: absolute;
         background: rgba(0,0,0, {{ page.header-mask }});
     }
-    {% endif %}
 </style>
+{% endif %}
 {% if page.header-style == 'text' %}
 <header class="intro-header style-text" >
 {% else %}
-<header class="intro-header" >
+<header class="intro-header"{% if _header_bg %} style="--hero: {{ _header_bg }};"{% endif %} >
 {% endif %}
     {% if page.header-mask %}
     <div class="header-mask"></div>
@@ -111,7 +110,7 @@
 
 {% if include.type == 'page' %}
 {% if _header_bg %}
-<header class="intro-header" style="background-color:{{ _header_bg }};background-image:linear-gradient(150deg,{{ _header_bg }},rgba(0,0,0,0.35));">
+<header class="intro-header" style="--hero: {{ _header_bg }};">
 {% else %}
 <header class="intro-header" style="background-image: url('{{ site.baseurl }}/{% if page.header-img %}{{ page.header-img }}{% else %}{{ site.header-img }}{% endif %}')">
 {% endif %}
