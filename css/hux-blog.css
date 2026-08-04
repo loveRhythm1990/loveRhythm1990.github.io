@@ -301,11 +301,11 @@ button.paper-button {
 }
 .highlight,
 pre.highlight {
-  background: #f6f8fa;
-  color: #24292f;
+  background: #fafafa;
+  color: #383a42;
 }
 .highlight pre {
-  background: #f6f8fa;
+  background: #fafafa;
 }
 .highlight .hll {
   background: #fff8c5;
@@ -315,62 +315,61 @@ pre.highlight {
 .highlight .c1,
 .highlight .cs,
 .highlight .cd {
-  color: #6e7781;
+  color: #a0a1a7;
   font-style: italic;
 }
 .highlight .cp {
-  color: #cf222e;
+  color: #a626a4;
 }
 .highlight .err,
 .highlight .x {
-  color: #82071e;
-  background-color: #ffebe9;
+  color: #e45649;
+  background-color: #ffeef0;
 }
 .highlight .k,
 .highlight .kd,
 .highlight .kn,
 .highlight .kp,
-.highlight .kr,
-.highlight .kt,
-.highlight .bp {
-  color: #cf222e;
+.highlight .kr {
+  color: #a626a4;
+}
+.highlight .kt {
+  color: #c18401;
 }
 .highlight .kc {
-  color: #0550ae;
+  color: #986801;
+}
+.highlight .bp {
+  color: #e45649;
 }
 .highlight .n,
 .highlight .nn,
 .highlight .nx,
 .highlight .py,
 .highlight .p,
-.highlight .o,
 .highlight .w {
-  color: #24292f;
+  color: #383a42;
 }
+.highlight .nf,
 .highlight .nb,
+.highlight .nd {
+  color: #4078f2;
+}
 .highlight .nc,
-.highlight .nd,
+.highlight .ne {
+  color: #c18401;
+}
+.highlight .nt,
+.highlight .na,
 .highlight .ni,
-.highlight .ne,
-.highlight .nf {
-  color: #8250df;
-}
-.highlight .no {
-  color: #0550ae;
-}
-.highlight .na {
-  color: #0550ae;
-}
-.highlight .nt {
-  color: #116329;
-}
-.highlight .nl,
 .highlight .nv,
 .highlight .vc,
 .highlight .vg,
 .highlight .vi {
-  color: #953800;
+  color: #e45649;
 }
+.highlight .no,
+.highlight .nl,
 .highlight .l,
 .highlight .m,
 .highlight .mf,
@@ -378,7 +377,7 @@ pre.highlight {
 .highlight .mi,
 .highlight .mo,
 .highlight .il {
-  color: #0550ae;
+  color: #986801;
 }
 .highlight .s,
 .highlight .sb,
@@ -390,53 +389,57 @@ pre.highlight {
 .highlight .si,
 .highlight .sx,
 .highlight .ld {
-  color: #0a3069;
+  color: #50a14f;
 }
 .highlight .se,
-.highlight .ss {
-  color: #0550ae;
-}
+.highlight .ss,
 .highlight .sr {
-  color: #116329;
+  color: #0184bc;
+}
+.highlight .o {
+  color: #0184bc;
+}
+.highlight .ow {
+  color: #a626a4;
+  font-weight: 700;
 }
 .highlight .ge {
   font-style: italic;
 }
-.highlight .gs,
-.highlight .ow {
+.highlight .gs {
   font-weight: 700;
 }
 .highlight .gh {
-  color: #0550ae;
+  color: #4078f2;
   font-weight: 700;
 }
 .highlight .gu {
-  color: #8250df;
+  color: #a626a4;
 }
 .highlight .gp {
-  color: #6e7781;
+  color: #a0a1a7;
 }
 .highlight .gd {
-  color: #82071e;
-  background-color: #ffebe9;
+  color: #e45649;
+  background-color: #ffeef0;
 }
 .highlight .gi {
-  color: #116329;
-  background-color: #dafbe1;
+  color: #50a14f;
+  background-color: #e6ffed;
 }
 .highlight .gr,
 .highlight .gt {
-  color: #82071e;
+  color: #e45649;
 }
 .highlighter-rouge .highlight {
-  margin-bottom: 10px;
+  margin-bottom: 0;
   border-radius: 6px;
-  border: 1px solid #d0d7de;
+  border: 1px solid #e1e4e8;
 }
 .highlighter-rouge .highlight pre {
   font-size: 14px;
   line-height: 1.5;
-  color: #24292f;
+  color: #383a42;
   background: transparent;
   border: 0;
   margin: 0;
@@ -448,7 +451,7 @@ pre.highlight {
   border: 0 !important;
 }
 .highlighter-rouge .highlight .rouge-code pre {
-  color: #24292f;
+  color: #383a42;
 }
 .highlighter-rouge .highlight .table-responsive {
   margin: 0px;
@@ -474,14 +477,29 @@ pre.highlight {
 }
 .highlighter-rouge .highlight .lineno {
   text-align: right;
-  color: #8c959f;
+  color: #b0b1b6;
   border-radius: 0px;
+}
+.post-container .highlighter-rouge {
+  margin-top: -14px;
+  margin-bottom: -14px;
+}
+.post-container h1 + .highlighter-rouge,
+.post-container h2 + .highlighter-rouge,
+.post-container h3 + .highlighter-rouge,
+.post-container h4 + .highlighter-rouge,
+.post-container h5 + .highlighter-rouge,
+.post-container h6 + .highlighter-rouge {
+  margin-top: 0;
+}
+.post-container .highlighter-rouge + .highlighter-rouge {
+  margin-top: 16px;
 }
 code {
   padding: 0.2em 0.4em;
   font-size: 90%;
-  color: #24292f;
-  background-color: rgba(175, 184, 193, 0.2);
+  color: #383a42;
+  background-color: rgba(64, 68, 79, 0.08);
   border-radius: 4px;
 }
 pre code,

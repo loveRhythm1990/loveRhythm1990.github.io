@@ -1,19 +1,19 @@
-// GitHub Light theme for Rouge
-// Palette follows GitHub Primer "prettylights" syntax tokens.
+// Atom One Light theme for Rouge
+// Hues are spread across the wheel so adjacent tokens (e.g. JSON key vs. value) stay distinguishable.
 
-@code-bg:      #f6f8fa;
-@code-fg:      #24292f;
-@code-border:  #d0d7de;
-@code-lineno:  #8c959f;
+@code-bg:      #fafafa;
+@code-fg:      #383a42;
+@code-border:  #e1e4e8;
+@code-lineno:  #b0b1b6;
 
-@code-comment:  #6e7781;
-@code-keyword:  #cf222e;
-@code-constant: #0550ae;
-@code-entity:   #8250df;
-@code-string:   #0a3069;
-@code-variable: #953800;
-@code-tag:      #116329;
-@code-danger:   #82071e;
+@code-comment: #a0a1a7; // mono-3
+@code-cyan:    #0184bc; // hue-1  operators, escapes, regex
+@code-blue:    #4078f2; // hue-2  functions, methods
+@code-purple:  #a626a4; // hue-3  keywords, storage
+@code-green:   #50a14f; // hue-4  strings
+@code-red:     #e45649; // hue-5  tags, attributes, variables
+@code-orange:  #986801; // hue-6  numbers, constants
+@code-gold:    #c18401; // hue-6-2  classes, types
 
 .highlight,
 pre.highlight {
@@ -37,66 +37,71 @@ pre.highlight {
   font-style: italic;
 }
 .highlight .cp {
-  color: @code-keyword; // preprocessor, e.g. #include
+  color: @code-purple; // preprocessor, e.g. #include
 }
 
 // Errors
 .highlight .err,
 .highlight .x {
-  color: @code-danger;
-  background-color: #ffebe9;
+  color: @code-red;
+  background-color: #ffeef0;
 }
 
-// Keywords
+// Keywords and storage
 .highlight .k,
 .highlight .kd,
 .highlight .kn,
 .highlight .kp,
-.highlight .kr,
-.highlight .kt,
-.highlight .bp {
-  color: @code-keyword;
+.highlight .kr {
+  color: @code-purple;
+}
+.highlight .kt {
+  color: @code-gold; // built-in types: int, string, bool
 }
 .highlight .kc {
-  color: @code-constant; // true / false / nil
+  color: @code-orange; // true / false / nil
+}
+.highlight .bp {
+  color: @code-red; // self, this
 }
 
-// Names
+// Plain names, punctuation
 .highlight .n,
 .highlight .nn,
 .highlight .nx,
 .highlight .py,
 .highlight .p,
-.highlight .o,
 .highlight .w {
   color: @code-fg;
 }
+
+// Functions
+.highlight .nf,
 .highlight .nb,
+.highlight .nd {
+  color: @code-blue;
+}
+
+// Classes and types
 .highlight .nc,
-.highlight .nd,
+.highlight .ne {
+  color: @code-gold;
+}
+
+// Tags, attributes, variables — this is what makes JSON/YAML keys pop
+.highlight .nt,
+.highlight .na,
 .highlight .ni,
-.highlight .ne,
-.highlight .nf {
-  color: @code-entity;
-}
-.highlight .no {
-  color: @code-constant;
-}
-.highlight .na {
-  color: @code-constant;
-}
-.highlight .nt {
-  color: @code-tag;
-}
-.highlight .nl,
 .highlight .nv,
 .highlight .vc,
 .highlight .vg,
 .highlight .vi {
-  color: @code-variable;
+  color: @code-red;
 }
 
-// Numbers
+// Constants and numbers
+.highlight .no,
+.highlight .nl,
 .highlight .l,
 .highlight .m,
 .highlight .mf,
@@ -104,7 +109,7 @@ pre.highlight {
 .highlight .mi,
 .highlight .mo,
 .highlight .il {
-  color: @code-constant;
+  color: @code-orange;
 }
 
 // Strings
@@ -118,50 +123,57 @@ pre.highlight {
 .highlight .si,
 .highlight .sx,
 .highlight .ld {
-  color: @code-string;
+  color: @code-green;
 }
 .highlight .se,
-.highlight .ss {
-  color: @code-constant;
-}
+.highlight .ss,
 .highlight .sr {
-  color: @code-tag;
+  color: @code-cyan;
+}
+
+// Operators
+.highlight .o {
+  color: @code-cyan;
+}
+.highlight .ow {
+  color: @code-purple;
+  font-weight: 700;
 }
 
 // Generic / diff
 .highlight .ge {
   font-style: italic;
 }
-.highlight .gs,
-.highlight .ow {
+.highlight .gs {
   font-weight: 700;
 }
 .highlight .gh {
-  color: @code-constant;
+  color: @code-blue;
   font-weight: 700;
 }
 .highlight .gu {
-  color: @code-entity;
+  color: @code-purple;
 }
 .highlight .gp {
   color: @code-comment;
 }
 .highlight .gd {
-  color: @code-danger;
-  background-color: #ffebe9;
+  color: @code-red;
+  background-color: #ffeef0;
 }
 .highlight .gi {
-  color: @code-tag;
-  background-color: #dafbe1;
+  color: @code-green;
+  background-color: #e6ffed;
 }
 .highlight .gr,
 .highlight .gt {
-  color: @code-danger;
+  color: @code-red;
 }
 
 // Customize for Hux Blog
 .highlighter-rouge .highlight {
-  margin-bottom: 10px;
+  // Outer spacing is handled on .highlighter-rouge below (margin collapsing)
+  margin-bottom: 0;
   border-radius: 6px;
   // Light background needs an outline to separate from the white page
   border: 1px solid @code-border;
@@ -217,12 +229,34 @@ pre.highlight {
   }
 }
 
+// Prose <p> carries 30px vertical margins, which collapse against code blocks
+// and leave too much air. Pull the block back to ~16px on both sides.
+.post-container {
+  .highlighter-rouge {
+    margin-top: -14px;
+    margin-bottom: -14px;
+  }
+  // Headings already sit tight (10px bottom margin) — no pull needed
+  h1 + .highlighter-rouge,
+  h2 + .highlighter-rouge,
+  h3 + .highlighter-rouge,
+  h4 + .highlighter-rouge,
+  h5 + .highlighter-rouge,
+  h6 + .highlighter-rouge {
+    margin-top: 0;
+  }
+  // Consecutive code blocks need a real gap between them
+  .highlighter-rouge + .highlighter-rouge {
+    margin-top: 16px;
+  }
+}
+
 // Inline code — match the block palette instead of Bootstrap's pink default
 code {
   padding: 0.2em 0.4em;
   font-size: 90%;
   color: @code-fg;
-  background-color: rgba(175, 184, 193, 0.2);
+  background-color: rgba(64, 68, 79, 0.08);
   border-radius: 4px;
 }
 pre code,
