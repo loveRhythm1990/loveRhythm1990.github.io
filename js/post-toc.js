@@ -26,16 +26,18 @@
     // rail's own sticky offset so the switch happens as the heading meets the top
     // of the rail rather than while it is still mid-screen.
     var LINE = 96;
-    var NAV_CLEAR = 76;
-    var HERO_GAP = 12;
+    // Matches @toc-rail-top in less/post-toc.less — navbar clearance only. The
+    // rail sits in the left gutter at >=1370px and does not overlap the hero text,
+    // so tracking intro-header on scroll was dropped: getBoundingClientRect() every
+    // frame made the rail twitch as the slim hero moved.
+    var NAV_CLEAR = 80;
 
     var current = null;
     var queued = false;
 
     // Below 1200px the rail is display:none and the in-flow card is shown instead.
     var wide = window.matchMedia('(min-width: 1200px)');
-    // From 1370px the rail is position:fixed in the viewport gutter and must stay
-    // below intro-header rather than at NAV_CLEAR alone.
+    // From 1370px the rail is position:fixed in the viewport gutter.
     var viewportPin = window.matchMedia('(min-width: 1370px)');
 
     function layoutFixedRail() {
@@ -46,14 +48,9 @@
             return;
         }
 
-        var hero = document.querySelector('.intro-header');
-        if (!hero) return;
-
-        var heroBottom = hero.getBoundingClientRect().bottom;
-        var top = heroBottom > NAV_CLEAR ? heroBottom + HERO_GAP : NAV_CLEAR;
-        rail.style.top = top + 'px';
-        rail.style.maxHeight = 'calc(100vh - ' + (top + 30) + 'px)';
-        LINE = top + 20;
+        rail.style.top = NAV_CLEAR + 'px';
+        rail.style.maxHeight = 'calc(100vh - ' + (NAV_CLEAR + 30) + 'px)';
+        LINE = NAV_CLEAR + 20;
     }
 
     function activeEntry() {
@@ -101,20 +98,24 @@
         window.requestAnimationFrame(update);
     }
 
-    function onScrollOrResize() {
+    function onScroll() {
+        schedule();
+    }
+
+    function onResize() {
         layoutFixedRail();
         schedule();
     }
 
     function sync() {
         if (wide.matches) {
-            window.addEventListener('scroll', onScrollOrResize, { passive: true });
-            window.addEventListener('resize', onScrollOrResize);
+            window.addEventListener('scroll', onScroll, { passive: true });
+            window.addEventListener('resize', onResize);
             layoutFixedRail();
             update();
         } else {
-            window.removeEventListener('scroll', onScrollOrResize);
-            window.removeEventListener('resize', onScrollOrResize);
+            window.removeEventListener('scroll', onScroll);
+            window.removeEventListener('resize', onResize);
             rail.style.top = '';
             rail.style.maxHeight = '';
             LINE = 96;
@@ -133,6 +134,5 @@
     else wide.addListener(onMqChange);
 
     sync();
-    // Late-loading images and web fonts shift the hero height and every heading.
-    window.addEventListener('load', onScrollOrResize);
+    window.addEventListener('load', onResize);
 })();

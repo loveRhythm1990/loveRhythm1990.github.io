@@ -1786,13 +1786,13 @@ img::-moz-selection {
   }
   .post-toc-side .post-toc {
     position: sticky;
-    top: 76px;
+    top: 80px;
     margin: 10px 0 0;
     padding: 2px 0 2px 14px;
     background: none;
     border-left: 1px solid #e3e7ea;
     border-radius: 0;
-    max-height: calc(100vh - 76px - 30px);
+    max-height: calc(100vh - 80px - 30px);
     overflow-y: auto;
     overscroll-behavior: contain;
   }
@@ -1855,9 +1855,11 @@ img::-moz-selection {
   }
   .post-toc-side .post-toc {
     position: fixed;
+    top: 80px;
     left: max(12px, env(safe-area-inset-left, 0px));
     width: min(150px, calc((100vw - min(1170px, 94vw)) / 2 - 16px));
     margin: 0;
+    max-height: calc(100vh - 80px - 30px);
   }
 }
 .archive-list {
