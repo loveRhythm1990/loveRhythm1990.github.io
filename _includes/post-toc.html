@@ -1,15 +1,25 @@
 {%- comment -%}
 Build-time table of contents for posts. No plugin, no JavaScript.
 
-Scans the *rendered* `content` for h2..h4 (kramdown emits the ids via auto_ids) and
+Scans the *rendered* `content` for h2..h6 (kramdown emits the ids via auto_ids) and
 emits a flat list tagged with a relative depth class. Indentation lives in CSS —
 generating nested <ul> in Liquid needs bracket-matching that breaks on skipped
 levels (e.g. h2 straight to h4).
 
+Depth is relative to the shallowest heading present, and only the first three
+levels are listed. So a post written entirely in h5/h6 — a couple of the older
+ones are — still gets a TOC, while a post spanning h2..h6 lists h2..h4 exactly as
+before instead of burying five levels of indentation in a 137px rail.
+
 Renders nothing when:
-  - the post already carries a hand-written TOC (the ~87 older posts), or
   - `toc: false` is set in front matter, or
+  - the post uses kramdown's own `{:toc}`, which puts a TOC in the flow already, or
   - there are fewer than `min_items` headings, where a TOC is just noise.
+
+The 87 older posts that open with a plugin-generated `**目录**` list are *not*
+skipped: their anchors match the ids kramdown derives from the same headings, so
+the rail reproduces them exactly. `_layouts/post.html` detects that opening list
+and flags the container, and `less/post-toc.less` hides the in-flow copy.
 {%- endcomment -%}
 
 {%- assign _min_items = 3 -%}
@@ -17,19 +27,21 @@ Renders nothing when:
 {%- assign _skip = false -%}
 {%- if page.toc == false -%}{%- assign _skip = true -%}{%- endif -%}
 {%- if page.multilingual -%}{%- assign _skip = true -%}{%- endif -%}
-{%- if content contains '<strong>目录</strong>' -%}{%- assign _skip = true -%}{%- endif -%}
-{%- if content contains '<strong>文章目录</strong>' -%}{%- assign _skip = true -%}{%- endif -%}
 {%- if content contains 'id="markdown-toc"' -%}{%- assign _skip = true -%}{%- endif -%}
 
 {%- unless _skip -%}
   {%- assign _chunks = content | split: '<h' -%}
 
-  {%- comment -%} Pass 1: count headings and find the shallowest level present. {%- endcomment -%}
+  {%- comment -%}
+    Pass 1: count headings and find the shallowest level present.
+    `'23456' contains _lvl` also rejects the chunks that come from other tags
+    starting with h — <header>, <hr> — whose first character is a letter.
+  {%- endcomment -%}
   {%- assign _count = 0 -%}
   {%- assign _top_level = 9 -%}
   {%- for _chunk in _chunks offset: 1 -%}
     {%- assign _lvl = _chunk | slice: 0, 1 -%}
-    {%- if _lvl == '2' or _lvl == '3' or _lvl == '4' -%}
+    {%- if _lvl != '' and '23456' contains _lvl -%}
       {%- assign _head = _chunk | split: '</h' | first -%}
       {%- if _head contains 'id="' -%}
         {%- assign _count = _count | plus: 1 -%}
@@ -44,7 +56,7 @@ Renders nothing when:
     {%- assign _items = '' -%}
     {%- for _chunk in _chunks offset: 1 -%}
       {%- assign _lvl = _chunk | slice: 0, 1 -%}
-      {%- if _lvl == '2' or _lvl == '3' or _lvl == '4' -%}
+      {%- if _lvl != '' and '23456' contains _lvl -%}
         {%- assign _head = _chunk | split: '</h' | first -%}
         {%- if _head contains 'id="' -%}
           {%- comment -%} Index 1, not `last`: the heading's own id is the first one. {%- endcomment -%}
@@ -64,8 +76,8 @@ Renders nothing when:
           {%- endif -%}
           {%- assign _text = _text | strip_html | strip -%}
 
-          {%- if _id != '' and _text != '' -%}
-            {%- assign _depth = _lvl | plus: 0 | minus: _top_level -%}
+          {%- assign _depth = _lvl | plus: 0 | minus: _top_level -%}
+          {%- if _id != '' and _text != '' and _depth <= 2 -%}
             {%- capture _items -%}
               {%- comment -%}
                 escape_once, not escape: the text already carries entities from
@@ -80,7 +92,13 @@ Renders nothing when:
       {%- endif -%}
     {%- endfor -%}
 
-    {%- if _items != '' -%}
+    {%- comment -%}
+      Re-checked against the entries actually listed, not the pass-1 count: levels
+      below the third are dropped above, so a post with three headings spread over
+      five levels can end up with one line, which is not worth a TOC.
+    {%- endcomment -%}
+    {%- assign _visible = _items | split: '<li' | size | minus: 1 -%}
+    {%- if _visible >= _min_items -%}
 <nav class="post-toc" aria-label="目录">
   <p class="post-toc-title">目录</p>
   <ul class="post-toc-list">{{ _items }}</ul>

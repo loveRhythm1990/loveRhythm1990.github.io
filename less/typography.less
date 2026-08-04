@@ -29,13 +29,22 @@
   }
 }
 
-// With the column back to ~707px of text, 18px puts the measure at ~38 CJK
-// characters. Headings, code and the TOC all carry their own fixed sizes, so
-// only prose moves.
-.post-container {
-  font-size: 18px;
+// The article is the only col-lg-9 on the site, and 75% leaves a wide right-hand
+// gutter once the TOC rail has taken the 2 columns on the left. 80% spends most of
+// that on text while keeping ~39px of margin, so the body does not run into the
+// container edge. Written as a compound selector rather than by editing .col-lg-9
+// above, so the grid class keeps its stock meaning for anything added later.
+@media (min-width: 1200px) {
+  .post-container.col-lg-9 {
+    width: 80%;
+  }
+}
 
-  // 30px against a ~31px line-height reads as a gap between separate paragraphs
+// Body type stays at the theme's 16px; the measure is governed by the column width
+// instead. That lands at ~57 CJK characters per line — past the 30-40 that reads
+// most comfortably, and a deliberate trade: the narrower measure read as cramped.
+.post-container {
+  // 30px against a ~26px line-height reads as a gap between separate paragraphs
   // instead of a rhythm within one body of text. The tighter value is still
   // comfortably clear of the line spacing.
   // Narrower selectors elsewhere keep precedence: `li p` stays at 0, and the

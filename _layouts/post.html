@@ -9,6 +9,35 @@ layout: default
 <!-- Post Header -->
 {% include intro-header.html type='post' %}
 
+{%- comment -%}
+    Built once and emitted twice below (rail at >=1200px, in-flow card under that),
+    which also makes the result available here: whether a TOC exists at all decides
+    what happens to the hand-written one.
+{%- endcomment -%}
+{%- capture _toc_html -%}{% include post-toc.html %}{%- endcapture -%}
+{%- assign _toc_html = _toc_html | strip -%}
+
+{%- comment -%}
+    The 87 posts migrated from the old TOC plugin open with a `**目录**` heading
+    followed by a link list. Where the generated TOC covers the same ground — the
+    anchors are the same ids kramdown derives from those headings — that opening
+    copy is hidden by CSS rather than stripped from the sources.
+
+    Two guards, both load-bearing:
+      - matched against the opening characters only, so an article that merely
+        mentions **目录** further down keeps its first paragraph;
+      - conditional on a TOC having been generated, otherwise posts whose headings
+        fall short of the minimum would have their only TOC hidden and no
+        replacement shown.
+{%- endcomment -%}
+{%- assign _content_head = content | strip | slice: 0, 80 -%}
+{%- assign _hide_legacy_toc = false -%}
+{%- if _toc_html != '' -%}
+    {%- if _content_head contains '<strong>目录</strong>' or _content_head contains '<strong>文章目录</strong>' -%}
+        {%- assign _hide_legacy_toc = true -%}
+    {%- endif -%}
+{%- endif -%}
+
 <!-- Post Content -->
 <article>
     <div class="container">
@@ -21,14 +50,14 @@ layout: default
                 col-lg-2 col-lg-offset-0
                 visible-lg-block
                 post-toc-side">
-                {% include post-toc.html %}
+                {{ _toc_html }}
             </div>
 
     <!-- Post Container -->
             <div class="
-                col-lg-8 col-lg-offset-0
+                col-lg-9 col-lg-offset-0
                 col-md-10 col-md-offset-1
-                post-container">
+                post-container{% if _hide_legacy_toc %} has-legacy-toc{% endif %}">
 
                 <!-- Multi-Lingual -->
                 {% if page.multilingual %}
@@ -39,7 +68,7 @@ layout: default
                 </select>
                 {% endif %}
 
-                {% include post-toc.html %}
+                {{ _toc_html }}
 
 				{{ content }}
 

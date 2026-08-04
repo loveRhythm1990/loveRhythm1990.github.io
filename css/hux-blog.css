@@ -1658,8 +1658,10 @@ img::-moz-selection {
     margin-left: 16.66666667%;
   }
 }
-.post-container {
-  font-size: 18px;
+@media (min-width: 1200px) {
+  .post-container.col-lg-9 {
+    width: 80%;
+  }
 }
 .post-container p {
   margin: 24px 0;
@@ -1726,6 +1728,10 @@ img::-moz-selection {
   .post-toc-side .post-toc-d2 {
     padding-left: 2.2em;
   }
+}
+.post-container.has-legacy-toc > p:first-of-type,
+.post-container.has-legacy-toc > p:first-of-type + ul {
+  display: none;
 }
 @media (min-width: 1200px) {
   article {

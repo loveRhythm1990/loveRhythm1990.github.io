@@ -65,6 +65,22 @@
   }
 }
 
+// The 87 posts carried over from the old TOC plugin still open with its
+// generated list. The rail reproduces the same anchors, so the original is
+// hidden here rather than deleted out of 87 source files — reverting is a matter
+// of dropping this rule and restoring the skip in _includes/post-toc.html.
+//
+// `p:first-of-type` lands on the body's opening paragraph: the generated TOC is a
+// <nav> and the multilingual switcher a <select>, so neither is in the running.
+// Both selectors are needed because kramdown emits the marker and its list as
+// separate elements, except where a post left no blank line between them.
+.post-container.has-legacy-toc {
+  > p:first-of-type,
+  > p:first-of-type + ul {
+    display: none;
+  }
+}
+
 // The rail only exists at lg, which is also where Bootstrap's visible-lg-block
 // reveals the column.
 @media (min-width: 1200px) {
