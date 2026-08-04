@@ -7,11 +7,18 @@ layout: default
 
 <!-- Main Content -->
 <div class="container">
-	<div class="row">
+	<div class="row post-row">
         {% if site.sidebar == false %}
 <!-- NO SIDEBAR -->
     <!-- PostList Container -->
-            <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1 postlist-container">
+            <div class="
+                col-lg-2 col-lg-offset-0 visible-lg-block post-toc-side
+            "></div>
+            <div class="
+                col-lg-9 col-lg-offset-0
+                col-md-10 col-md-offset-1
+                postlist-container post-container
+            ">
                 {{ content }}
             </div>
     <!-- Sidebar Container 

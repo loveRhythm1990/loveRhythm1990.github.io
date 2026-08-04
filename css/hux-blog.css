@@ -1080,6 +1080,10 @@ samp {
 .intro-header.hero-compact .post-heading .meta a {
   color: inherit;
 }
+.intro-header.hero-compact .site-heading,
+.intro-header.hero-compact #tag-heading {
+  text-align: left;
+}
 .intro-header.hero-compact .site-heading h1,
 .intro-header.hero-compact #tag-heading h1 {
   margin-bottom: 0;

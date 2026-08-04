@@ -50,8 +50,9 @@
     </div>
     {% endif %}
     <div class="container">
-        <div class="row">
-            <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+        <div class="row post-row">
+            <div class="col-lg-2 col-lg-offset-0 visible-lg-block post-toc-side"></div>
+            <div class="col-lg-9 col-lg-offset-0 col-md-10 col-md-offset-1 post-container">
                 <div class="post-heading">
                    <!-- <div class="tags">
                         {% for tag in page.tags %}
@@ -90,8 +91,9 @@
     <iframe src="{{page.iframe}}"></iframe>
     <!-- keep for SEO -->
     <div class="container">
-        <div class="row">
-            <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+        <div class="row post-row">
+            <div class="col-lg-2 col-lg-offset-0 visible-lg-block post-toc-side"></div>
+            <div class="col-lg-9 col-lg-offset-0 col-md-10 col-md-offset-1 post-container">
                 <div class="post-heading">
                     <div class="tags">
                         {% for tag in page.tags %}
@@ -119,8 +121,9 @@
 <header class="intro-header hero-compact" style="background-image: url('{{ site.baseurl }}/{% if page.header-img %}{{ page.header-img }}{% else %}{{ site.header-img }}{% endif %}'); background-position: center bottom;">
 {% endif %}
   <div class="container">
-    <div class="row">
-      <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+    <div class="row post-row">
+      <div class="col-lg-2 col-lg-offset-0 visible-lg-block post-toc-side"></div>
+      <div class="col-lg-9 col-lg-offset-0 col-md-10 col-md-offset-1 post-container">
         {% if include.short %}
         <div class="site-heading" id="tag-heading">
         {% else %}
