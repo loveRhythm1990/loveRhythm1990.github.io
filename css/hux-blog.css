@@ -301,11 +301,11 @@ button.paper-button {
 }
 .highlight,
 pre.highlight {
-  background: #fafafa;
+  background: #e8ecf0;
   color: #383a42;
 }
 .highlight pre {
-  background: #fafafa;
+  background: #e8ecf0;
 }
 .highlight .hll {
   background: #fff8c5;
@@ -315,7 +315,7 @@ pre.highlight {
 .highlight .c1,
 .highlight .cs,
 .highlight .cd {
-  color: #a0a1a7;
+  color: #72727a;
   font-style: italic;
 }
 .highlight .cp {
@@ -323,7 +323,7 @@ pre.highlight {
 }
 .highlight .err,
 .highlight .x {
-  color: #e45649;
+  color: #cb2c1f;
   background-color: #ffeef0;
 }
 .highlight .k,
@@ -334,13 +334,13 @@ pre.highlight {
   color: #a626a4;
 }
 .highlight .kt {
-  color: #c18401;
+  color: #a37500;
 }
 .highlight .kc {
-  color: #986801;
+  color: #8a5f01;
 }
 .highlight .bp {
-  color: #e45649;
+  color: #cb2c1f;
 }
 .highlight .n,
 .highlight .nn,
@@ -353,11 +353,11 @@ pre.highlight {
 .highlight .nf,
 .highlight .nb,
 .highlight .nd {
-  color: #4078f2;
+  color: #1c5ef0;
 }
 .highlight .nc,
 .highlight .ne {
-  color: #c18401;
+  color: #a37500;
 }
 .highlight .nt,
 .highlight .na,
@@ -366,7 +366,7 @@ pre.highlight {
 .highlight .vc,
 .highlight .vg,
 .highlight .vi {
-  color: #e45649;
+  color: #cb2c1f;
 }
 .highlight .no,
 .highlight .nl,
@@ -377,7 +377,7 @@ pre.highlight {
 .highlight .mi,
 .highlight .mo,
 .highlight .il {
-  color: #986801;
+  color: #8a5f01;
 }
 .highlight .s,
 .highlight .sb,
@@ -389,15 +389,15 @@ pre.highlight {
 .highlight .si,
 .highlight .sx,
 .highlight .ld {
-  color: #50a14f;
+  color: #3b773b;
 }
 .highlight .se,
 .highlight .ss,
 .highlight .sr {
-  color: #0184bc;
+  color: #0172a2;
 }
 .highlight .o {
-  color: #0184bc;
+  color: #0172a2;
 }
 .highlight .ow {
   color: #a626a4;
@@ -410,31 +410,31 @@ pre.highlight {
   font-weight: 700;
 }
 .highlight .gh {
-  color: #4078f2;
+  color: #1c5ef0;
   font-weight: 700;
 }
 .highlight .gu {
   color: #a626a4;
 }
 .highlight .gp {
-  color: #a0a1a7;
+  color: #72727a;
 }
 .highlight .gd {
-  color: #e45649;
+  color: #cb2c1f;
   background-color: #ffeef0;
 }
 .highlight .gi {
-  color: #50a14f;
+  color: #3b773b;
   background-color: #e6ffed;
 }
 .highlight .gr,
 .highlight .gt {
-  color: #e45649;
+  color: #cb2c1f;
 }
 .highlighter-rouge .highlight {
   margin-bottom: 0;
   border-radius: 6px;
-  border: 1px solid #e1e4e8;
+  border: 1px solid #c9d1d9;
 }
 .highlighter-rouge .highlight pre {
   font-size: 14px;
@@ -477,7 +477,7 @@ pre.highlight {
 }
 .highlighter-rouge .highlight .lineno {
   text-align: right;
-  color: #b0b1b6;
+  color: #737e8c;
   border-radius: 0px;
 }
 .post-container .highlighter-rouge {
@@ -510,7 +510,7 @@ code {
   padding: 0.2em 0.4em;
   font-size: 90%;
   color: #383a42;
-  background-color: rgba(64, 68, 79, 0.08);
+  background-color: rgba(64, 68, 79, 0.1);
   border-radius: 4px;
 }
 pre code,

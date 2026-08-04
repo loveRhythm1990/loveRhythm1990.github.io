@@ -1,19 +1,26 @@
 // Atom One Light theme for Rouge
 // Hues are spread across the wheel so adjacent tokens (e.g. JSON key vs. value) stay distinguishable.
 
-@code-bg:      #fafafa;
+// Atom One Light ships #fafafa, which sits ~1.04:1 against the white page — the
+// block reads as unbounded text. Darkened until the edge is legible without the
+// block turning into a heavy grey slab. Now 1.19:1.
+@code-bg:      #e8ecf0;
 @code-fg:      #383a42;
-@code-border:  #e1e4e8;
-@code-lineno:  #b0b1b6;
+@code-border:  #c9d1d9;
+@code-lineno:  #737e8c;
 
-@code-comment: #a0a1a7; // mono-3
-@code-cyan:    #0184bc; // hue-1  operators, escapes, regex
-@code-blue:    #4078f2; // hue-2  functions, methods
+// Tokens are darkened to clear ~4.5:1 against the background above; the upstream
+// values were tuned for near-white and drop to 2.5–3.5:1 here, which is what makes
+// long code blocks tiring to read. Hues are kept so the palette still reads as
+// Atom One Light. orange/gold share a hue upstream and are separated by lightness.
+@code-comment: #72727a; // mono-3
+@code-cyan:    #0172a2; // hue-1  operators, escapes, regex
+@code-blue:    #1c5ef0; // hue-2  functions, methods
 @code-purple:  #a626a4; // hue-3  keywords, storage
-@code-green:   #50a14f; // hue-4  strings
-@code-red:     #e45649; // hue-5  tags, attributes, variables
-@code-orange:  #986801; // hue-6  numbers, constants
-@code-gold:    #c18401; // hue-6-2  classes, types
+@code-green:   #3b773b; // hue-4  strings
+@code-red:     #cb2c1f; // hue-5  tags, attributes, variables
+@code-orange:  #8a5f01; // hue-6  numbers, constants, JSON keys
+@code-gold:    #a37500; // hue-6-2  classes, built-in types
 
 .highlight,
 pre.highlight {
@@ -282,7 +289,7 @@ code {
   padding: 0.2em 0.4em;
   font-size: 90%;
   color: @code-fg;
-  background-color: rgba(64, 68, 79, 0.08);
+  background-color: rgba(64, 68, 79, 0.1);
   border-radius: 4px;
 }
 pre code,
