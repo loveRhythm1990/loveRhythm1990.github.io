@@ -1,215 +1,174 @@
-// Atom's One Dark theme for Jekyll
-// Credits: https://github.com/mgyongyosi/OneDarkJekyll/
+// GitHub Light theme for Rouge
+// Palette follows GitHub Primer "prettylights" syntax tokens.
+
+@code-bg:      #f6f8fa;
+@code-fg:      #24292f;
+@code-border:  #d0d7de;
+@code-lineno:  #8c959f;
+
+@code-comment:  #6e7781;
+@code-keyword:  #cf222e;
+@code-constant: #0550ae;
+@code-entity:   #8250df;
+@code-string:   #0a3069;
+@code-variable: #953800;
+@code-tag:      #116329;
+@code-danger:   #82071e;
 
 .highlight,
 pre.highlight {
-  background: #282c34;
-  color: #abb2bf;
+  background: @code-bg;
+  color: @code-fg;
 }
 .highlight pre {
-  background: #282c34;
+  background: @code-bg;
 }
 .highlight .hll {
-  background: #282c34;
+  background: #fff8c5; // highlighted line
 }
-.highlight .c {
-  color: #5c6370;
-  font-style: italic;
-}
-.highlight .err {
-  color: #960050;
-  background-color: #e2bfd2;
-}
-.highlight .k {
-  color: #c678dd;
-}
-.highlight .l {
-  color: #98c379;
-}
-.highlight .n {
-  color: #abb2bf;
-}
-.highlight .o {
-  color: #abb2bf;
-}
-.highlight .p {
-  color: #abb2bf;
-}
-.highlight .cm {
-  color: #5c6370;
+
+// Comments
+.highlight .c,
+.highlight .cm,
+.highlight .c1,
+.highlight .cs,
+.highlight .cd {
+  color: @code-comment;
   font-style: italic;
 }
 .highlight .cp {
-  color: #5c6370;
-  font-style: italic;
+  color: @code-keyword; // preprocessor, e.g. #include
 }
-.highlight .c1 {
-  color: #5c6370;
-  font-style: italic;
+
+// Errors
+.highlight .err,
+.highlight .x {
+  color: @code-danger;
+  background-color: #ffebe9;
 }
-.highlight .cs {
-  color: #5c6370;
-  font-style: italic;
+
+// Keywords
+.highlight .k,
+.highlight .kd,
+.highlight .kn,
+.highlight .kp,
+.highlight .kr,
+.highlight .kt,
+.highlight .bp {
+  color: @code-keyword;
 }
+.highlight .kc {
+  color: @code-constant; // true / false / nil
+}
+
+// Names
+.highlight .n,
+.highlight .nn,
+.highlight .nx,
+.highlight .py,
+.highlight .p,
+.highlight .o,
+.highlight .w {
+  color: @code-fg;
+}
+.highlight .nb,
+.highlight .nc,
+.highlight .nd,
+.highlight .ni,
+.highlight .ne,
+.highlight .nf {
+  color: @code-entity;
+}
+.highlight .no {
+  color: @code-constant;
+}
+.highlight .na {
+  color: @code-constant;
+}
+.highlight .nt {
+  color: @code-tag;
+}
+.highlight .nl,
+.highlight .nv,
+.highlight .vc,
+.highlight .vg,
+.highlight .vi {
+  color: @code-variable;
+}
+
+// Numbers
+.highlight .l,
+.highlight .m,
+.highlight .mf,
+.highlight .mh,
+.highlight .mi,
+.highlight .mo,
+.highlight .il {
+  color: @code-constant;
+}
+
+// Strings
+.highlight .s,
+.highlight .sb,
+.highlight .sc,
+.highlight .sd,
+.highlight .s1,
+.highlight .s2,
+.highlight .sh,
+.highlight .si,
+.highlight .sx,
+.highlight .ld {
+  color: @code-string;
+}
+.highlight .se,
+.highlight .ss {
+  color: @code-constant;
+}
+.highlight .sr {
+  color: @code-tag;
+}
+
+// Generic / diff
 .highlight .ge {
   font-style: italic;
 }
-.highlight .gs {
-  font-weight: 700;
-}
-.highlight .kc {
-  color: #c678dd;
-}
-.highlight .kd {
-  color: #c678dd;
-}
-.highlight .kn {
-  color: #c678dd;
-}
-.highlight .kp {
-  color: #c678dd;
-}
-.highlight .kr {
-  color: #c678dd;
-}
-.highlight .kt {
-  color: #c678dd;
-}
-.highlight .ld {
-  color: #98c379;
-}
-.highlight .m {
-  color: #d19a66;
-}
-.highlight .s {
-  color: #98c379;
-}
-.highlight .na {
-  color: #d19a66;
-}
-.highlight .nb {
-  color: #e5c07b;
-}
-.highlight .nc {
-  color: #e5c07b;
-}
-.highlight .no {
-  color: #e5c07b;
-}
-.highlight .nd {
-  color: #e5c07b;
-}
-.highlight .ni {
-  color: #e5c07b;
-}
-.highlight .ne {
-  color: #e5c07b;
-}
-.highlight .nf {
-  color: #abb2bf;
-}
-.highlight .nl {
-  color: #e5c07b;
-}
-.highlight .nn {
-  color: #abb2bf;
-}
-.highlight .nx {
-  color: #abb2bf;
-}
-.highlight .py {
-  color: #e5c07b;
-}
-.highlight .nt {
-  color: #e06c75;
-}
-.highlight .nv {
-  color: #e5c07b;
-}
+.highlight .gs,
 .highlight .ow {
   font-weight: 700;
 }
-.highlight .w {
-  color: #f8f8f2;
-}
-.highlight .mf {
-  color: #d19a66;
-}
-.highlight .mh {
-  color: #d19a66;
-}
-.highlight .mi {
-  color: #d19a66;
-}
-.highlight .mo {
-  color: #d19a66;
-}
-.highlight .sb {
-  color: #98c379;
-}
-.highlight .sc {
-  color: #98c379;
-}
-.highlight .sd {
-  color: #98c379;
-}
-.highlight .s2 {
-  color: #98c379;
-}
-.highlight .se {
-  color: #98c379;
-}
-.highlight .sh {
-  color: #98c379;
-}
-.highlight .si {
-  color: #98c379;
-}
-.highlight .sx {
-  color: #98c379;
-}
-.highlight .sr {
-  color: #56b6c2;
-}
-.highlight .s1 {
-  color: #98c379;
-}
-.highlight .ss {
-  color: #56b6c2;
-}
-.highlight .bp {
-  color: #e5c07b;
-}
-.highlight .vc {
-  color: #e5c07b;
-}
-.highlight .vg {
-  color: #e5c07b;
-}
-.highlight .vi {
-  color: #e06c75;
-}
-.highlight .il {
-  color: #d19a66;
+.highlight .gh {
+  color: @code-constant;
+  font-weight: 700;
 }
 .highlight .gu {
-  color: #75715e;
+  color: @code-entity;
+}
+.highlight .gp {
+  color: @code-comment;
 }
 .highlight .gd {
-  color: #f92672;
+  color: @code-danger;
+  background-color: #ffebe9;
 }
 .highlight .gi {
-  color: #a6e22e;
+  color: @code-tag;
+  background-color: #dafbe1;
+}
+.highlight .gr,
+.highlight .gt {
+  color: @code-danger;
 }
 
 // Customize for Hux Blog
 .highlighter-rouge .highlight {
   margin-bottom: 10px;
   border-radius: 6px;
+  // Light background needs an outline to separate from the white page
+  border: 1px solid @code-border;
   pre {
     font-size: 14px;
     line-height: 1.5;
-    color: #555;
+    color: @code-fg;
     background: transparent;
     border: 0;
     margin: 0;
@@ -223,7 +182,7 @@ pre.highlight {
   }
   .rouge-code {
     pre {
-      color: #abb2bf; // default color for nil-lang code
+      color: @code-fg; // default color for nil-lang code
     }
   }
   .table-responsive {
@@ -240,19 +199,41 @@ pre.highlight {
       border: 0;
       padding: 0;
       > pre {
-        padding: 14px;
+        padding: 18px;
       }
     }
+  }
+  // Fenced blocks render without a table when line_numbers is off
+  > pre {
+    padding: 18px;
   }
   td.rouge-gutter {
     width: 56px;
   }
   .lineno {
     text-align: right;
-    // border-right: 1px solid #373434;
+    color: @code-lineno;
     border-radius: 0px;
   }
 }
+
+// Inline code — match the block palette instead of Bootstrap's pink default
+code {
+  padding: 0.2em 0.4em;
+  font-size: 90%;
+  color: @code-fg;
+  background-color: rgba(175, 184, 193, 0.2);
+  border-radius: 4px;
+}
+pre code,
+.highlight code {
+  padding: 0;
+  font-size: inherit;
+  color: inherit;
+  background-color: transparent;
+  border-radius: 0;
+}
+
 /* Narrow phones: keep blocks inside the content column to avoid horizontal scroll */
 @media (max-width: 480px) {
   .highlighter-rouge .highlight {
@@ -262,6 +243,10 @@ pre.highlight {
     }
     pre {
       font-size: 13px;
+    }
+    table > tbody > tr > td > pre,
+    > pre {
+      padding: 14px;
     }
   }
 }
