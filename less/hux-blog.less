@@ -537,9 +537,10 @@ samp {
     margin-bottom: 20px; /* response on desktop */
   }
 
-  // Flat-colour headers (posts and pages): title stays on the tinted hero with
-  // tight vertical padding. Home, Archive, About and posts share these metrics.
-  &.hero-band {
+  // Posts carry .hero-band for the flat tag fill; .hero-compact holds the metrics.
+
+  // Shared slim hero metrics for posts (with .hero-band) and photo pages.
+  &.hero-compact {
     margin-bottom: 0;
     @media only screen and (min-width: 768px) {
       margin-bottom: 8px;
@@ -547,7 +548,8 @@ samp {
 
     .site-heading,
     .post-heading,
-    .page-heading {
+    .page-heading,
+    #tag-heading {
       padding: @hero-compact-pad-top-sm 0 @hero-compact-pad-bottom-sm;
       color: white;
       text-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
@@ -591,7 +593,8 @@ samp {
         }
       }
     }
-    .site-heading {
+    .site-heading,
+    #tag-heading {
       h1 {
         margin-bottom: 0;
         white-space: nowrap;
@@ -601,8 +604,8 @@ samp {
           font-size: 24px;
         }
       }
-      // Page descriptions lived here on the old photo headers; dropping them keeps
-      // the hero the same height as a post title line.
+      // Same single-line height as a post title; description stays in the DOM for
+      // SEO but is not shown in the slim hero.
       .subheading {
         display: none;
       }
@@ -1020,12 +1023,6 @@ img::-moz-selection {
   }
 }
 
-#tag-heading {
-  padding: 70px 0 60px;
-  @media only screen and (min-width: 768px) {
-    padding: 55px 0;
-  }
-}
 // tag_cloud
 #tag_cloud {
   margin: 20px 0 15px 0;
@@ -1041,20 +1038,13 @@ img::-moz-selection {
     margin-bottom: 8px;
     background: #f3f5f5;
     &:hover,
-    &:active,
-    &.focus {
-      background-color: #0085a1 !important;
+    &:active {
+      background-color: #e9eef2;
     }
     &.focus{
       box-shadow: rgba(0,0,0,.117647) 0 1px 6px, rgba(0,0,0,.239216) 0 1px 4px;
     }
-    &.tag-button--all {
-      font-weight: 700;
-      color: #0085a1!important;
-      &:hover, &:active, &.focus{
-        background-color: #e4e4e4 !important;
-      }
-    }
+    // Archive filter colours live in less/archive.less (.tag-button / --all)
   }
   @media only screen and (min-width: 768px) {
     margin-bottom: 25px;

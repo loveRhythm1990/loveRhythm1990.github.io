@@ -27,16 +27,13 @@ https://github.com/kitian616/jekyll-TeXt-theme
 				The `data-sort` attribute must stay the first thing inside each <a>: the
 				list is ordered by splitting this capture on </a> and sorting the raw
 				strings. Anything added ahead of it would sort on that instead.
-				Colours come from _config.yml's tag-colors, the same map the post header
-				uses, so a tag reads the same everywhere; unmapped tags fall back to grey.
 			{% endcomment %}
 			{% capture tags %}
-			{% for tag in site.tags %}{% assign _c = site.tag-colors[tag[0]] | default: '#8593a0' %}
+			{% for tag in site.tags %}
 				<a data-sort="{{ site.posts.size | minus: tag[1].size | prepend: '0000' | slice: -4, 4 }}"
 					data-encode="{{ tag[0] | strip | url_encode }}"
 					class="tag-button"
-					title="{{ tag[0] }}" rel="{{ tag[1].size }}"
-					style="--tag: {{ _c }};">
+					title="{{ tag[0] }}" rel="{{ tag[1].size }}">
 					{{ tag[0] }}
 					<sup>{{tag[1].size}}</sup>
 				</a>

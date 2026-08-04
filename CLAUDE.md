@@ -142,9 +142,9 @@ inline colour cannot be overridden from a stylesheet. The file remains in `js/` 
 
 ## Post header (hero)
 
-Flat-colour headers (`.hero-band`) keep the title on the tinted hero with compact padding.
-Posts, Home, Archive, and About all use this class; the old full-bleed photo headers for pages
-are gone. Posts may pass a tag colour as `--hero`; pages fall back to the site default teal.
+Flat-colour post headers use `.hero-band` (tag fill) plus `.hero-compact` (slim metrics).
+Home, Archive, and About use `.hero-compact` with their `header-img` background photos;
+only the vertical padding and title size match posts, not the flat colour fill.
 
 The date shares the title's line — `.post-heading` is a baseline-aligned flex row.
 The title is `flex: 0 1 auto; min-width: 0` so it wraps on narrow screens instead

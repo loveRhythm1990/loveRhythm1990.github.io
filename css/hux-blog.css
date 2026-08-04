@@ -1008,39 +1008,41 @@ samp {
     /* response on desktop */
   }
 }
-.intro-header.hero-band {
+.intro-header.hero-compact {
   margin-bottom: 0;
 }
 @media only screen and (min-width: 768px) {
-  .intro-header.hero-band {
+  .intro-header.hero-compact {
     margin-bottom: 8px;
   }
 }
-.intro-header.hero-band .site-heading,
-.intro-header.hero-band .post-heading,
-.intro-header.hero-band .page-heading {
+.intro-header.hero-compact .site-heading,
+.intro-header.hero-compact .post-heading,
+.intro-header.hero-compact .page-heading,
+.intro-header.hero-compact #tag-heading {
   padding: 56px 0 3px;
   color: white;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
 }
 @media only screen and (min-width: 768px) {
-  .intro-header.hero-band .site-heading,
-  .intro-header.hero-band .post-heading,
-  .intro-header.hero-band .page-heading {
+  .intro-header.hero-compact .site-heading,
+  .intro-header.hero-compact .post-heading,
+  .intro-header.hero-compact .page-heading,
+  .intro-header.hero-compact #tag-heading {
     padding: 56px 0 4px;
   }
 }
-.intro-header.hero-band .post-heading .meta,
-.intro-header.hero-band .site-heading .subheading,
-.intro-header.hero-band .page-heading .subheading {
+.intro-header.hero-compact .post-heading .meta,
+.intro-header.hero-compact .site-heading .subheading,
+.intro-header.hero-compact .page-heading .subheading {
   color: rgba(255, 255, 255, 0.8);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.22);
 }
-.intro-header.hero-band .post-heading {
+.intro-header.hero-compact .post-heading {
   display: flex;
   align-items: baseline;
 }
-.intro-header.hero-band .post-heading h1 {
+.intro-header.hero-compact .post-heading h1 {
   margin-bottom: 0;
   flex: 0 1 auto;
   white-space: nowrap;
@@ -1048,11 +1050,11 @@ samp {
   line-height: 1.2;
 }
 @media only screen and (min-width: 768px) {
-  .intro-header.hero-band .post-heading h1 {
+  .intro-header.hero-compact .post-heading h1 {
     font-size: 24px;
   }
 }
-.intro-header.hero-band .post-heading .meta {
+.intro-header.hero-compact .post-heading .meta {
   /* Hux learn from
      *     TypeIsBeautiful,
      *     [This Post](http://zhuanlan.zhihu.com/ibuick/20186806) etc.
@@ -1067,26 +1069,29 @@ samp {
   font-variant-numeric: tabular-nums;
 }
 @media only screen and (min-width: 768px) {
-  .intro-header.hero-band .post-heading .meta {
+  .intro-header.hero-compact .post-heading .meta {
     font-size: 13px;
     margin-left: 16px;
   }
 }
-.intro-header.hero-band .post-heading .meta a {
+.intro-header.hero-compact .post-heading .meta a {
   color: inherit;
 }
-.intro-header.hero-band .site-heading h1 {
+.intro-header.hero-compact .site-heading h1,
+.intro-header.hero-compact #tag-heading h1 {
   margin-bottom: 0;
   white-space: nowrap;
   font-size: 17px;
   line-height: 1.2;
 }
 @media only screen and (min-width: 768px) {
-  .intro-header.hero-band .site-heading h1 {
+  .intro-header.hero-compact .site-heading h1,
+  .intro-header.hero-compact #tag-heading h1 {
     font-size: 24px;
   }
 }
-.intro-header.hero-band .site-heading .subheading {
+.intro-header.hero-compact .site-heading .subheading,
+.intro-header.hero-compact #tag-heading .subheading {
   display: none;
 }
 .intro-header .site-heading,
@@ -1484,14 +1489,6 @@ img::-moz-selection {
     margin-right: 5px;
   }
 }
-#tag-heading {
-  padding: 70px 0 60px;
-}
-@media only screen and (min-width: 768px) {
-  #tag-heading {
-    padding: 55px 0;
-  }
-}
 #tag_cloud {
   margin: 20px 0 15px 0;
 }
@@ -1510,27 +1507,12 @@ img::-moz-selection {
 #tag_cloud a:hover,
 #tag_cloud .tag:hover,
 #tag_cloud a:active,
-#tag_cloud .tag:active,
-#tag_cloud a.focus,
-#tag_cloud .tag.focus {
-  background-color: #0085a1 !important;
+#tag_cloud .tag:active {
+  background-color: #e9eef2;
 }
 #tag_cloud a.focus,
 #tag_cloud .tag.focus {
   box-shadow: rgba(0, 0, 0, 0.117647) 0 1px 6px, rgba(0, 0, 0, 0.239216) 0 1px 4px;
-}
-#tag_cloud a.tag-button--all,
-#tag_cloud .tag.tag-button--all {
-  font-weight: 700;
-  color: #0085a1!important;
-}
-#tag_cloud a.tag-button--all:hover,
-#tag_cloud .tag.tag-button--all:hover,
-#tag_cloud a.tag-button--all:active,
-#tag_cloud .tag.tag-button--all:active,
-#tag_cloud a.tag-button--all.focus,
-#tag_cloud .tag.tag-button--all.focus {
-  background-color: #e4e4e4 !important;
 }
 @media only screen and (min-width: 768px) {
   #tag_cloud {
@@ -1963,21 +1945,30 @@ img::-moz-selection {
     display: none;
   }
 }
-#tag_cloud a.tag-button {
-  color: #3a4650;
-  background: #e9eef2;
-  color: color-mix(in oklab, var(--tag, #0085a1), #0b1620 35%);
-  background: color-mix(in oklab, var(--tag, #0085a1), #ffffff 82%);
+#tag_cloud a.tag-button,
+#tag_cloud a.tag-button--all {
+  color: #404040;
+  background: #f1f3f5;
+  font-weight: 600;
+}
+#tag_cloud a.tag-button > sup,
+#tag_cloud a.tag-button--all > sup {
+  font-weight: 600;
+  color: inherit;
+  opacity: 0.65;
 }
 #tag_cloud a.tag-button:hover,
-#tag_cloud a.tag-button:active,
-#tag_cloud a.tag-button.focus {
-  color: white;
-  background-color: var(--tag, #0085a1) !important;
+#tag_cloud a.tag-button--all:hover {
+  color: #0085a1;
+  background: #e9eef2;
 }
-#tag_cloud a.tag-button > sup {
-  font-weight: 600;
-  color: color-mix(in oklab, var(--tag, #0085a1), #0b1620 48%);
+#tag_cloud a.tag-button.focus,
+#tag_cloud a.tag-button--all.focus {
+  color: #0085a1 !important;
+  background-color: #e4e4e4 !important;
+}
+#tag_cloud a.tag-button--all {
+  font-weight: 700;
 }
 html {
   -webkit-text-size-adjust: 100%;
@@ -2078,23 +2069,25 @@ body {
     line-height: 1.35;
     margin-bottom: 4px;
   }
-  .intro-header.hero-band .post-heading {
+  .intro-header.hero-compact .post-heading {
     padding-top: 56px;
     padding-bottom: 3px;
   }
-  .intro-header.hero-band .site-heading {
+  .intro-header.hero-compact .site-heading,
+  .intro-header.hero-compact #tag-heading {
     padding-top: 56px;
     padding-bottom: 3px;
   }
-  .intro-header.hero-band .post-heading h1 {
+  .intro-header.hero-compact .post-heading h1 {
     margin-bottom: 0;
     line-height: 1.2;
   }
-  .intro-header.hero-band .site-heading h1 {
+  .intro-header.hero-compact .site-heading h1,
+  .intro-header.hero-compact #tag-heading h1 {
     margin-bottom: 0;
     line-height: 1.2;
   }
-  .intro-header.hero-band .post-heading .meta {
+  .intro-header.hero-compact .post-heading .meta {
     font-size: 12px;
     margin-left: 12px;
   }
