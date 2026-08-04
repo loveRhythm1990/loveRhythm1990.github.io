@@ -537,9 +537,8 @@ samp {
     margin-bottom: 20px; /* response on desktop */
   }
 
-  // Flat-colour post headers: title and date stay on the tinted hero (not dropped
-  // onto the page white), with tight vertical padding so the block reads as a
-  // slim bar rather than a full-bleed slab. Photo headers have no .hero-band.
+  // Flat-colour headers (posts and pages): title stays on the tinted hero with
+  // tight vertical padding. Home, Archive, About and posts share these metrics.
   &.hero-band {
     margin-bottom: 0;
     @media only screen and (min-width: 768px) {
@@ -590,6 +589,22 @@ samp {
         a {
           color: inherit;
         }
+      }
+    }
+    .site-heading {
+      h1 {
+        margin-bottom: 0;
+        white-space: nowrap;
+        font-size: 17px;
+        line-height: 1.2;
+        @media only screen and (min-width: 768px) {
+          font-size: 24px;
+        }
+      }
+      // Page descriptions lived here on the old photo headers; dropping them keeps
+      // the hero the same height as a post title line.
+      .subheading {
+        display: none;
       }
     }
   }

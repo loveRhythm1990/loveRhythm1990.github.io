@@ -21,8 +21,8 @@
     in, as --hero. That keeps the layering in one place instead of duplicated
     across the three header types below.
 
-    hero-band marks flat-colour post headers: the title and date stay on the
-    tinted hero with compact padding, rather than being dropped onto page white.
+    hero-band marks flat-colour headers (posts and pages): compact padding and a
+    single-line title. Photo backgrounds are no longer used for page headers.
 {% endcomment %}
 {% if include.type == 'post' %}
 {% if page.header-mask %}
@@ -112,11 +112,7 @@
 {% endif %}
 
 {% if include.type == 'page' %}
-{% if _header_bg %}
-<header class="intro-header hero-band" style="--hero: {{ _header_bg }};">
-{% else %}
-<header class="intro-header" style="background-image: url('{{ site.baseurl }}/{% if page.header-img %}{{ page.header-img }}{% else %}{{ site.header-img }}{% endif %}')">
-{% endif %}
+<header class="intro-header hero-band"{% if _header_bg %} style="--hero: {{ _header_bg }};"{% endif %}>
   <div class="container">
     <div class="row">
       <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
@@ -126,7 +122,6 @@
         <div class="site-heading">
         {% endif %}
           <h1>{% if page.title %}{{ page.title }}{% else %}{{ site.title }}{% endif %}</h1>
-          <span class="subheading">{{ page.description }}</span>
         </div>
       </div>
     </div>

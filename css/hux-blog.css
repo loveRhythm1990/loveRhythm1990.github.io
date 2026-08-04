@@ -437,7 +437,7 @@ pre.highlight {
   border: 1px solid #c9d1d9;
 }
 .highlighter-rouge .highlight pre {
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.5;
   color: #383a42;
   background: transparent;
@@ -530,7 +530,7 @@ pre code,
     width: 46px;
   }
   .highlighter-rouge .highlight pre {
-    font-size: 13px;
+    font-size: 12px;
   }
   .highlighter-rouge .highlight table > tbody > tr > td > pre,
   .highlighter-rouge .highlight > pre {
@@ -1074,6 +1074,20 @@ samp {
 }
 .intro-header.hero-band .post-heading .meta a {
   color: inherit;
+}
+.intro-header.hero-band .site-heading h1 {
+  margin-bottom: 0;
+  white-space: nowrap;
+  font-size: 17px;
+  line-height: 1.2;
+}
+@media only screen and (min-width: 768px) {
+  .intro-header.hero-band .site-heading h1 {
+    font-size: 24px;
+  }
+}
+.intro-header.hero-band .site-heading .subheading {
+  display: none;
 }
 .intro-header .site-heading,
 .intro-header .post-heading,
@@ -2068,7 +2082,15 @@ body {
     padding-top: 56px;
     padding-bottom: 3px;
   }
+  .intro-header.hero-band .site-heading {
+    padding-top: 56px;
+    padding-bottom: 3px;
+  }
   .intro-header.hero-band .post-heading h1 {
+    margin-bottom: 0;
+    line-height: 1.2;
+  }
+  .intro-header.hero-band .site-heading h1 {
     margin-bottom: 0;
     line-height: 1.2;
   }
