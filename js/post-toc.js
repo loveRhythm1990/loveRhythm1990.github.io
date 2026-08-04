@@ -26,9 +26,35 @@
     // rail's own sticky offset so the switch happens as the heading meets the top
     // of the rail rather than while it is still mid-screen.
     var LINE = 96;
+    var NAV_CLEAR = 76;
+    var HERO_GAP = 12;
 
     var current = null;
     var queued = false;
+
+    // Below 1200px the rail is display:none and the in-flow card is shown instead.
+    var wide = window.matchMedia('(min-width: 1200px)');
+    // From 1370px the rail is position:fixed in the viewport gutter and must stay
+    // below intro-header rather than at NAV_CLEAR alone.
+    var viewportPin = window.matchMedia('(min-width: 1370px)');
+
+    function layoutFixedRail() {
+        if (!viewportPin.matches) {
+            rail.style.top = '';
+            rail.style.maxHeight = '';
+            LINE = 96;
+            return;
+        }
+
+        var hero = document.querySelector('.intro-header');
+        if (!hero) return;
+
+        var heroBottom = hero.getBoundingClientRect().bottom;
+        var top = heroBottom > NAV_CLEAR ? heroBottom + HERO_GAP : NAV_CLEAR;
+        rail.style.top = top + 'px';
+        rail.style.maxHeight = 'calc(100vh - ' + (top + 30) + 'px)';
+        LINE = top + 20;
+    }
 
     function activeEntry() {
         // Measured live rather than cached: images and web fonts settle after this
@@ -75,18 +101,23 @@
         window.requestAnimationFrame(update);
     }
 
-    // Below 1200px the rail is display:none and the in-flow card is shown instead,
-    // where a highlight would scroll out of sight and mean nothing.
-    var wide = window.matchMedia('(min-width: 1200px)');
+    function onScrollOrResize() {
+        layoutFixedRail();
+        schedule();
+    }
 
     function sync() {
         if (wide.matches) {
-            window.addEventListener('scroll', schedule, { passive: true });
-            window.addEventListener('resize', schedule);
+            window.addEventListener('scroll', onScrollOrResize, { passive: true });
+            window.addEventListener('resize', onScrollOrResize);
+            layoutFixedRail();
             update();
         } else {
-            window.removeEventListener('scroll', schedule);
-            window.removeEventListener('resize', schedule);
+            window.removeEventListener('scroll', onScrollOrResize);
+            window.removeEventListener('resize', onScrollOrResize);
+            rail.style.top = '';
+            rail.style.maxHeight = '';
+            LINE = 96;
             if (current) {
                 current.item.classList.remove('active');
                 current = null;
@@ -94,10 +125,14 @@
         }
     }
 
-    if (wide.addEventListener) wide.addEventListener('change', sync);
-    else wide.addListener(sync);
+    function onMqChange() {
+        sync();
+    }
+
+    if (wide.addEventListener) wide.addEventListener('change', onMqChange);
+    else wide.addListener(onMqChange);
 
     sync();
-    // Late-loading images shift every heading; re-run once the page settles.
-    window.addEventListener('load', schedule);
+    // Late-loading images and web fonts shift the hero height and every heading.
+    window.addEventListener('load', onScrollOrResize);
 })();

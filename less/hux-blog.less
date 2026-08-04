@@ -543,7 +543,7 @@ samp {
   &.hero-band {
     margin-bottom: 0;
     @media only screen and (min-width: 768px) {
-      margin-bottom: 12px;
+      margin-bottom: 8px;
     }
 
     .site-heading,
@@ -568,16 +568,25 @@ samp {
       h1 {
         margin-bottom: 0;
         flex: 0 1 auto;
-        min-width: 0;
+        white-space: nowrap;
+        font-size: 17px;
+        line-height: 1.2;
+        @media only screen and (min-width: 768px) {
+          font-size: 24px;
+        }
       }
       .meta {
         .sans-serif;
         flex: none;
-        margin-left: 16px;
+        margin-left: 12px;
         font-style: normal;
-        font-size: 13px;
+        font-size: 12px;
         letter-spacing: 0.02em;
         font-variant-numeric: tabular-nums;
+        @media only screen and (min-width: 768px) {
+          font-size: 13px;
+          margin-left: 16px;
+        }
         a {
           color: inherit;
         }

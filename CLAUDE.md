@@ -61,11 +61,11 @@ at `###` gets a flush-left first level just like one starting at `##`.
 | < 1200px | card in the flow above the article |
 
 From 1370px up the rail sits in the margin the centred container leaves on the left — no longer
-flush against the article. The article keeps a `col-lg-offset-2` start so body text still lines up
-with the post title in `intro-header.html`. The article itself is `col-lg-9` at 80% width, giving
-~50 CJK characters per line at the theme's 16px — see the note at the top of `less/typography.less`
-before changing either number. Below 1370px the gutter is too narrow and the rail falls back to the
-in-column sticky layout. The hidden in-flow copy is `display: none`, so screen readers never encounter both.
+flush against the article. `js/post-toc.js` sets its `top` from `.intro-header`'s live bottom edge
+so it never overlaps the hero; once the hero scrolls away it settles to navbar clearance (76px). Below
+1370px the gutter is too narrow and the rail falls back to the in-column sticky layout. The article
+keeps a `col-lg-offset-2` start so body text lines up with the post title; see `less/typography.less`
+for the 80% width override on `.post-container.col-lg-9`.
 
 `js/post-toc.js` highlights the entry being read, loaded from `footer.html` for `layout: post` only.
 It reads the headings back out of the rail's own links, so the level rules in `post-toc.html` stay the

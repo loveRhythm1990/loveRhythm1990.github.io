@@ -1013,13 +1013,13 @@ samp {
 }
 @media only screen and (min-width: 768px) {
   .intro-header.hero-band {
-    margin-bottom: 12px;
+    margin-bottom: 8px;
   }
 }
 .intro-header.hero-band .site-heading,
 .intro-header.hero-band .post-heading,
 .intro-header.hero-band .page-heading {
-  padding: 56px 0 5px;
+  padding: 56px 0 3px;
   color: white;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
 }
@@ -1027,7 +1027,7 @@ samp {
   .intro-header.hero-band .site-heading,
   .intro-header.hero-band .post-heading,
   .intro-header.hero-band .page-heading {
-    padding: 56px 0 6px;
+    padding: 56px 0 4px;
   }
 }
 .intro-header.hero-band .post-heading .meta,
@@ -1043,7 +1043,14 @@ samp {
 .intro-header.hero-band .post-heading h1 {
   margin-bottom: 0;
   flex: 0 1 auto;
-  min-width: 0;
+  white-space: nowrap;
+  font-size: 17px;
+  line-height: 1.2;
+}
+@media only screen and (min-width: 768px) {
+  .intro-header.hero-band .post-heading h1 {
+    font-size: 24px;
+  }
 }
 .intro-header.hero-band .post-heading .meta {
   /* Hux learn from
@@ -1053,11 +1060,17 @@ samp {
   font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Arial", "PingFang SC", "Hiragino Sans GB", "STHeiti", "Microsoft YaHei", "Microsoft JhengHei", "Source Han Sans SC", "Noto Sans CJK SC", "Source Han Sans CN", "Noto Sans SC", "Source Han Sans TC", "Noto Sans CJK TC", "WenQuanYi Micro Hei", SimSun, sans-serif;
   line-height: 1.7;
   flex: none;
-  margin-left: 16px;
+  margin-left: 12px;
   font-style: normal;
-  font-size: 13px;
+  font-size: 12px;
   letter-spacing: 0.02em;
   font-variant-numeric: tabular-nums;
+}
+@media only screen and (min-width: 768px) {
+  .intro-header.hero-band .post-heading .meta {
+    font-size: 13px;
+    margin-left: 16px;
+  }
 }
 .intro-header.hero-band .post-heading .meta a {
   color: inherit;
@@ -1815,7 +1828,6 @@ img::-moz-selection {
   }
   .post-toc-side .post-toc {
     position: fixed;
-    top: 76px;
     left: max(12px, env(safe-area-inset-left, 0px));
     width: min(150px, calc((100vw - min(1170px, 94vw)) / 2 - 16px));
     margin: 0;
@@ -2054,10 +2066,11 @@ body {
   }
   .intro-header.hero-band .post-heading {
     padding-top: 56px;
-    padding-bottom: 5px;
+    padding-bottom: 3px;
   }
   .intro-header.hero-band .post-heading h1 {
     margin-bottom: 0;
+    line-height: 1.2;
   }
   .intro-header.hero-band .post-heading .meta {
     font-size: 12px;

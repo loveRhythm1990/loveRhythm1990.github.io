@@ -219,7 +219,9 @@
 
   .post-toc-side .post-toc {
     position: fixed;
-    top: @toc-rail-top;
+    // top and max-height are set by js/post-toc.js from the hero's live bottom
+    // edge so the rail never sits over intro-header; once the hero scrolls away
+    // they settle to @toc-rail-top (navbar clearance).
     left: ~"max(12px, env(safe-area-inset-left, 0px))";
     width: ~"min(@{toc-rail-width}, calc((100vw - min(1170px, 94vw)) / 2 - 16px))";
     margin: 0;
