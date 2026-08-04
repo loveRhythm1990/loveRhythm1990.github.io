@@ -1038,6 +1038,15 @@ samp {
 .intro-header.hero-band .page-heading .subheading {
   color: #737373;
 }
+.intro-header.hero-band .post-heading {
+  display: flex;
+  align-items: baseline;
+}
+.intro-header.hero-band .post-heading h1 {
+  margin-bottom: 0;
+  flex: 0 1 auto;
+  min-width: 0;
+}
 .intro-header.hero-band .post-heading .meta {
   /* Hux learn from
      *     TypeIsBeautiful,
@@ -1045,6 +1054,8 @@ samp {
      */
   font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Arial", "PingFang SC", "Hiragino Sans GB", "STHeiti", "Microsoft YaHei", "Microsoft JhengHei", "Source Han Sans SC", "Noto Sans CJK SC", "Source Han Sans CN", "Noto Sans SC", "Source Han Sans TC", "Noto Sans CJK TC", "WenQuanYi Micro Hei", SimSun, sans-serif;
   line-height: 1.7;
+  flex: none;
+  margin-left: 20px;
   font-style: normal;
   font-size: 14px;
   letter-spacing: 0.02em;

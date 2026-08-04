@@ -156,6 +156,16 @@ The band's scrim is a flat 28% rather than a fade because the navbar's links are
 y=20..40px: a fade starting at 0.30 is down to ~0.19 there, which leaves the lightest tag colours
 (Golang `#00ACD7` is 2.7:1 against white unaided) under 4.5:1.
 
+The date shares the title's line — `.post-heading` is a baseline-aligned flex row — because a second
+line was most of what was left of the header's height. The title is `flex: 0 1 auto; min-width: 0`:
+it must not grow, or it stretches to the full column and pushes the date out to a right edge that
+lines up with nothing (the header column is `col-lg-8`, the article `col-lg-9`), and it needs
+`min-width: 0` so a long title wraps instead of overflowing a narrow screen.
+
+Note when screenshotting this: headless Chrome clamps `--window-size` to a 500px minimum width, so a
+`390` request silently lays out at 500 and then crops, which makes the date look like it has vanished.
+Load the page in a 390px-wide `<iframe>` instead to get a real narrow layout.
+
 ## Architecture
 
 - `_config.yml` - Site configuration (title, SEO, analytics, sidebar, featured tags)

@@ -589,16 +589,35 @@ samp {
       // 4.7:1 on white — one step lighter fails AA for 16px text
       color: lighten(@gray-dark, 20%);
     }
-    .post-heading .meta {
-      // The theme's italic serif meta was meant to sit on a photo; as a bare
-      // date under the title it reads better upright, with aligned digits.
-      .sans-serif;
-      font-style: normal;
-      font-size: 14px;
-      letter-spacing: 0.02em;
-      font-variant-numeric: tabular-nums;
-      a {
-        color: inherit;
+    .post-heading {
+      // The date shares the title's line, on its baseline. On its own line it
+      // was costing the header a whole row of height for one short string.
+      // It trails the title rather than being pushed to the column's right edge:
+      // the header column is col-lg-8 while the article is col-lg-9, so that edge
+      // lines up with nothing and a date parked there just looks adrift.
+      display: flex;
+      align-items: baseline;
+      h1 {
+        margin-bottom: 0;
+        // Shrink but never grow: growing would stretch the title box to the full
+        // column and push the date back out to that unanchored right edge.
+        // min-width:0 is what lets a long title wrap rather than overflow.
+        flex: 0 1 auto;
+        min-width: 0;
+      }
+      .meta {
+        // The theme's italic serif meta was meant to sit on a photo; next to the
+        // title it reads better upright, with aligned digits.
+        .sans-serif;
+        flex: none;
+        margin-left: 20px;
+        font-style: normal;
+        font-size: 14px;
+        letter-spacing: 0.02em;
+        font-variant-numeric: tabular-nums;
+        a {
+          color: inherit;
+        }
       }
     }
     .tags {
