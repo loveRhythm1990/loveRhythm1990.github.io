@@ -13,12 +13,11 @@
 @intro-header-bg: #0097b8;
 
 // Compact hero band, shared by posts and the photo pages. The navbar overlays the
-// band and measures 61px, so the title's line box starts inside it; 48px keeps the
-// text clear of the nav links on the right for all but the longest titles, which
-// is as low as the top can go without a shorter navbar.
-@hero-compact-pad-top: 48px;
-@hero-compact-pad-top-sm: 48px;
-@hero-compact-pad-bottom: 2px;
-@hero-compact-pad-bottom-sm: 2px;
-// Nudge the post title row slightly up inside the band; band height unchanged.
-@hero-compact-post-lift: 6px;
+// band (~61px); extra top padding keeps the title row visually below the nav links
+// rather than tucked under them. Most titles are a single line, so the band can
+// afford the height.
+@hero-compact-pad-top: 58px;
+@hero-compact-pad-top-sm: 54px;
+@hero-compact-pad-bottom: 4px;
+@hero-compact-pad-bottom-sm: 4px;
+@hero-compact-post-lift: 0px;

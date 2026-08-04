@@ -1075,7 +1075,7 @@ samp {
 .intro-header.hero-compact .site-heading,
 .intro-header.hero-compact .page-heading,
 .intro-header.hero-compact #tag-heading {
-  padding: 48px 0 2px;
+  padding: 54px 0 4px;
   color: white;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
 }
@@ -1083,7 +1083,7 @@ samp {
   .intro-header.hero-compact .site-heading,
   .intro-header.hero-compact .page-heading,
   .intro-header.hero-compact #tag-heading {
-    padding: 48px 0 2px;
+    padding: 58px 0 4px;
   }
 }
 .intro-header.hero-compact .post-heading .meta,
@@ -1094,7 +1094,7 @@ samp {
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.22);
 }
 .intro-header.hero-compact .post-heading {
-  padding: 42px 0 8px;
+  padding: 54px 0 4px;
   color: white;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
   display: flex;
@@ -1104,7 +1104,7 @@ samp {
 }
 @media only screen and (min-width: 768px) {
   .intro-header.hero-compact .post-heading {
-    padding: 42px 0 8px;
+    padding: 58px 0 4px;
   }
 }
 .intro-header.hero-compact .post-heading h1 {
@@ -2442,13 +2442,13 @@ body {
     margin-bottom: 4px;
   }
   .intro-header.hero-compact .post-heading {
-    padding-top: 42px;
-    padding-bottom: 8px;
+    padding-top: 54px;
+    padding-bottom: 4px;
   }
   .intro-header.hero-compact .site-heading,
   .intro-header.hero-compact #tag-heading {
-    padding-top: 48px;
-    padding-bottom: 2px;
+    padding-top: 54px;
+    padding-bottom: 4px;
   }
   .intro-header.hero-compact .post-heading h1 {
     margin-bottom: 0;
