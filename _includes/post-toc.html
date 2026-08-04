@@ -67,7 +67,13 @@ Renders nothing when:
           {%- if _id != '' and _text != '' -%}
             {%- assign _depth = _lvl | plus: 0 | minus: _top_level -%}
             {%- capture _items -%}
-              {{ _items }}<li class="post-toc-d{{ _depth }}"><a href="#{{ _id }}">{{ _text }}</a></li>
+              {%- comment -%}
+                escape_once, not escape: the text already carries entities from
+                kramdown (smart quotes, &amp;), which escape would double up.
+                The title is what makes the narrow side rail readable when a long
+                heading gets clipped.
+              {%- endcomment -%}
+              {{ _items }}<li class="post-toc-d{{ _depth }}"><a href="#{{ _id }}" title="{{ _text | escape_once }}">{{ _text }}</a></li>
             {%- endcapture -%}
           {%- endif -%}
         {%- endif -%}

@@ -44,13 +44,35 @@ tags:
 
 ### Table of Contents
 
-**Write nothing.** `_includes/post-toc.html` builds the TOC at build time and `_layouts/post.html`
-renders it above the content. No plugin, no JavaScript, no front matter.
+**Write nothing.** `_includes/post-toc.html` builds the TOC at build time. No plugin, no
+JavaScript, no front matter.
 
 It scans the *rendered* HTML for `h2`..`h4`, reusing the ids that kramdown's `auto_ids` already
 emits, and outputs a flat list whose depth classes (`post-toc-d0/d1/d2`) are indented via CSS in
 `less/post-toc.less`. Depth is relative to the shallowest heading in the post, so a post starting
 at `###` gets a flush-left first level just like one starting at `##`.
+
+`_layouts/post.html` includes it **twice**, and CSS shows exactly one:
+
+| Width | Where it appears |
+|---|---|
+| >= 1200px | sticky rail in the left column (`.post-toc-side`), following the scroll |
+| < 1200px | card in the flow above the article |
+
+The rail fills the two columns the article already left empty on its left, so the article's own
+position is unchanged at every width. The hidden copy is `display: none`, so screen readers never
+encounter both.
+
+Two constraints worth knowing before touching this:
+
+- `position: sticky` is inert inside an ancestor whose `overflow` is not `visible`, and the theme
+  sets `overflow: hidden` on `article`. `less/post-toc.less` releases that above 1200px; putting it
+  back will silently stop the rail from sticking.
+- The rail is only ~137px wide. `.post-row` must stay `display: flex` there, because a floated
+  Bootstrap column is only as tall as its own content and would give the rail nothing to travel along.
+
+The theme also ships its own JS side catalog (`page.catalog`, right-hand side, `less/side-catalog.less`).
+It is unused — no post sets `catalog: true` — and it bypasses the skip rules below, so prefer this one.
 
 The TOC is skipped when any of these hold:
 

@@ -1,9 +1,18 @@
 @import "variables.less";
 
 // Auto-generated table of contents (see _includes/post-toc.html).
-// Scoped under .post-container so it outranks the generic list rules there.
+//
+// The include is emitted twice per post: once as a sticky rail in the left
+// column (>=1200px) and once in the flow above the article (below that). Only
+// one is ever visible, so screen readers never see both.
+//
+// Scoped under the two containers rather than written bare, so it outranks the
+// generic list rules inside .post-container.
 
-.post-container {
+@toc-rail-top: 76px;
+
+.post-container,
+.post-toc-side {
   .post-toc {
     margin: 10px 0 30px;
     padding: 14px 20px 16px;
@@ -53,5 +62,97 @@
     }
     .post-toc-d1 { padding-left: 1.1em; }
     .post-toc-d2 { padding-left: 2.2em; }
+  }
+}
+
+// The rail only exists at lg, which is also where Bootstrap's visible-lg-block
+// reveals the column.
+@media (min-width: 1200px) {
+  // position:sticky is inert inside an ancestor whose overflow is not visible,
+  // and the theme sets overflow:hidden on <article> — that alone was enough to
+  // make the rail scroll away. Wide content (tables, code, images, iframes) is
+  // already constrained individually in responsive.less, and body still carries
+  // overflow-x:hidden, so releasing it here costs nothing.
+  article {
+    overflow: visible;
+  }
+
+  // A floated column is only as tall as its own content, which would leave the
+  // sticky rail nothing to travel along. Flex makes both columns share the
+  // row's height. The columns keep their percentage widths; the pseudo-element
+  // clearfix would otherwise become a stray flex item.
+  .post-row {
+    display: flex;
+
+    &:before,
+    &:after {
+      display: none;
+    }
+
+    > [class*="col-"] {
+      flex: 0 0 auto;
+    }
+  }
+
+  // The rail replaces the in-flow copy at this width
+  .post-container > .post-toc {
+    display: none;
+  }
+
+  .post-toc-side {
+    .post-toc {
+      position: sticky;
+      top: @toc-rail-top;
+      margin: 10px 0 0;
+      // The filled card of the in-flow version reads as heavy in a 165px column;
+      // a hairline rail is enough to group the list against the wide margin.
+      padding: 2px 0 2px 14px;
+      background: none;
+      border-left: 1px solid #e3e7ea;
+      border-radius: 0;
+      // Long posts can out-run the viewport; scroll inside the rail instead of
+      // letting it run off screen.
+      max-height: ~"calc(100vh - @{toc-rail-top} - 30px)";
+      overflow-y: auto;
+      overscroll-behavior: contain;
+    }
+
+    .post-toc-title {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      color: #8c8c8c;
+    }
+
+    .post-toc-list {
+      // ~137px of usable width, so the type tightens and identifiers like
+      // NodeExpandVolume stop being split mid-word.
+      font-size: 12.5px;
+      line-height: 1.5;
+
+      li + li {
+        margin-top: 5px;
+      }
+
+      a {
+        display: block;
+        color: @gray-dark;
+
+        &:hover,
+        &:focus {
+          color: @brand-primary;
+        }
+      }
+
+      // Indentation alone is a weak cue at this width; weight carries the top level
+      .post-toc-d0 > a {
+        font-weight: 600;
+      }
+    }
+
+    // Indents stay small here — every em spent on indentation is width the
+    // heading text no longer has.
+    .post-toc-d1 { padding-left: 0.8em; }
+    .post-toc-d2 { padding-left: 1.6em; }
   }
 }

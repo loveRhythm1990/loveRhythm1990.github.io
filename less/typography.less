@@ -1,0 +1,47 @@
+@import "variables.less";
+
+// Reading measure and rhythm for the article body.
+
+// css/bootstrap.min.css carries a local edit to three lg classes, widening the
+// content column across the whole site:
+//
+//   .col-lg-8         90%  (stock 66.6667%)
+//   .col-lg-9         90%  (stock 75%)
+//   .col-lg-offset-2   5%  (stock 16.6667%)
+//
+// Those three are consistent with each other — 5% + 90% = 95% — but they put the
+// article at ~63 CJK characters per line, well past the 30-40 that reads
+// comfortably, which is what made the text feel sparse and drifty.
+//
+// All three must be restored together: putting the width back while leaving the
+// offset at 5% would leave the content wedged to the left with a wide gutter on
+// the right instead of centred. Restored here rather than in the vendored file,
+// which head.html loads first.
+@media (min-width: 1200px) {
+  .col-lg-8 {
+    width: 66.66666667%;
+  }
+  .col-lg-9 {
+    width: 75%;
+  }
+  .col-lg-offset-2 {
+    margin-left: 16.66666667%;
+  }
+}
+
+// With the column back to ~707px of text, 18px puts the measure at ~38 CJK
+// characters. Headings, code and the TOC all carry their own fixed sizes, so
+// only prose moves.
+.post-container {
+  font-size: 18px;
+
+  // 30px against a ~31px line-height reads as a gap between separate paragraphs
+  // instead of a rhythm within one body of text. The tighter value is still
+  // comfortably clear of the line spacing.
+  // Narrower selectors elsewhere keep precedence: `li p` stays at 0, and the
+  // `p:has(+ .highlighter-rouge)` rules in highlight.less still set 16px before
+  // a code block.
+  p {
+    margin: 24px 0;
+  }
+}

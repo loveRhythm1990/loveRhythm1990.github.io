@@ -12,11 +12,21 @@ layout: default
 <!-- Post Content -->
 <article>
     <div class="container">
-        <div class="row">
+        <div class="row post-row">
+
+    <!-- Side TOC: occupies the two columns the article used to leave empty on
+         its left, so the article itself does not move. Hidden below lg, where
+         the in-flow copy inside .post-container is shown instead. -->
+            <div class="
+                col-lg-2 col-lg-offset-0
+                visible-lg-block
+                post-toc-side">
+                {% include post-toc.html %}
+            </div>
 
     <!-- Post Container -->
             <div class="
-                col-lg-8 col-lg-offset-2
+                col-lg-8 col-lg-offset-0
                 col-md-10 col-md-offset-1
                 post-container">
 
