@@ -56,15 +56,16 @@ at `###` gets a flush-left first level just like one starting at `##`.
 
 | Width | Where it appears |
 |---|---|
-| >= 1200px | sticky rail in the left column (`.post-toc-side`), following the scroll |
+| >= 1370px | fixed in the viewport's left gutter (outside the centred container) |
+| 1200–1369px | sticky rail in the left column (`.post-toc-side`), following the scroll |
 | < 1200px | card in the flow above the article |
 
-The rail fills the two columns the article used to leave empty on its left, which keeps the body text
-starting at the same offset as the post title in `intro-header.html` (both land at 338px in a 1440px
-viewport). The article itself is `col-lg-9`, giving ~50 CJK characters per line at the theme's 16px —
-see the note at the top of `less/typography.less` before changing either number, since the vendored
-`bootstrap.min.css` carries local edits to these very classes. The hidden copy is `display: none`, so
-screen readers never encounter both.
+From 1370px up the rail sits in the margin the centred container leaves on the left — no longer
+flush against the article. The article keeps a `col-lg-offset-2` start so body text still lines up
+with the post title in `intro-header.html`. The article itself is `col-lg-9` at 80% width, giving
+~50 CJK characters per line at the theme's 16px — see the note at the top of `less/typography.less`
+before changing either number. Below 1370px the gutter is too narrow and the rail falls back to the
+in-column sticky layout. The hidden in-flow copy is `display: none`, so screen readers never encounter both.
 
 `js/post-toc.js` highlights the entry being read, loaded from `footer.html` for `layout: post` only.
 It reads the headings back out of the rail's own links, so the level rules in `post-toc.html` stay the
@@ -75,11 +76,12 @@ the Grunt uglify pipeline, where a stale `.min` would go unnoticed.
 
 Two constraints worth knowing before touching this:
 
-- `position: sticky` is inert inside an ancestor whose `overflow` is not `visible`, and the theme
-  sets `overflow: hidden` on `article`. `less/post-toc.less` releases that above 1200px; putting it
-  back will silently stop the rail from sticking.
-- The rail is only ~137px wide. `.post-row` must stay `display: flex` there, because a floated
-  Bootstrap column is only as tall as its own content and would give the rail nothing to travel along.
+- From 1370px up the rail is `position: fixed` in the viewport gutter; below that, through 1200px,
+  it uses `position: sticky` inside `.post-toc-side`. Both need `article { overflow: visible }` above
+  1200px — the theme sets `overflow: hidden` on `article`, which makes sticky inert.
+- The rail is only ~150px wide at most. `.post-row` must stay `display: flex` through 1369px, because
+  a floated column is only as tall as its own content and would give the sticky rail nothing to travel
+  along; above 1370px the column is zero-width and the fixed rail no longer depends on it.
 
 The theme also ships its own JS side catalog (`page.catalog`, right-hand side, `less/side-catalog.less`).
 It is unused — no post sets `catalog: true` — and it bypasses the skip rules below, so prefer this one.

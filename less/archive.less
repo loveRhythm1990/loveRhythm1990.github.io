@@ -171,10 +171,13 @@
 // styles would have won over everything here.
 #tag_cloud {
   a.tag-button {
-    color: #55606a;
-    background: #f1f3f5;
-    color: color-mix(in srgb, var(--tag, @brand-primary) 82%, #0b1620);
-    background: color-mix(in srgb, var(--tag, @brand-primary) 17%, white);
+    // Fallback when color-mix() is unavailable
+    color: #3a4650;
+    background: #e9eef2;
+    // oklab keeps chroma; a heavier dark mix lifts contrast on the pale pill,
+    // especially for light tag colours (Golang/Etcd were ~3:1 before).
+    color: color-mix(in oklab, var(--tag, @brand-primary), #0b1620 35%);
+    background: color-mix(in oklab, var(--tag, @brand-primary), white 82%);
 
     // Both the base and the hover rule in hux-blog.less carry !important
     &:hover,
@@ -185,8 +188,8 @@
     }
 
     > sup {
-      opacity: 0.65;
       font-weight: 600;
+      color: color-mix(in oklab, var(--tag, @brand-primary), #0b1620 48%);
     }
   }
 }

@@ -10,6 +10,10 @@
 // generic list rules inside .post-container.
 
 @toc-rail-top: 76px;
+@toc-rail-width: 150px;
+// Pin the rail into the viewport's left gutter once the centred container leaves
+// ~100px there; below this the col-lg-2 sticky column is used instead.
+@toc-viewport-pin: 1370px;
 
 .post-container,
 .post-toc-side {
@@ -195,5 +199,29 @@
     // heading text no longer has.
     .post-toc-d1 { padding-left: 0.8em; }
     .post-toc-d2 { padding-left: 1.6em; }
+  }
+}
+
+// Wide screens: park the rail in the viewport's left margin instead of in the
+// col-lg-2 column where it sat flush against the article. The article keeps the
+// same horizontal start (offset-2) so it still lines up with the post title.
+@media (min-width: @toc-viewport-pin) {
+  .post-toc-side {
+    flex: 0 0 0 !important;
+    width: 0 !important;
+    padding: 0;
+    overflow: visible;
+  }
+
+  .post-row > .post-container.col-lg-9 {
+    margin-left: 16.66666667%;
+  }
+
+  .post-toc-side .post-toc {
+    position: fixed;
+    top: @toc-rail-top;
+    left: ~"max(12px, env(safe-area-inset-left, 0px))";
+    width: ~"min(@{toc-rail-width}, calc((100vw - min(1170px, 94vw)) / 2 - 16px))";
+    margin: 0;
   }
 }

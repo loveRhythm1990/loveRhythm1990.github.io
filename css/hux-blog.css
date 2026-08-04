@@ -1019,7 +1019,7 @@ samp {
 .intro-header.hero-band .site-heading,
 .intro-header.hero-band .post-heading,
 .intro-header.hero-band .page-heading {
-  padding: 56px 0 8px;
+  padding: 56px 0 5px;
   color: white;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
 }
@@ -1027,7 +1027,7 @@ samp {
   .intro-header.hero-band .site-heading,
   .intro-header.hero-band .post-heading,
   .intro-header.hero-band .page-heading {
-    padding: 62px 0 10px;
+    padding: 56px 0 6px;
   }
 }
 .intro-header.hero-band .post-heading .meta,
@@ -1803,6 +1803,24 @@ img::-moz-selection {
     padding-left: 1.6em;
   }
 }
+@media (min-width: 1370px) {
+  .post-toc-side {
+    flex: 0 0 0 !important;
+    width: 0 !important;
+    padding: 0;
+    overflow: visible;
+  }
+  .post-row > .post-container.col-lg-9 {
+    margin-left: 16.66666667%;
+  }
+  .post-toc-side .post-toc {
+    position: fixed;
+    top: 76px;
+    left: max(12px, env(safe-area-inset-left, 0px));
+    width: min(150px, calc((100vw - min(1170px, 94vw)) / 2 - 16px));
+    margin: 0;
+  }
+}
 .archive-list {
   margin: 22px 0 40px;
 }
@@ -1920,10 +1938,10 @@ img::-moz-selection {
   }
 }
 #tag_cloud a.tag-button {
-  color: #55606a;
-  background: #f1f3f5;
-  color: color-mix(in srgb, var(--tag, #0085a1) 82%, #0b1620);
-  background: color-mix(in srgb, var(--tag, #0085a1) 17%, #ffffff);
+  color: #3a4650;
+  background: #e9eef2;
+  color: color-mix(in oklab, var(--tag, #0085a1), #0b1620 35%);
+  background: color-mix(in oklab, var(--tag, #0085a1), #ffffff 82%);
 }
 #tag_cloud a.tag-button:hover,
 #tag_cloud a.tag-button:active,
@@ -1932,8 +1950,8 @@ img::-moz-selection {
   background-color: var(--tag, #0085a1) !important;
 }
 #tag_cloud a.tag-button > sup {
-  opacity: 0.65;
   font-weight: 600;
+  color: color-mix(in oklab, var(--tag, #0085a1), #0b1620 48%);
 }
 html {
   -webkit-text-size-adjust: 100%;
@@ -2036,7 +2054,7 @@ body {
   }
   .intro-header.hero-band .post-heading {
     padding-top: 56px;
-    padding-bottom: 8px;
+    padding-bottom: 5px;
   }
   .intro-header.hero-band .post-heading h1 {
     margin-bottom: 0;
