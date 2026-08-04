@@ -1,0 +1,159 @@
+@import "variables.less";
+
+// Home page post list (index.html).
+
+.home-feed {
+  margin-top: 4px;
+}
+
+.post-preview {
+  margin: 0 0 18px;
+
+  &:last-child {
+    margin-bottom: 8px;
+  }
+}
+
+.post-preview-link {
+  display: block;
+  padding: 18px 20px 16px;
+  border: 1px solid #e8ecef;
+  border-radius: 8px;
+  background: #fafbfc;
+  color: @gray-dark;
+  text-decoration: none;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+
+  &:hover {
+    color: @gray-dark;
+    text-decoration: none;
+    border-color: color-mix(in srgb, @brand-primary 28%, #e8ecef);
+    background: #fff;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+  }
+
+  &:focus {
+    outline: none;
+    text-decoration: none;
+  }
+
+  &:focus-visible {
+    outline: 2px solid fade(@brand-primary, 55%);
+    outline-offset: 2px;
+  }
+
+  &:active {
+    outline: none;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+  }
+
+  .post-title,
+  .post-subtitle,
+  .post-content-preview {
+    outline: none;
+  }
+}
+
+.post-preview-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  margin-bottom: 10px;
+}
+
+.post-preview-tag {
+  display: inline-block;
+  padding: 1px 9px;
+  border-radius: 999em;
+  font-size: 11px;
+  line-height: 18px;
+  font-weight: 500;
+  white-space: nowrap;
+  color: color-mix(in srgb, var(--tag, @brand-primary) 88%, #0b1620);
+  background: color-mix(in srgb, var(--tag, @brand-primary) 13%, #fff);
+  border: 1px solid color-mix(in srgb, var(--tag, @brand-primary) 22%, #e8ecef);
+}
+
+.post-preview-date {
+  .sans-serif;
+  font-size: 12px;
+  line-height: 18px;
+  color: #97a2aa;
+  font-variant-numeric: tabular-nums;
+}
+
+.post-preview-link .post-title {
+  margin: 0 0 6px;
+  font-size: 20px;
+  line-height: 1.35;
+  font-weight: 700;
+  color: #1f2933;
+  transition: color 0.15s ease;
+}
+
+.post-preview-link:hover .post-title {
+  color: @brand-primary;
+}
+
+.post-preview-link .post-subtitle {
+  margin: 0 0 8px;
+  font-size: 14px;
+  line-height: 1.45;
+  font-weight: 400;
+  color: #5c6b76;
+}
+
+.post-preview-link .post-content-preview {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.65;
+  color: #8a96a0;
+  font-style: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+@media only screen and (min-width: 768px) {
+  .post-preview {
+    margin-bottom: 22px;
+  }
+
+  .post-preview-link {
+    padding: 22px 24px 20px;
+  }
+
+  .post-preview-link .post-title {
+    font-size: 22px;
+    margin-bottom: 8px;
+  }
+
+  .post-preview-link .post-subtitle {
+    font-size: 15px;
+    margin-bottom: 10px;
+  }
+
+  .post-preview-link .post-content-preview {
+    font-size: 14px;
+    -webkit-line-clamp: 2;
+  }
+}
+
+@media screen and (max-width: 767px) {
+  .post-preview-link {
+    padding: 16px 16px 14px;
+  }
+
+  .post-preview-link .post-title {
+    font-size: 18px;
+  }
+}
+
+// Pager spacing below the feed
+.home-feed + .pager {
+  margin-top: 8px;
+}

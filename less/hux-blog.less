@@ -336,6 +336,22 @@ samp {
   width: 100%;
   z-index: 3;
   .sans-serif;
+
+  .navbar-brand,
+  .nav li a {
+    -webkit-tap-highlight-color: transparent;
+    outline: none;
+
+    &:focus {
+      outline: none;
+    }
+
+    &:focus-visible {
+      outline: 2px solid fade(@brand-primary, 50%);
+      outline-offset: 2px;
+    }
+  }
+
   .navbar-brand {
     font-weight: 800;
     // materialize
@@ -356,7 +372,7 @@ samp {
         letter-spacing: 1px;
         // only highlight in mobile
         &:active {
-          background: rgba(0, 0, 0, 0.12);
+          background: none;
         }
       }
     }
@@ -807,29 +823,9 @@ samp {
 }
 
 // Post Preview Pages (Home Page)
+// Card layout lives in less/home.less; keep .post-meta for any legacy markup.
 
 .post-preview {
-  > a {
-    color: @gray-dark;
-    &:hover,
-    &:focus {
-      text-decoration: none;
-      color: @brand-primary;
-    }
-    > .post-title {
-      font-size: 21px;
-      line-height: 1.3;
-      margin-top: 30px;
-      margin-bottom: 8px;
-    }
-    > .post-subtitle {
-      font-size: 15px;
-      line-height: 1.3;
-      margin: 0;
-      font-weight: 300;
-      margin-bottom: 10px;
-    }
-  }
   > .post-meta {
     .serif;
     color: @gray;
@@ -846,24 +842,9 @@ samp {
       }
     }
   }
-  @media only screen and (min-width: 768px) {
-    > a {
-      > .post-title {
-        font-size: 26px;
-        line-height: 1.3;
-        margin-bottom: 10px;
-      }
-      > .post-subtitle {
-        font-size: 16px;
-      }
-    }
-    .post-meta {
-      font-size: 18px;
-    }
-  }
 }
 
-// Hux add home-page post-content-preview
+// Legacy home excerpt helper — overridden on the card feed in home.less.
 .post-content-preview {
   font-size: 13px;
   font-style: italic;
@@ -1187,9 +1168,18 @@ img::-moz-selection {
 
 /* Hux Optimize UserExperience */
 .navbar-default .navbar-toggle {
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+
   &:focus,
   &:hover {
     background-color: inherit;
+    outline: none;
+  }
+
+  &:focus-visible {
+    outline: 2px solid fade(@brand-primary, 50%);
+    outline-offset: 2px;
   }
   &:active {
     background-color: rgba(255, 255, 255, 0.25);
@@ -1326,4 +1316,5 @@ img::-moz-selection {
 @import "post-lightbox.less";
 // After the #tag_cloud rules above, whose hover state uses !important
 @import "archive.less";
+@import "home.less";
 @import "responsive.less";

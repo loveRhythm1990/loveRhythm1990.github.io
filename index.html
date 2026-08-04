@@ -3,33 +3,33 @@ layout: page
 description: ""
 ---
 
+<div class="home-feed">
 {% for post in paginator.posts %}
-<div class="post-preview">
-    <a href="{{ post.url | prepend: site.baseurl }}">
-        <h2 class="post-title">
-            {{ post.title }}
-        </h2>
+<article class="post-preview">
+    <a class="post-preview-link" href="{{ post.url | prepend: site.baseurl }}">
+        <div class="post-preview-meta">
+            {% if post.tags and post.tags.size > 0 %}
+            {% assign _preview_tag = post.tags[0] %}
+            {% assign _preview_tag_color = site.tag-colors[_preview_tag] | default: '#8593a0' %}
+            <span class="post-preview-tag" style="--tag: {{ _preview_tag_color }}">{{ _preview_tag }}</span>
+            {% endif %}
+            <time class="post-preview-date" datetime="{{ post.date | date_to_xmlschema }}">{{ post.date | date: "%Y-%m-%d" }}</time>
+        </div>
+        <h2 class="post-title">{{ post.title }}</h2>
         {% if post.subtitle %}
-        <h3 class="post-subtitle">
-            {{ post.subtitle }}
-        </h3>
+        <p class="post-subtitle">{{ post.subtitle }}</p>
         {% endif %}
-        <div class="post-content-preview">
+        <p class="post-content-preview">
             {% if post.lang == 'en' %}
                 {{ post.content | strip_html | truncate:300 }}
             {% else %}
                 {{ post.content | strip_html | truncate:200 }}
             {% endif %}
-        </div>
+        </p>
     </a>
-    <!--
-    <p class="post-meta">
-        Posted by {% if post.author %}{{ post.author }}{% else %}{{ site.title }}{% endif %} on {{ post.date | date: "%B %-d, %Y" }}
-    </p>
--->
-</div>
-<hr>
+</article>
 {% endfor %}
+</div>
 
 <!-- Pager -->
 {% if paginator.total_pages > 1 %}
