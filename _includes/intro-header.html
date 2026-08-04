@@ -116,7 +116,7 @@
 {% if _header_bg %}
 <header class="intro-header hero-band hero-compact" style="--hero: {{ _header_bg }};">
 {% else %}
-<header class="intro-header hero-compact" style="background-image: url('{{ site.baseurl }}/{% if page.header-img %}{{ page.header-img }}{% else %}{{ site.header-img }}{% endif %}')">
+<header class="intro-header hero-compact" style="background-image: url('{{ site.baseurl }}/{% if page.header-img %}{{ page.header-img }}{% else %}{{ site.header-img }}{% endif %}'); background-position: center bottom;">
 {% endif %}
   <div class="container">
     <div class="row">

@@ -1050,7 +1050,16 @@ img::-moz-selection {
     &.focus{
       box-shadow: rgba(0,0,0,.117647) 0 1px 6px, rgba(0,0,0,.239216) 0 1px 4px;
     }
-    // Archive filter colours live in less/archive.less (.tag-button / --all)
+    &.tag-button,
+    &.tag-button--all {
+      font-size: 13px;
+      line-height: 26px;
+      font-weight: 400;
+      > sup {
+        font-weight: 400;
+      }
+    }
+    // Archive filter text colours live in less/archive.less
   }
   @media only screen and (min-width: 768px) {
     margin-bottom: 25px;
