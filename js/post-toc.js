@@ -22,63 +22,36 @@
     }
     if (!entries.length) return;
 
-    // A heading counts as current once it reaches this line, kept just below the
-    // rail's own sticky offset so the switch happens as the heading meets the top
-    // of the rail rather than while it is still mid-screen.
-    var LINE = 96;
-    // Matches @toc-rail-top in less/post-toc.less — navbar clearance only. The
-    // rail sits in the left gutter at >=1370px and does not overlap the hero text,
-    // so tracking intro-header on scroll was dropped: getBoundingClientRect() every
-    // frame made the rail twitch as the slim hero moved.
-    var NAV_CLEAR = 80;
+    // Matches @toc-rail-top in less/post-toc.less. Headings above this viewport
+    // line count as read; kept a little below the rail's own top offset.
+    var LINE = 100;
 
     var current = null;
     var queued = false;
+    var tops = [];
 
     // Below 1200px the rail is display:none and the in-flow card is shown instead.
     var wide = window.matchMedia('(min-width: 1200px)');
-    // From 1370px the rail is position:fixed in the viewport gutter.
-    var viewportPin = window.matchMedia('(min-width: 1370px)');
 
-    function layoutFixedRail() {
-        if (!viewportPin.matches) {
-            rail.style.top = '';
-            rail.style.maxHeight = '';
-            LINE = 96;
-            return;
-        }
-
-        rail.style.top = NAV_CLEAR + 'px';
-        rail.style.maxHeight = 'calc(100vh - ' + (NAV_CLEAR + 30) + 'px)';
-        LINE = NAV_CLEAR + 20;
+    function measureTops() {
+        // Document Y of each heading — refreshed on load/resize/font settle only.
+        // scroll + getBoundingClientRect() every frame was forcing layout and made
+        // the highlight (and the rail's internal scroll) hunt section boundaries.
+        tops = entries.map(function (entry) {
+            return entry.heading.getBoundingClientRect().top + window.pageYOffset;
+        });
     }
 
     function activeEntry() {
-        // Measured live rather than cached: images and web fonts settle after this
-        // script runs, and every cached offset would be stale by then.
+        var y = window.pageYOffset + LINE;
         var found = null;
         for (var i = 0; i < entries.length; i++) {
-            if (entries[i].heading.getBoundingClientRect().top > LINE) break;
+            if (tops[i] > y) break;
             found = entries[i];
         }
-        // The last section is usually too short to ever reach the line, so anchor
-        // it to the bottom of the document instead.
         var atBottom = window.innerHeight + window.pageYOffset >=
             document.documentElement.scrollHeight - 4;
         return atBottom ? entries[entries.length - 1] : found;
-    }
-
-    // The rail scrolls internally once a TOC outgrows the viewport. scrollTop is
-    // set directly because scrollIntoView would scroll the window along with it.
-    function reveal(item) {
-        if (rail.scrollHeight <= rail.clientHeight) return;
-        var top = item.offsetTop;
-        var bottom = top + item.offsetHeight;
-        if (top < rail.scrollTop) {
-            rail.scrollTop = top - 8;
-        } else if (bottom > rail.scrollTop + rail.clientHeight) {
-            rail.scrollTop = bottom - rail.clientHeight + 8;
-        }
     }
 
     function update() {
@@ -89,7 +62,8 @@
         current = next;
         if (!current) return;
         current.item.classList.add('active');
-        reveal(current.item);
+        // Do not auto-scroll the rail during page scroll — changing scrollTop here
+        // was the twitch readers saw as the TOC "wobbling" in the gutter.
     }
 
     function schedule() {
@@ -98,27 +72,20 @@
         window.requestAnimationFrame(update);
     }
 
-    function onScroll() {
-        schedule();
-    }
-
     function onResize() {
-        layoutFixedRail();
+        measureTops();
         schedule();
     }
 
     function sync() {
         if (wide.matches) {
-            window.addEventListener('scroll', onScroll, { passive: true });
+            window.addEventListener('scroll', schedule, { passive: true });
             window.addEventListener('resize', onResize);
-            layoutFixedRail();
+            measureTops();
             update();
         } else {
-            window.removeEventListener('scroll', onScroll);
+            window.removeEventListener('scroll', schedule);
             window.removeEventListener('resize', onResize);
-            rail.style.top = '';
-            rail.style.maxHeight = '';
-            LINE = 96;
             if (current) {
                 current.item.classList.remove('active');
                 current = null;

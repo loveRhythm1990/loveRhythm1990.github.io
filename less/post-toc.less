@@ -124,6 +124,10 @@
       position: sticky;
       top: @toc-rail-top;
       margin: 10px 0 0;
+      // Promote to its own layer so sticky/fixed positioning does not repaint
+      // with the article on every scroll frame.
+      transform: translateZ(0);
+      backface-visibility: hidden;
       // The filled card of the in-flow version reads as heavy in a 165px column;
       // a hairline rail is enough to group the list against the wide margin.
       padding: 2px 0 2px 14px;
@@ -220,11 +224,12 @@
 
   .post-toc-side .post-toc {
     position: fixed;
-    // Fixed below the navbar; js/post-toc.js sets the same offset (NAV_CLEAR).
     top: @toc-rail-top;
     left: ~"max(12px, env(safe-area-inset-left, 0px))";
     width: ~"min(@{toc-rail-width}, calc((100vw - min(1170px, 94vw)) / 2 - 16px))";
     margin: 0;
     max-height: ~"calc(100vh - @{toc-rail-top} - 30px)";
+    transform: translateZ(0);
+    backface-visibility: hidden;
   }
 }

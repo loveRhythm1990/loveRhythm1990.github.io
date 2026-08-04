@@ -12,7 +12,7 @@
 const CACHE_NAMESPACE = 'main-'
 
 // Bump this string whenever precached assets (CSS/JS shell) change materially — drops stale SW caches.
-const CACHE = CACHE_NAMESPACE + 'precache-then-runtime-v3';
+const CACHE = CACHE_NAMESPACE + 'precache-then-runtime-v4';
 const PRECACHE_LIST = [
   "./",
   "./offline.html",

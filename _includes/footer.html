@@ -1,9 +1,8 @@
-{%- comment -%}
-    head.html captures this too, but each include gets its own scope, so the value
-    has to be re-captured here rather than inherited — the script tags below were
-    emitting ?v= with nothing after it.
-{%- endcomment -%}
-{%- capture asset_v -%}{% include asset-vars.html %}{%- endcapture -%}
+{%- if site.asset_version != blank -%}
+  {%- assign asset_v = site.asset_version -%}
+{%- else -%}
+  {%- assign asset_v = site.time | date: '%s' -%}
+{%- endif -%}
 
 <!-- Footer -->
 <footer>

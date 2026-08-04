@@ -150,26 +150,33 @@
   }
 }
 
-// Tag filter: text colour only — black when idle, brand blue when selected
-// (.focus from archive.js). Per-tag pill tints come from --tag inline and the
-// base #tag_cloud rules in hux-blog.less; do not override background here.
+// Tag filter: neutral pills when idle; selected (.focus from archive.js) fills
+// with brand blue and white type — clearer than a text-colour change alone.
 #tag_cloud {
   a.tag-button,
   a.tag-button--all {
     color: @gray-dark;
-
-    &:hover,
-    &:active {
-      color: @brand-primary;
-    }
-
-    &.focus {
-      color: @brand-primary !important;
-    }
+    background: #f3f5f5;
 
     > sup {
       color: inherit;
       opacity: 0.65;
+    }
+
+    &:hover:not(.focus),
+    &:active:not(.focus) {
+      color: @gray-dark;
+      background-color: #e9eef2 !important;
+    }
+
+    &.focus {
+      color: white !important;
+      background-color: @brand-primary !important;
+      box-shadow: none;
+
+      > sup {
+        opacity: 0.9;
+      }
     }
   }
 }

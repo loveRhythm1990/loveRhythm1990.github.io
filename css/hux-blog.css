@@ -1788,6 +1788,8 @@ img::-moz-selection {
     position: sticky;
     top: 80px;
     margin: 10px 0 0;
+    transform: translateZ(0);
+    backface-visibility: hidden;
     padding: 2px 0 2px 14px;
     background: none;
     border-left: 1px solid #e3e7ea;
@@ -1860,6 +1862,8 @@ img::-moz-selection {
     width: min(150px, calc((100vw - min(1170px, 94vw)) / 2 - 16px));
     margin: 0;
     max-height: calc(100vh - 80px - 30px);
+    transform: translateZ(0);
+    backface-visibility: hidden;
   }
 }
 .archive-list {
@@ -1981,21 +1985,29 @@ img::-moz-selection {
 #tag_cloud a.tag-button,
 #tag_cloud a.tag-button--all {
   color: #404040;
-}
-#tag_cloud a.tag-button:hover,
-#tag_cloud a.tag-button--all:hover,
-#tag_cloud a.tag-button:active,
-#tag_cloud a.tag-button--all:active {
-  color: #0085a1;
-}
-#tag_cloud a.tag-button.focus,
-#tag_cloud a.tag-button--all.focus {
-  color: #0085a1 !important;
+  background: #f3f5f5;
 }
 #tag_cloud a.tag-button > sup,
 #tag_cloud a.tag-button--all > sup {
   color: inherit;
   opacity: 0.65;
+}
+#tag_cloud a.tag-button:hover:not(.focus),
+#tag_cloud a.tag-button--all:hover:not(.focus),
+#tag_cloud a.tag-button:active:not(.focus),
+#tag_cloud a.tag-button--all:active:not(.focus) {
+  color: #404040;
+  background-color: #e9eef2 !important;
+}
+#tag_cloud a.tag-button.focus,
+#tag_cloud a.tag-button--all.focus {
+  color: white !important;
+  background-color: #0085a1 !important;
+  box-shadow: none;
+}
+#tag_cloud a.tag-button.focus > sup,
+#tag_cloud a.tag-button--all.focus > sup {
+  opacity: 0.9;
 }
 html {
   -webkit-text-size-adjust: 100%;
