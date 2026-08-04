@@ -985,13 +985,8 @@ samp {
   object-fit: cover;
   object-position: center bottom;
   z-index: 0;
-  opacity: 0;
-  transition: opacity 0.18s ease;
   pointer-events: none;
   user-select: none;
-}
-.intro-header.hero-photo.hero-photo-ready .hero-photo-bg {
-  opacity: 1;
 }
 .intro-header {
   position: relative;
