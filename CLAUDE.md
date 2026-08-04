@@ -66,6 +66,13 @@ see the note at the top of `less/typography.less` before changing either number,
 `bootstrap.min.css` carries local edits to these very classes. The hidden copy is `display: none`, so
 screen readers never encounter both.
 
+`js/post-toc.js` highlights the entry being read, loaded from `footer.html` for `layout: post` only.
+It reads the headings back out of the rail's own links, so the level rules in `post-toc.html` stay the
+single source of truth; it scrolls the rail internally when a long TOC outgrows the viewport, and it
+switches itself off below 1200px. The highlight changes colour but deliberately not weight — re-bolding
+a wrapped CJK heading reflows it and the rail visibly twitches. Unminified on purpose: it is outside
+the Grunt uglify pipeline, where a stale `.min` would go unnoticed.
+
 Two constraints worth knowing before touching this:
 
 - `position: sticky` is inert inside an ancestor whose `overflow` is not `visible`, and the theme
@@ -116,6 +123,20 @@ lists `h2`..`h4` — five levels of indentation would not survive a 137px rail. 
 raising the `_depth <= 2` test and adding `.post-toc-d3`. kramdown's own `{:toc}` is deliberately
 unused: `{:toc levels="..."}` is not a valid IAL — it leaks through as an HTML attribute — and the
 global `kramdown.toc_levels` option applies only to `{:toc}`, not to this include.
+
+## Archive page
+
+`archive.html` renders a timeline grouped by year, styled in `less/archive.less`. `js/archive.js`
+filters it by toggling `.d-none` — which carries `!important` — on each year `<section>` and on
+`.item`, so those two hooks and the `data-tags` attribute have to survive any restyling. The rail is
+drawn per item rather than once per section, so it stays continuous when the filter hides rows.
+
+Tag colours come from `_config.yml`'s `tag-colors`, the same map the post header uses, so a tag reads
+the same in both places. The template passes the colour in as an inline `--tag` custom property and
+`color-mix()` derives the pill and node tints from it; unmapped tags arrive as grey.
+
+`jquery.tagcloud.js` is deliberately no longer loaded — it tinted each tag inline by post count, and an
+inline colour cannot be overridden from a stylesheet. The file remains in `js/` but is unreferenced.
 
 ## Architecture
 

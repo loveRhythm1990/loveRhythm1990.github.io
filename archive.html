@@ -23,22 +23,35 @@ https://github.com/kitian616/jekyll-TeXt-theme
 					<sup>{{site.posts.size}}</sup>
 				</a>
 
-				{% capture tags %}
-				{% for tag in site.tags %}
+			{% comment %}
+				The `data-sort` attribute must stay the first thing inside each <a>: the
+				list is ordered by splitting this capture on </a> and sorting the raw
+				strings. Anything added ahead of it would sort on that instead.
+				Colours come from _config.yml's tag-colors, the same map the post header
+				uses, so a tag reads the same everywhere; unmapped tags fall back to grey.
+			{% endcomment %}
+			{% capture tags %}
+			{% for tag in site.tags %}{% assign _c = site.tag-colors[tag[0]] | default: '#8593a0' %}
 				<a data-sort="{{ site.posts.size | minus: tag[1].size | prepend: '0000' | slice: -4, 4 }}"
 					data-encode="{{ tag[0] | strip | url_encode }}"
 					class="tag-button"
-					title="{{ tag[0] }}" rel="{{ tag[1].size }}">
+					title="{{ tag[0] }}" rel="{{ tag[1].size }}"
+					style="--tag: {{ _c }};">
 					{{ tag[0] }}
 					<sup>{{tag[1].size}}</sup>
 				</a>
-				{% endfor %}
-				{% endcapture %}
+			{% endfor %}
+			{% endcapture %}
         {{ tags | split:'</a>' | sort | join:'</a>' }}
 			</div>
 
             <!-- Article List -->
-			<div class="mini-post-list js-result d-none">
+			{% comment %}
+				js/archive.js filters by toggling .d-none on each <section> and .item, so
+				those two hooks and the data-tags attribute have to stay put; the styling
+				in less/archive.less is built around them rather than replacing them.
+			{% endcomment %}
+			<div class="archive-list js-result d-none">
 			{%- assign _sorted_list = site.posts -%}
 			{%- assign _sorted_list = _sorted_list | sort: 'date' -%}
 			{%- assign _sorted_list = _sorted_list | reverse -%}
@@ -57,30 +70,37 @@ https://github.com/kitian616/jekyll-TeXt-theme
 
 			{% comment %} group by year {% endcomment %}
 			{%- assign _currentdate = _article.date | date: '%Y' -%}
-			{%- assign _displaydate = _article.date | date: "%Y-%-m-%-d: " -%}
 			{%- if _currentdate != _date -%}
 				{%- unless forloop.first -%}</section>{%- endunless -%}
-				<section>
-				<span class="fa listing-seperator">
-					<span class="tag-text">{{ _currentdate }}</span>
-				</span>
+				<section class="archive-group">
+				<h2 class="archive-year">{{ _currentdate }}</h2>
 				{%- assign _date = _currentdate -%}
 			{%- endif -%}
 
-				<div class="post-preview item" data-tags="{{ _tags }}">
-					<a href="{{ _article.url | prepend: site.baseurl }}"> 
-						<h2 class="post-title">
-                            {{ _displaydate }}  {{ _article.title }}
-				        </h2>
-				        {% if _article.subtitle %}
-				        <h3 class="post-subtitle">
-				            {{ _article.subtitle }}
-				        </h3>
-				        {% endif %}
-				    </a>
-					<hr>
+			{%- comment -%}
+				The first tag stands in as the post's subject. --tag is set on the item so
+				the timeline node, the title hover and the pill can all read it.
+			{%- endcomment -%}
+			{%- assign _primary_tag = _article.tags | first -%}
+			{%- assign _tag_color = site.tag-colors[_primary_tag] | default: '#8593a0' -%}
+
+				<div class="archive-item item" data-tags="{{ _tags }}" style="--tag: {{ _tag_color }};">
+					<a href="{{ _article.url | prepend: site.baseurl }}">
+						<time class="archive-date" datetime="{{ _article.date | date_to_xmlschema }}">{{ _article.date | date: '%m-%d' }}</time>
+						<span class="archive-body">
+							<span class="archive-title">{{ _article.title }}</span>
+							{%- if _article.subtitle -%}
+							<span class="archive-subtitle">{{ _article.subtitle }}</span>
+							{%- endif -%}
+						</span>
+						{%- if _primary_tag -%}
+						<span class="archive-tag">{{ _primary_tag }}</span>
+						{%- endif -%}
+					</a>
 				</div>
 			{% endfor %}
+			{%- comment -%} Close the last year group, which the loop above never reaches. {%- endcomment -%}
+			{%- if _sorted_list.size > 0 -%}</section>{%- endif -%}
 		</div>
 	</div>
 </div>

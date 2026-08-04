@@ -165,4 +165,5 @@ tag-colors:
   数据库:       "#1A237E"   # 数据库 深蓝
   boltdb:       "#4E342E"   # boltdb 深棕
   gpu调度:      "#4527A0"   # GPU 深紫
+  ingress-nginx: "#009639"  # nginx 官方绿
   随笔:         "#37474F"   # 随笔 深灰蓝

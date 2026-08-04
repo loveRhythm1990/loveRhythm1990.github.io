@@ -1,0 +1,192 @@
+@import "variables.less";
+
+// Archive page listing (archive.html).
+//
+// js/archive.js filters by toggling .d-none — which carries !important — on the
+// year <section>s and on .item, so every rule here has to survive those elements
+// being switched to display:none and back.
+//
+// --tag is set inline per item from _config.yml's tag-colors, the same map the
+// post header uses. Unmapped tags arrive as grey from the template, so var()
+// fallbacks here are only a safety net.
+
+@archive-indent: 26px; // room for the rail and its nodes
+@archive-rail-x: 7px;
+@archive-node: 7px;
+
+.archive-list {
+  margin: 22px 0 40px;
+}
+
+.archive-year {
+  margin: 34px 0 6px;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: @brand-primary;
+
+  .archive-group:first-child & {
+    margin-top: 4px;
+  }
+}
+
+.archive-item {
+  position: relative;
+  padding-left: @archive-indent;
+
+  // The rail is drawn per item rather than once per section: consecutive segments
+  // meet to read as one continuous line, and it stays continuous when the filter
+  // hides individual items — a single line spanning the section would need a
+  // height keyed to the year heading and would outlive its own list.
+  &::before {
+    content: '';
+    position: absolute;
+    left: @archive-rail-x;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: #e6eaec;
+  }
+
+  // Node, drawn over the rail
+  &::after {
+    content: '';
+    position: absolute;
+    left: @archive-rail-x - ((@archive-node - 1) / 2);
+    top: 15px;
+    width: @archive-node;
+    height: @archive-node;
+    border-radius: 50%;
+    // Mostly grey, but tinted enough that the rail carries a hint of each post's
+    // subject. A saturated node per row would compete with the titles.
+    background: #cfd6da;
+    background: color-mix(in srgb, var(--tag, @brand-primary) 30%, #dde3e7);
+    transition: background 0.2s ease, transform 0.2s ease;
+  }
+
+  &:hover::after {
+    background: var(--tag, @brand-primary);
+    transform: scale(1.35);
+  }
+
+  > a {
+    display: flex;
+    align-items: baseline;
+    padding: 8px 0;
+    color: inherit;
+
+    &:hover,
+    &:focus {
+      text-decoration: none;
+      color: inherit;
+    }
+  }
+}
+
+.archive-date {
+  flex: 0 0 auto;
+  width: 3.6em;
+  margin-right: 14px;
+  font-size: 13px;
+  color: #9aa5ad;
+  // Keeps the day columns lined up down the page
+  font-variant-numeric: tabular-nums;
+}
+
+.archive-body {
+  // Does not grow, so the pill sits against the end of the title instead of being
+  // pushed to the far right — titles vary enough in length that a right-aligned
+  // column left a wide empty channel down the middle of the page.
+  // min-width lets a long CJK title wrap rather than force the pill off the row.
+  flex: 0 1 auto;
+  min-width: 0;
+  margin-right: 10px;
+}
+
+.archive-title {
+  font-size: 16px;
+  line-height: 1.5;
+  color: @gray-dark;
+  transition: color 0.2s ease;
+
+  .archive-item:hover & {
+    color: @brand-primary;
+  }
+}
+
+.archive-subtitle {
+  display: block;
+  margin-top: 1px;
+  font-size: 13px;
+  color: #97a2aa;
+}
+
+.archive-tag {
+  flex: 0 0 auto;
+  padding: 1px 9px;
+  border-radius: 999em;
+  font-size: 11px;
+  line-height: 18px;
+  white-space: nowrap;
+
+  // Flat fallback first, for browsers without color-mix()
+  color: #6b7780;
+  background: #f1f3f5;
+  color: color-mix(in srgb, var(--tag, @brand-primary) 88%, #0b1620);
+  background: color-mix(in srgb, var(--tag, @brand-primary) 13%, white);
+}
+
+@media screen and (max-width: 767px) {
+  .archive-year {
+    margin-top: 26px;
+    font-size: 18px;
+  }
+
+  .archive-item {
+    padding-left: 22px;
+
+    &::after {
+      top: 13px;
+    }
+  }
+
+  .archive-date {
+    width: 3.2em;
+    margin-right: 10px;
+    font-size: 12px;
+  }
+
+  .archive-title {
+    font-size: 15px;
+  }
+
+  // The tag is redundant on a narrow row — the cloud above is the way to filter
+  .archive-tag {
+    display: none;
+  }
+}
+
+// Tag cloud, restyled from the flat grey pills. The heat-based colouring that
+// jquery.tagcloud.js used to apply inline was removed from footer.html; inline
+// styles would have won over everything here.
+#tag_cloud {
+  a.tag-button {
+    color: #55606a;
+    background: #f1f3f5;
+    color: color-mix(in srgb, var(--tag, @brand-primary) 82%, #0b1620);
+    background: color-mix(in srgb, var(--tag, @brand-primary) 17%, white);
+
+    // Both the base and the hover rule in hux-blog.less carry !important
+    &:hover,
+    &:active,
+    &.focus {
+      color: white;
+      background-color: var(--tag, @brand-primary) !important;
+    }
+
+    > sup {
+      opacity: 0.65;
+      font-weight: 600;
+    }
+  }
+}

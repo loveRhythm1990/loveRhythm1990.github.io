@@ -164,6 +164,31 @@
       .post-toc-d0 > a {
         font-weight: 600;
       }
+
+      // Applied by js/post-toc.js to whichever section is being read.
+      li.active {
+        position: relative;
+
+        // Colour, deliberately without a weight change: re-bolding a wrapped CJK
+        // heading reflows it to a different number of lines, and the whole rail
+        // twitches as the reader scrolls past.
+        > a {
+          color: @brand-primary;
+        }
+
+        // Marker sits just inside the rail's hairline border. overflow-y on the
+        // rail clips horizontally too, so pulling it further left than the 14px
+        // padding would shave most of its width off.
+        &::before {
+          content: '';
+          position: absolute;
+          left: -14px;
+          top: 0.15em;
+          bottom: 0.15em;
+          width: 2px;
+          background: @brand-primary;
+        }
+      }
     }
 
     // Indents stay small here — every em spent on indentation is width the

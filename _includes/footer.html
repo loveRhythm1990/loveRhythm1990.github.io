@@ -31,6 +31,12 @@
 <!-- Custom Theme JavaScript -->
 <script src="{{ "/js/hux-blog.min.js" | prepend: site.baseurl }}?v={{ asset_v }}"></script>
 
+<!-- Scroll highlighting for the sticky TOC rail. Loaded unminified: it is ~1KB and
+     is not part of the Grunt uglify pipeline, so a stale .min would go unnoticed. -->
+{% if page.layout == 'post' %}
+<script src="{{ "/js/post-toc.js" | prepend: site.baseurl }}?v={{ asset_v }}"></script>
+{% endif %}
+
 <!-- Service Worker -->
 {% if site.service-worker %}
 <script src="{{ "/js/snackbar.js" | prepend: site.baseurl }}?v={{ asset_v }}"></script>
@@ -71,17 +77,10 @@
 
 
 {% if page.title == 'Archive' %}
-<!-- jquery.tagcloud.js -->
-<script>
-    async('{{ "/js/jquery.tagcloud.js" | prepend: site.baseurl }}',function(){
-        $.fn.tagcloud.defaults = {
-            //size: {start: 1, end: 1, unit: 'em'},
-            color: {start: '#bbbbee', end: '#2f93b4'},
-        };
-        $('#tag_cloud a').tagcloud();
-    })
-</script>
-<script src='{{ "/js/archive.js " | prepend: site.baseurl }}'></script>
+<!-- jquery.tagcloud.js is no longer loaded: it tinted each tag inline by post
+     count, and an inline colour cannot be overridden by less/archive.less, which
+     colours tags by subject from _config.yml's tag-colors instead. -->
+<script src='{{ "/js/archive.js" | prepend: site.baseurl }}?v={{ asset_v }}'></script>
 {% endif %}
 
 <!--fastClick.js -->
