@@ -1,11 +1,13 @@
 @media (min-width: 1200px) {
   .post-container,
-  .sidebar-container {
+  .sidebar-container,
+  .hero-col {
     padding-right: 5%;
   }
 }
 @media (min-width: 768px) {
-  .post-container {
+  .post-container,
+  .hero-col {
     padding-right: 5%;
   }
 }
@@ -1023,7 +1025,7 @@ samp {
 .intro-header.hero-compact .post-heading,
 .intro-header.hero-compact .page-heading,
 .intro-header.hero-compact #tag-heading {
-  padding: 56px 0 3px;
+  padding: 48px 0 2px;
   color: white;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
 }
@@ -1032,7 +1034,7 @@ samp {
   .intro-header.hero-compact .post-heading,
   .intro-header.hero-compact .page-heading,
   .intro-header.hero-compact #tag-heading {
-    padding: 56px 0 4px;
+    padding: 48px 0 2px;
   }
 }
 .intro-header.hero-compact .post-heading .meta,
@@ -1046,6 +1048,7 @@ samp {
   align-items: baseline;
 }
 .intro-header.hero-compact .post-heading h1 {
+  margin-top: 0;
   margin-bottom: 0;
   flex: 0 1 auto;
   white-space: nowrap;
@@ -1067,6 +1070,7 @@ samp {
   flex: none;
   margin-left: 12px;
   font-style: normal;
+  line-height: 1.2;
   font-size: 12px;
   letter-spacing: 0.02em;
   font-variant-numeric: tabular-nums;
@@ -1086,6 +1090,7 @@ samp {
 }
 .intro-header.hero-compact .site-heading h1,
 .intro-header.hero-compact #tag-heading h1 {
+  margin-top: 0;
   margin-bottom: 0;
   white-space: nowrap;
   font-size: 17px;
@@ -1684,9 +1689,13 @@ img::-moz-selection {
   }
 }
 @media (min-width: 1200px) {
-  .post-container.col-lg-9 {
+  .post-container.col-lg-9,
+  .hero-col.col-lg-9 {
     width: 80%;
   }
+}
+.hero-col > .post-container {
+  padding-right: 0;
 }
 .post-container p {
   margin: 24px 0;
@@ -1840,7 +1849,8 @@ img::-moz-selection {
     padding: 0;
     overflow: visible;
   }
-  .post-row > .post-container.col-lg-9 {
+  .post-row > .post-container.col-lg-9,
+  .post-row > .hero-col.col-lg-9 {
     margin-left: 16.66666667%;
   }
   .post-toc-side .post-toc {
@@ -2085,13 +2095,13 @@ body {
     margin-bottom: 4px;
   }
   .intro-header.hero-compact .post-heading {
-    padding-top: 56px;
-    padding-bottom: 3px;
+    padding-top: 48px;
+    padding-bottom: 2px;
   }
   .intro-header.hero-compact .site-heading,
   .intro-header.hero-compact #tag-heading {
-    padding-top: 56px;
-    padding-bottom: 3px;
+    padding-top: 48px;
+    padding-bottom: 2px;
   }
   .intro-header.hero-compact .post-heading h1 {
     margin-bottom: 0;

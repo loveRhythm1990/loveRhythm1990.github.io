@@ -34,10 +34,22 @@
 // that on text while keeping ~39px of margin, so the body does not run into the
 // container edge. Written as a compound selector rather than by editing .col-lg-9
 // above, so the grid class keeps its stock meaning for anything added later.
+//
+// .hero-col is the same measure without the article's typography: hero headings
+// and the Home/Archive listings line up with the post body, but do not inherit
+// the 30px heading margins that would deepen the hero band.
 @media (min-width: 1200px) {
-  .post-container.col-lg-9 {
+  .post-container.col-lg-9,
+  .hero-col.col-lg-9 {
     width: 80%;
   }
+}
+
+// About wraps its body in .post-container inside the page column, and both carry
+// the 5% right gutter from sidebar.less. It belongs to the column only, or the
+// text ends up narrower there than in a post.
+.hero-col > .post-container {
+  padding-right: 0;
 }
 
 // Body type stays at the theme's 16px; the measure is governed by the column width

@@ -573,6 +573,9 @@ samp {
       display: flex;
       align-items: baseline;
       h1 {
+        // Bootstrap's 20px and the article's 30px both land here; the band's own
+        // padding is the only vertical metric that should matter.
+        margin-top: 0;
         margin-bottom: 0;
         flex: 0 1 auto;
         white-space: nowrap;
@@ -587,6 +590,9 @@ samp {
         flex: none;
         margin-left: 12px;
         font-style: normal;
+        // 1.7 from .sans-serif leaves the date's line box hanging below the
+        // title's, which made the post band 2px taller than the photo pages'.
+        line-height: 1.2;
         font-size: 12px;
         letter-spacing: 0.02em;
         font-variant-numeric: tabular-nums;
@@ -603,6 +609,7 @@ samp {
     #tag-heading {
       text-align: left;
       h1 {
+        margin-top: 0;
         margin-bottom: 0;
         white-space: nowrap;
         font-size: 17px;

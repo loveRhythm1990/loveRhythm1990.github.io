@@ -12,9 +12,11 @@
 // and its glow are derived from it in hux-blog.less.
 @intro-header-bg: #0097b8;
 
-// Compact flat-colour post hero. Top padding matches the overlaying navbar (56px);
-// bottom padding is kept minimal so the coloured block stays slim.
-@hero-compact-pad-top: 56px;
-@hero-compact-pad-top-sm: 56px;
-@hero-compact-pad-bottom: 4px;
-@hero-compact-pad-bottom-sm: 3px;
+// Compact hero band, shared by posts and the photo pages. The navbar overlays the
+// band and measures 61px, so the title's line box starts inside it; 48px keeps the
+// text clear of the nav links on the right for all but the longest titles, which
+// is as low as the top can go without a shorter navbar.
+@hero-compact-pad-top: 48px;
+@hero-compact-pad-top-sm: 48px;
+@hero-compact-pad-bottom: 2px;
+@hero-compact-pad-bottom-sm: 2px;
