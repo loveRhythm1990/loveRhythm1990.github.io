@@ -52,6 +52,33 @@
   padding-right: 0;
 }
 
+// Home, About, Archive: no TOC rail — centre the content column. Posts keep
+// col-lg-2 + margin-left for the sticky / fixed TOC; these pages were still
+// carrying the empty spacer, which pushed the grid left between 1200–1369px and
+// again at 1370px+ via post-toc.less's offset rule.
+@media (min-width: 1200px) {
+  .post-row.page-row--centered {
+    justify-content: center;
+
+    > .hero-col,
+    > .postlist-container.hero-col {
+      margin-left: 0 !important;
+      flex: 0 0 80%;
+      width: 80%;
+      max-width: 80%;
+    }
+  }
+}
+
+@media (min-width: 1370px) {
+  .post-row.page-row--centered {
+    > .hero-col.col-lg-9,
+    > .postlist-container.hero-col.col-lg-9 {
+      margin-left: 0 !important;
+    }
+  }
+}
+
 // Body type stays at the theme's 16px; the measure is governed by the column width
 // instead. That lands at ~57 CJK characters per line — past the 30-40 that reads
 // most comfortably, and a deliberate trade: the narrower measure read as cramped.

@@ -5,6 +5,14 @@
       {%- assign asset_v = site.time | date: '%s' -%}
     {%- endif -%}
     <meta charset="utf-8">
+    {%- if page.layout == 'page' or page.layout == 'default' -%}
+      {%- unless page.header-bg-css or page.header-style == 'text' -%}
+        {%- assign _hero_photo = page.header-img | default: site.header-img -%}
+        {%- if _hero_photo -%}
+    <link rel="preload" as="image" href="{{ site.baseurl }}/{{ _hero_photo }}" fetchpriority="high">
+        {%- endif -%}
+      {%- endunless -%}
+    {%- endif -%}
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="google-site-verification" content="xBT4GhYoi5qRD5tr338pgPM5OWHHIDR6mNg1a3euekI" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">

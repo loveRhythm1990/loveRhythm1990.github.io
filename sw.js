@@ -12,7 +12,7 @@
 const CACHE_NAMESPACE = 'main-'
 
 // Bump this string whenever precached assets (CSS/JS shell) change materially — drops stale SW caches.
-const CACHE = CACHE_NAMESPACE + 'precache-then-runtime-v9';
+const CACHE = CACHE_NAMESPACE + 'precache-then-runtime-v12';
 const PRECACHE_LIST = [
   "./",
   "./offline.html",
@@ -23,6 +23,8 @@ const PRECACHE_LIST = [
   "./img/icon_wechat.png",
   "./img/avatar-hux.jpg",
   "./img/home-bg.jpg",
+  "./img/about-bg.jpg",
+  "./img/tag-bg.jpg",
   "./img/404-bg.jpg",
   "./css/hux-blog.min.css",
   "./css/bootstrap.min.css"

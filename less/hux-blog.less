@@ -487,6 +487,18 @@ samp {
   }
 }
 
+.hero-photo-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center bottom;
+  z-index: 0;
+  pointer-events: none;
+  user-select: none;
+}
+
 // Header
 
 .intro-header {
@@ -597,8 +609,19 @@ samp {
 
     // Photo pages (Home / Archive / About): cover fills the slim band but keeps
     // the bottom of the image visible — center/center was cropping the foot.
-    &:not(.hero-band) {
+    &:not(.hero-band):not(.hero-photo) {
       background-position: center bottom;
+    }
+
+    &.hero-photo {
+      overflow: hidden;
+      background-color: transparent;
+      background-image: none;
+
+      > .container {
+        position: relative;
+        z-index: 1;
+      }
     }
 
     .site-heading,

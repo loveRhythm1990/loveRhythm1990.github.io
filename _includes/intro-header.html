@@ -116,11 +116,12 @@
 {% if _header_bg %}
 <header class="intro-header hero-band hero-compact" style="--hero: {{ _header_bg }};">
 {% else %}
-<header class="intro-header hero-compact" style="background-image: url('{{ site.baseurl }}/{% if page.header-img %}{{ page.header-img }}{% else %}{{ site.header-img }}{% endif %}'); background-position: center bottom;">
+{% assign _hero_photo = page.header-img | default: site.header-img %}
+<header class="intro-header hero-compact hero-photo">
+  <img class="hero-photo-bg" src="{{ site.baseurl }}/{{ _hero_photo }}" alt="" fetchpriority="high" decoding="async" width="1400" height="400">
 {% endif %}
   <div class="container">
-    <div class="row post-row">
-      <div class="col-lg-2 col-lg-offset-0 visible-lg-block post-toc-side"></div>
+    <div class="row post-row page-row--centered">
       <div class="col-lg-9 col-lg-offset-0 col-md-10 col-md-offset-1 hero-col">
         {% if include.short %}
         <div class="site-heading" id="tag-heading">
