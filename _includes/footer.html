@@ -1,3 +1,10 @@
+{%- comment -%}
+    head.html captures this too, but each include gets its own scope, so the value
+    has to be re-captured here rather than inherited — the script tags below were
+    emitting ?v= with nothing after it.
+{%- endcomment -%}
+{%- capture asset_v -%}{% include asset-vars.html %}{%- endcapture -%}
+
 <!-- Footer -->
 <footer>
     <div class="container">

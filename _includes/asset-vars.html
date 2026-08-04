@@ -1,6 +1,14 @@
-{% comment %} Cache-bust query for static assets. Optional site.asset_version in _config.yml overrides build time. {% endcomment %}
-{% if site.asset_version != blank %}
-{% assign asset_v = site.asset_version %}
-{% else %}
-{% assign asset_v = site.time | date: '%s' %}
-{% endif %}
+{%- comment -%}
+Cache-busting token for static asset URLs.
+
+Emitted as text rather than assigned to a variable: Liquid renders an {% include %}
+in its own scope, so a variable assigned in here is discarded before the caller can
+read it. This include previously did `{% assign asset_v = ... %}`, which is why every
+page shipped `?v=` with nothing after it — and why a changed CSS file kept being
+served from the service worker's cache, whose lookup keys on the full URL.
+
+Callers wrap it: {%- capture asset_v -%}{% include asset-vars.html %}{%- endcapture -%}
+
+Set asset_version in _config.yml to pin the value; otherwise it tracks the build time.
+{%- endcomment -%}
+{%- if site.asset_version != blank -%}{{ site.asset_version }}{%- else -%}{{ site.time | date: '%s' }}{%- endif -%}

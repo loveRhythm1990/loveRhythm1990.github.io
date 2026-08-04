@@ -12,7 +12,7 @@
 const CACHE_NAMESPACE = 'main-'
 
 // Bump this string whenever precached assets (CSS/JS shell) change materially — drops stale SW caches.
-const CACHE = CACHE_NAMESPACE + 'precache-then-runtime-v2';
+const CACHE = CACHE_NAMESPACE + 'precache-then-runtime-v3';
 const PRECACHE_LIST = [
   "./",
   "./offline.html",
@@ -36,7 +36,10 @@ const HOSTNAME_WHITELIST = [
   "yanshuo.io",
   "cdnjs.cloudflare.com"
 ]
-const DEPRECATED_CACHES = ['precache-v1', 'runtime', 'main-precache-v1', 'main-runtime', 'main-precache-then-runtime']
+// v2 held assets fetched as `?v=` (an empty cache-busting token, see
+// _includes/asset-vars.html); those entries would keep matching and shadow the
+// real files, so the whole cache is dropped rather than left to age out.
+const DEPRECATED_CACHES = ['precache-v1', 'runtime', 'main-precache-v1', 'main-runtime', 'main-precache-then-runtime', 'main-precache-then-runtime-v2']
 
 
 // The Util Function to hack URLs of intercepted requests
