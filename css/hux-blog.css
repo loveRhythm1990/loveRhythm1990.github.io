@@ -1010,6 +1010,10 @@ samp {
     /* response on desktop */
   }
 }
+.intro-header.hero-band {
+  background-color: color-mix(in oklab, var(--hero, #0097b8), #1e2630 62%);
+  background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.06) 0%, transparent 28%), linear-gradient(to bottom, rgba(3, 10, 20, 0.52) 0%, rgba(3, 10, 20, 0.22) 55%, rgba(255, 255, 255, 0.08) 100%), radial-gradient(85% 130% at 88% 118%, color-mix(in oklab, var(--hero, #0097b8), #1e2630 72%) 0%, transparent 58%), linear-gradient(135deg, color-mix(in oklab, var(--hero, #0097b8), #1e2630 55%), color-mix(in oklab, var(--hero, #0097b8), #06121f 72%));
+}
 .intro-header.hero-compact {
   margin-bottom: 0;
 }

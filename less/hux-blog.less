@@ -538,6 +538,26 @@ samp {
   }
 
   // Posts carry .hero-band for the flat tag fill; .hero-compact holds the metrics.
+  // Tag hues from _config.yml are tuned for pills — on the slim hero band they
+  // glare against the white article below. Heavy mix toward slate keeps tag
+  // identity as a tint, not a neon block.
+  &.hero-band {
+    background-color: color-mix(in oklab, var(--hero, @intro-header-bg), #1e2630 62%);
+
+    background-image:
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.06) 0%, transparent 28%),
+      linear-gradient(to bottom, rgba(3, 10, 20, 0.52) 0%, rgba(3, 10, 20, 0.22) 55%, rgba(255, 255, 255, 0.08) 100%),
+      radial-gradient(
+        85% 130% at 88% 118%,
+        color-mix(in oklab, var(--hero, @intro-header-bg), #1e2630 72%) 0%,
+        transparent 58%
+      ),
+      linear-gradient(
+        135deg,
+        color-mix(in oklab, var(--hero, @intro-header-bg), #1e2630 55%),
+        color-mix(in oklab, var(--hero, @intro-header-bg), #06121f 72%)
+      );
+  }
 
   // Shared slim hero metrics for posts (with .hero-band) and photo pages.
   &.hero-compact {
