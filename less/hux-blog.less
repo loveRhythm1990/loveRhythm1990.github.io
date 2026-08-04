@@ -498,6 +498,19 @@ samp {
         }
       }
     }
+    .hero-tags .hero-tag {
+      color: color-mix(in srgb, var(--tag, @brand-primary) 88%, #0b1620);
+      background: color-mix(in srgb, var(--tag, @brand-primary) 13%, #fff);
+      border-color: color-mix(in srgb, var(--tag, @brand-primary) 28%, #dde3e7);
+      box-shadow: none;
+      text-shadow: none;
+      &:hover,
+      &:focus {
+        color: color-mix(in srgb, var(--tag, @brand-primary) 95%, #000);
+        background: color-mix(in srgb, var(--tag, @brand-primary) 20%, #fff);
+        border-color: color-mix(in srgb, var(--tag, @brand-primary) 40%, #cfd6da);
+      }
+    }
   }
   position: relative;
   // --hero is set inline by intro-header.html from the post's tag colour; it
@@ -583,6 +596,7 @@ samp {
       }
     }
     .post-heading .meta,
+    .post-heading .hero-tags,
     .site-heading .subheading,
     .page-heading .subheading {
       color: @white-faded;
@@ -597,18 +611,59 @@ samp {
         padding: (@hero-compact-pad-top - @hero-compact-post-lift) 0 (@hero-compact-pad-bottom + @hero-compact-post-lift);
       }
       display: flex;
+      flex-wrap: wrap;
       align-items: baseline;
+      gap: 6px 12px;
       h1 {
         // Bootstrap's 20px and the article's 30px both land here; the band's own
         // padding is the only vertical metric that should matter.
         margin-top: 0;
         margin-bottom: 0;
         flex: 0 1 auto;
+        min-width: 0;
         white-space: nowrap;
         font-size: 17px;
         line-height: 1.2;
         @media only screen and (min-width: 768px) {
           font-size: 24px;
+        }
+      }
+      .hero-tags {
+        .sans-serif;
+        flex: 0 1 auto;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px;
+        min-width: 0;
+      }
+      .hero-tag {
+        display: inline-block;
+        padding: 1px 10px;
+        border-radius: 999em;
+        font-size: 11px;
+        line-height: 18px;
+        font-weight: 500;
+        letter-spacing: 0.01em;
+        white-space: nowrap;
+        text-decoration: none;
+        color: rgba(255, 255, 255, 0.95);
+        background: color-mix(in srgb, var(--tag, @brand-primary) 38%, rgba(255, 255, 255, 0.08));
+        border: 1px solid color-mix(in srgb, var(--tag, @brand-primary) 52%, rgba(255, 255, 255, 0.28));
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+        transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+        &:hover,
+        &:focus {
+          color: #fff;
+          background: color-mix(in srgb, var(--tag, @brand-primary) 55%, rgba(255, 255, 255, 0.12));
+          border-color: color-mix(in srgb, var(--tag, @brand-primary) 68%, rgba(255, 255, 255, 0.42));
+          text-decoration: none;
+          outline: none;
+        }
+        @media only screen and (min-width: 768px) {
+          font-size: 12px;
+          line-height: 20px;
+          padding: 2px 11px;
         }
       }
       .meta {

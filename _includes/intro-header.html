@@ -54,17 +54,15 @@
             <div class="col-lg-2 col-lg-offset-0 visible-lg-block post-toc-side"></div>
             <div class="col-lg-9 col-lg-offset-0 col-md-10 col-md-offset-1 hero-col">
                 <div class="post-heading">
-                   <!-- <div class="tags">
-                        {% for tag in page.tags %}
-                        <a class="tag" href="{{ site.baseurl }}/archive/?tag={{ tag | url_encode }}" title="{{ tag }}">{{ tag }}</a>
-                        {% endfor %}
-                    </div>-->
                     <h1>{{ page.title }}</h1>
-                    {% comment %} always create a h2 for keeping the margin {% endcomment %}
-                   <!-- <h2 class="subheading">{{ page.subtitle }}</h2>-->
-                    <span class="meta">
-                      <time datetime="{{ page.date | date_to_xmlschema }}">{{ page.date | date: "%Y-%m-%d" }}</time>
-                    </span>
+                    {% if page.tags and page.tags.size > 0 %}
+                    <div class="hero-tags">
+                        {% for tag in page.tags %}
+                        {% assign _tag_color = site.tag-colors[tag] | default: '#8593a0' %}
+                        <a class="hero-tag" href="{{ site.baseurl }}/archive/?tag={{ tag | url_encode }}" title="{{ tag }}" style="--tag: {{ _tag_color }}">{{ tag }}</a>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
