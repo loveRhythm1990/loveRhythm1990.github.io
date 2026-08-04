@@ -229,25 +229,51 @@ pre.highlight {
   }
 }
 
-// Prose <p> carries 30px vertical margins, which collapse against code blocks
-// and leave too much air. Pull the block back to ~16px on both sides.
+// Spacing around code blocks, targeting a consistent ~16px.
+//
+// These margins must stay positive. Adjacent margins collapse to the *larger*
+// value, so 16px is a floor that holds up in tight contexts where the preceding
+// element contributes almost nothing — `li p` gives 5px, `blockquote p` and
+// `table` give 0. A negative margin instead subtracts from those and drags the
+// block on top of the text.
+@code-gap: 16px;
+
 .post-container {
   .highlighter-rouge {
-    margin-top: -14px;
-    margin-bottom: -14px;
+    margin-top: @code-gap;
+    margin-bottom: @code-gap;
   }
-  // Headings already sit tight (10px bottom margin) — no pull needed
-  h1 + .highlighter-rouge,
-  h2 + .highlighter-rouge,
-  h3 + .highlighter-rouge,
-  h4 + .highlighter-rouge,
-  h5 + .highlighter-rouge,
-  h6 + .highlighter-rouge {
-    margin-top: 0;
+
+  // Loose prose is the opposite problem: p has 30px and ul/ol 40px, which
+  // collapse to more air than we want. :has() is the only way to reach an
+  // element based on what follows it. Where unsupported, spacing simply falls
+  // back to the theme's roomier default — no overlap either way.
+  // hux-blog.js wraps every prose table in .table-responsive at runtime, so both
+  // the wrapper and the bare element are matched here.
+  p:has(+ .highlighter-rouge),
+  ul:has(+ .highlighter-rouge),
+  ol:has(+ .highlighter-rouge),
+  table:has(+ .highlighter-rouge),
+  .table-responsive:has(+ .highlighter-rouge) {
+    margin-bottom: @code-gap;
   }
-  // Consecutive code blocks need a real gap between them
-  .highlighter-rouge + .highlighter-rouge {
-    margin-top: 16px;
+
+  .highlighter-rouge + p,
+  .highlighter-rouge + ul,
+  .highlighter-rouge + ol,
+  .highlighter-rouge + table,
+  .highlighter-rouge + .table-responsive {
+    margin-top: @code-gap;
+  }
+
+  // Headings keep more breathing room so they read as section breaks
+  .highlighter-rouge + h1,
+  .highlighter-rouge + h2,
+  .highlighter-rouge + h3,
+  .highlighter-rouge + h4,
+  .highlighter-rouge + h5,
+  .highlighter-rouge + h6 {
+    margin-top: 24px;
   }
 }
 

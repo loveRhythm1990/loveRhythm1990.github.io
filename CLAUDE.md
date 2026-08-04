@@ -42,6 +42,39 @@ tags:
 ---
 ```
 
+### Table of Contents
+
+**Write nothing.** `_includes/post-toc.html` builds the TOC at build time and `_layouts/post.html`
+renders it above the content. No plugin, no JavaScript, no front matter.
+
+It scans the *rendered* HTML for `h2`..`h4`, reusing the ids that kramdown's `auto_ids` already
+emits, and outputs a flat list whose depth classes (`post-toc-d0/d1/d2`) are indented via CSS in
+`less/post-toc.less`. Depth is relative to the shallowest heading in the post, so a post starting
+at `###` gets a flush-left first level just like one starting at `##`.
+
+The TOC is skipped when any of these hold:
+
+| Condition | Rationale |
+|---|---|
+| Body contains `**目录**` or `**文章目录**` | the ~87 older posts hand-rolled their own |
+| Body contains a kramdown `{:toc}` (emits `id="markdown-toc"`) | avoids two TOCs |
+| Fewer than 3 headings in `h2`..`h4` | a TOC of one or two links is just noise |
+| `toc: false` in front matter | manual opt-out |
+| `multilingual: true` | content holds two languages, headings would interleave |
+
+Anchor slugs follow GitHub's rules, identical to what the old Markdown All in One plugin produced,
+so links in the hand-written TOCs of older posts remain valid:
+
+| Heading | Anchor |
+|---|---|
+| `#### 部署 metallb` | `#部署-metallb` |
+| `#### rke 可以直接移除两个 master 节点吗？` | `#rke-可以直接移除两个-master-节点吗` |
+
+To change the depth range, edit the `'2' or '3' or '4'` level tests in `_includes/post-toc.html`
+and add a matching `.post-toc-d3` rule. Note that kramdown's own `{:toc}` is *not* used here;
+`{:toc levels="..."}` does not work as an IAL — it leaks through as an HTML attribute — and the
+global `kramdown.toc_levels` option would only apply to `{:toc}`, not to this include.
+
 ## Architecture
 
 - `_config.yml` - Site configuration (title, SEO, analytics, sidebar, featured tags)

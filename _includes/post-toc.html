@@ -1,0 +1,84 @@
+{%- comment -%}
+Build-time table of contents for posts. No plugin, no JavaScript.
+
+Scans the *rendered* `content` for h2..h4 (kramdown emits the ids via auto_ids) and
+emits a flat list tagged with a relative depth class. Indentation lives in CSS —
+generating nested <ul> in Liquid needs bracket-matching that breaks on skipped
+levels (e.g. h2 straight to h4).
+
+Renders nothing when:
+  - the post already carries a hand-written TOC (the ~87 older posts), or
+  - `toc: false` is set in front matter, or
+  - there are fewer than `min_items` headings, where a TOC is just noise.
+{%- endcomment -%}
+
+{%- assign _min_items = 3 -%}
+
+{%- assign _skip = false -%}
+{%- if page.toc == false -%}{%- assign _skip = true -%}{%- endif -%}
+{%- if page.multilingual -%}{%- assign _skip = true -%}{%- endif -%}
+{%- if content contains '<strong>目录</strong>' -%}{%- assign _skip = true -%}{%- endif -%}
+{%- if content contains '<strong>文章目录</strong>' -%}{%- assign _skip = true -%}{%- endif -%}
+{%- if content contains 'id="markdown-toc"' -%}{%- assign _skip = true -%}{%- endif -%}
+
+{%- unless _skip -%}
+  {%- assign _chunks = content | split: '<h' -%}
+
+  {%- comment -%} Pass 1: count headings and find the shallowest level present. {%- endcomment -%}
+  {%- assign _count = 0 -%}
+  {%- assign _top_level = 9 -%}
+  {%- for _chunk in _chunks offset: 1 -%}
+    {%- assign _lvl = _chunk | slice: 0, 1 -%}
+    {%- if _lvl == '2' or _lvl == '3' or _lvl == '4' -%}
+      {%- assign _head = _chunk | split: '</h' | first -%}
+      {%- if _head contains 'id="' -%}
+        {%- assign _count = _count | plus: 1 -%}
+        {%- assign _lvl_num = _lvl | plus: 0 -%}
+        {%- if _lvl_num < _top_level -%}{%- assign _top_level = _lvl_num -%}{%- endif -%}
+      {%- endif -%}
+    {%- endif -%}
+  {%- endfor -%}
+
+  {%- if _count >= _min_items -%}
+    {%- comment -%} Pass 2: build the list. {%- endcomment -%}
+    {%- assign _items = '' -%}
+    {%- for _chunk in _chunks offset: 1 -%}
+      {%- assign _lvl = _chunk | slice: 0, 1 -%}
+      {%- if _lvl == '2' or _lvl == '3' or _lvl == '4' -%}
+        {%- assign _head = _chunk | split: '</h' | first -%}
+        {%- if _head contains 'id="' -%}
+          {%- comment -%} Index 1, not `last`: the heading's own id is the first one. {%- endcomment -%}
+          {%- assign _id_parts = _head | split: 'id="' -%}
+          {%- assign _id = _id_parts[1] | split: '"' | first -%}
+
+          {%- comment -%}
+            Strip the leading `N id="...">` so headings containing inline markup or
+            links keep their full text. `remove_first` returns the string unchanged
+            when it does not match, which is the only reliable signal that the
+            heading carries extra attributes and needs the cruder split.
+          {%- endcomment -%}
+          {%- capture _prefix -%}{{ _lvl }} id="{{ _id }}">{%- endcapture -%}
+          {%- assign _text = _head | remove_first: _prefix -%}
+          {%- if _text == _head -%}
+            {%- assign _text = _head | split: '">' | last -%}
+          {%- endif -%}
+          {%- assign _text = _text | strip_html | strip -%}
+
+          {%- if _id != '' and _text != '' -%}
+            {%- assign _depth = _lvl | plus: 0 | minus: _top_level -%}
+            {%- capture _items -%}
+              {{ _items }}<li class="post-toc-d{{ _depth }}"><a href="#{{ _id }}">{{ _text }}</a></li>
+            {%- endcapture -%}
+          {%- endif -%}
+        {%- endif -%}
+      {%- endif -%}
+    {%- endfor -%}
+
+    {%- if _items != '' -%}
+<nav class="post-toc" aria-label="目录">
+  <p class="post-toc-title">目录</p>
+  <ul class="post-toc-list">{{ _items }}</ul>
+</nav>
+    {%- endif -%}
+  {%- endif -%}
+{%- endunless -%}
