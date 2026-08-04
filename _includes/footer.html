@@ -41,6 +41,7 @@
      is not part of the Grunt uglify pipeline, so a stale .min would go unnoticed. -->
 {% if page.layout == 'post' %}
 <script src="{{ "/js/post-toc.js" | prepend: site.baseurl }}?v={{ asset_v }}"></script>
+<script src="{{ "/js/post-lightbox.js" | prepend: site.baseurl }}?v={{ asset_v }}"></script>
 {% endif %}
 
 <!-- Service Worker -->

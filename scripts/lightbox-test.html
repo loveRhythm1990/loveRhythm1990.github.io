@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>lightbox-test-pending</title>
+  <link rel="stylesheet" href="../css/hux-blog.css">
+</head>
+<body>
+  <div class="post-container">
+    <p><img src="../pics/son_1.jpg" alt="sample" width="320"></p>
+    <img width="0" height="0" src="data:," alt="track" id="zero-img">
+    <p><a href="https://example.com"><img src="../pics/B-tree.svg" alt="linked" width="120"></a></p>
+  </div>
+  <script src="../js/post-lightbox.js"></script>
+  <script>
+    (function () {
+      var failures = [];
+
+      function assert(name, ok) {
+        if (!ok) failures.push(name);
+      }
+
+      function click(el) {
+        el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+      }
+
+      function run() {
+        var overlay = document.querySelector('.post-lightbox');
+        var full = document.querySelector('.post-lightbox-img');
+        var sample = document.querySelector('.post-container img[width="320"]');
+        var zero = document.getElementById('zero-img');
+        var linked = document.querySelector('.post-container a img');
+
+        assert('overlay created', !!overlay && !!full);
+        assert('initially hidden', overlay.hidden === true);
+
+        click(sample);
+        assert('opens on image click', overlay.hidden === false);
+        assert('locks body scroll', document.body.classList.contains('post-lightbox-open'));
+        assert('uses image src', full.src.indexOf('son_1.jpg') !== -1);
+
+        click(zero);
+        assert('skips zero-size tracking pixel', overlay.hidden === false);
+
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        assert('closes on Escape', overlay.hidden === true);
+        assert('restores body scroll', !document.body.classList.contains('post-lightbox-open'));
+
+        click(linked);
+        assert('opens linked image instead of navigating', overlay.hidden === false);
+        assert('linked image src', full.src.indexOf('B-tree.svg') !== -1);
+
+        click(document.querySelector('.post-lightbox-close'));
+        assert('closes on close button', overlay.hidden === true);
+
+        click(sample);
+        click(overlay);
+        assert('closes on backdrop click', overlay.hidden === true);
+
+        document.title = failures.length ? ('FAIL:' + failures.join(',')) : 'PASS';
+      }
+
+      setTimeout(run, 0);
+    })();
+  </script>
+</body>
+</html>
