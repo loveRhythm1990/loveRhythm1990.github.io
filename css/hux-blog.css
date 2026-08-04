@@ -1016,6 +1016,9 @@ samp {
     margin-bottom: 8px;
   }
 }
+.intro-header.hero-compact:not(.hero-band) {
+  background-position: center bottom;
+}
 .intro-header.hero-compact .site-heading,
 .intro-header.hero-compact .post-heading,
 .intro-header.hero-compact .page-heading,
@@ -1948,27 +1951,23 @@ img::-moz-selection {
 #tag_cloud a.tag-button,
 #tag_cloud a.tag-button--all {
   color: #404040;
-  background: #f1f3f5;
-  font-weight: 600;
+  font-weight: normal;
 }
 #tag_cloud a.tag-button > sup,
 #tag_cloud a.tag-button--all > sup {
-  font-weight: 600;
+  font-weight: normal;
   color: inherit;
   opacity: 0.65;
 }
 #tag_cloud a.tag-button:hover,
-#tag_cloud a.tag-button--all:hover {
+#tag_cloud a.tag-button--all:hover,
+#tag_cloud a.tag-button:active,
+#tag_cloud a.tag-button--all:active {
   color: #0085a1;
-  background: #e9eef2;
 }
 #tag_cloud a.tag-button.focus,
 #tag_cloud a.tag-button--all.focus {
   color: #0085a1 !important;
-  background-color: #e4e4e4 !important;
-}
-#tag_cloud a.tag-button--all {
-  font-weight: 700;
 }
 html {
   -webkit-text-size-adjust: 100%;

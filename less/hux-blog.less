@@ -546,6 +546,12 @@ samp {
       margin-bottom: 8px;
     }
 
+    // Photo pages (Home / Archive / About): cover fills the slim band but keeps
+    // the bottom of the image visible — center/center was cropping the foot.
+    &:not(.hero-band) {
+      background-position: center bottom;
+    }
+
     .site-heading,
     .post-heading,
     .page-heading,
