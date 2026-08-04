@@ -1008,6 +1008,62 @@ samp {
     /* response on desktop */
   }
 }
+.intro-header.hero-band {
+  background-color: white;
+  background-image: linear-gradient(to bottom, rgba(3, 10, 20, 0.28) 0, rgba(3, 10, 20, 0.28) 56px, rgba(3, 10, 20, 0) 56px), linear-gradient(to bottom, var(--hero, #0097b8) 0, var(--hero, #0097b8) 56px, #ffffff 56px, #ffffff 100%);
+  margin-bottom: 0;
+}
+@media only screen and (min-width: 768px) {
+  .intro-header.hero-band {
+    background-image: linear-gradient(to bottom, rgba(3, 10, 20, 0.28) 0, rgba(3, 10, 20, 0.28) 58px, rgba(3, 10, 20, 0) 58px), linear-gradient(to bottom, var(--hero, #0097b8) 0, var(--hero, #0097b8) 58px, #ffffff 58px, #ffffff 100%);
+    margin-bottom: 6px;
+  }
+}
+.intro-header.hero-band .site-heading,
+.intro-header.hero-band .post-heading,
+.intro-header.hero-band .page-heading {
+  padding: 68px 0 8px;
+  color: #404040;
+  text-shadow: none;
+}
+@media only screen and (min-width: 768px) {
+  .intro-header.hero-band .site-heading,
+  .intro-header.hero-band .post-heading,
+  .intro-header.hero-band .page-heading {
+    padding: 76px 0 10px;
+  }
+}
+.intro-header.hero-band .post-heading .meta,
+.intro-header.hero-band .site-heading .subheading,
+.intro-header.hero-band .page-heading .subheading {
+  color: #737373;
+}
+.intro-header.hero-band .post-heading .meta {
+  /* Hux learn from
+     *     TypeIsBeautiful,
+     *     [This Post](http://zhuanlan.zhihu.com/ibuick/20186806) etc.
+     */
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Arial", "PingFang SC", "Hiragino Sans GB", "STHeiti", "Microsoft YaHei", "Microsoft JhengHei", "Source Han Sans SC", "Noto Sans CJK SC", "Source Han Sans CN", "Noto Sans SC", "Source Han Sans TC", "Noto Sans CJK TC", "WenQuanYi Micro Hei", SimSun, sans-serif;
+  line-height: 1.7;
+  font-style: normal;
+  font-size: 14px;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.intro-header.hero-band .post-heading .meta a {
+  color: inherit;
+}
+.intro-header.hero-band .tags a,
+.intro-header.hero-band .tags .tag {
+  border-color: #404040;
+  color: #404040;
+}
+.intro-header.hero-band .tags a:hover,
+.intro-header.hero-band .tags .tag:hover,
+.intro-header.hero-band .tags a:active,
+.intro-header.hero-band .tags .tag:active {
+  background-color: rgba(0, 0, 0, 0.05);
+}
 .intro-header .site-heading,
 .intro-header .post-heading,
 .intro-header .page-heading {

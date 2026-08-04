@@ -138,6 +138,24 @@ the same in both places. The template passes the colour in as an inline `--tag` 
 `jquery.tagcloud.js` is deliberately no longer loaded — it tinted each tag inline by post count, and an
 inline colour cannot be overridden from a stylesheet. The file remains in `js/` but is unreferenced.
 
+## Post header (hero)
+
+Flat-colour headers carry their colour only in a band at the top — 58px on desktop, 56px below 768px —
+and put the title on the page's white background. A full-bleed block of one saturated colour was far too
+heavy above what is a single line of text, since `intro-header.html` keeps the subtitle commented out.
+`intro-header.html` tags these headers `.hero-band`; photo headers (About, Archive, 404, and the home
+page, which all set `header-img`) do not get the class and keep their full bleed. All 158 posts are
+flat-colour, so in practice the band is the post header.
+
+The band height must stay at or above the navbar's 56px — the navbar is `position: absolute` over the
+header with white text, so any of it that overhangs the band lands on white and disappears. Both heights
+live in `less/variables.less` as `@hero-band-height{,-sm}` and drive the heading's top padding, so they
+only need changing in one place.
+
+The band's scrim is a flat 28% rather than a fade because the navbar's links are 12px and sit at
+y=20..40px: a fade starting at 0.30 is down to ~0.19 there, which leaves the lightest tag colours
+(Golang `#00ACD7` is 2.7:1 against white unaided) under 4.5:1.
+
 ## Architecture
 
 - `_config.yml` - Site configuration (title, SEO, analytics, sidebar, featured tags)

@@ -473,6 +473,27 @@ samp {
 
 // Header
 
+// The colour band of .hero-band headers. The scrim is flat rather than a fade
+// because the navbar's 12px links sit at y=20..40px: a fade that starts at 0.30
+// is already down to ~0.19 there, which drops the lightest tag colours (Golang
+// #00ACD7 is only 2.7:1 against white on its own) below 4.5:1.
+.hero-band-bg(@h) {
+  background-image:
+    linear-gradient(
+      to bottom,
+      rgba(3, 10, 20, 0.28) 0,
+      rgba(3, 10, 20, 0.28) @h,
+      rgba(3, 10, 20, 0) @h
+    ),
+    linear-gradient(
+      to bottom,
+      var(--hero, @intro-header-bg) 0,
+      var(--hero, @intro-header-bg) @h,
+      white @h,
+      white 100%
+    );
+}
+
 .intro-header {
   &.style-text {
     background: none;
@@ -536,6 +557,63 @@ samp {
   @media only screen and (min-width: 768px) {
     margin-bottom: 20px; /* response on desktop */
   }
+
+  // Flat-colour headers keep the colour as a narrow band at the top — just tall
+  // enough to carry the overlaying navbar's white text — and drop the title onto
+  // the page's white background. A full-bleed block of one saturated colour read
+  // as far too heavy above a single line of title. Photo headers (About, Archive,
+  // 404) are untouched: they have no .hero-band class.
+  &.hero-band {
+    background-color: white;
+    .hero-band-bg(@hero-band-height-sm);
+    margin-bottom: 0;
+    @media only screen and (min-width: 768px) {
+      .hero-band-bg(@hero-band-height);
+      margin-bottom: 6px;
+    }
+
+    .site-heading,
+    .post-heading,
+    .page-heading {
+      // Top padding clears the band, so the title always lands on white
+      padding: (@hero-band-height-sm + 12px) 0 8px;
+      color: @gray-dark;
+      text-shadow: none;
+      @media only screen and (min-width: 768px) {
+        padding: (@hero-band-height + 18px) 0 10px;
+      }
+    }
+    .post-heading .meta,
+    .site-heading .subheading,
+    .page-heading .subheading {
+      // 4.7:1 on white — one step lighter fails AA for 16px text
+      color: lighten(@gray-dark, 20%);
+    }
+    .post-heading .meta {
+      // The theme's italic serif meta was meant to sit on a photo; as a bare
+      // date under the title it reads better upright, with aligned digits.
+      .sans-serif;
+      font-style: normal;
+      font-size: 14px;
+      letter-spacing: 0.02em;
+      font-variant-numeric: tabular-nums;
+      a {
+        color: inherit;
+      }
+    }
+    .tags {
+      a,
+      .tag {
+        border-color: @gray-dark;
+        color: @gray-dark;
+        &:hover,
+        &:active {
+          background-color: rgba(0, 0, 0, 0.05);
+        }
+      }
+    }
+  }
+
   .site-heading,
   .post-heading,
   .page-heading {
