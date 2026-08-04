@@ -1046,7 +1046,7 @@ samp {
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.22);
 }
 .intro-header.hero-compact .post-heading {
-  padding: 44px 0 6px;
+  padding: 42px 0 8px;
   color: white;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
   display: flex;
@@ -1054,7 +1054,7 @@ samp {
 }
 @media only screen and (min-width: 768px) {
   .intro-header.hero-compact .post-heading {
-    padding: 44px 0 6px;
+    padding: 42px 0 8px;
   }
 }
 .intro-header.hero-compact .post-heading h1 {
@@ -2119,8 +2119,8 @@ body {
     margin-bottom: 4px;
   }
   .intro-header.hero-compact .post-heading {
-    padding-top: 44px;
-    padding-bottom: 6px;
+    padding-top: 42px;
+    padding-bottom: 8px;
   }
   .intro-header.hero-compact .site-heading,
   .intro-header.hero-compact #tag-heading {
