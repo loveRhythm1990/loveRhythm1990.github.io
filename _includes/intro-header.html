@@ -21,9 +21,8 @@
     in, as --hero. That keeps the layering in one place instead of duplicated
     across the three header types below.
 
-    hero-band marks the headers whose background is a flat colour rather than a
-    photo: those get the narrow colour band (see .intro-header.hero-band), which
-    would wreck a photo header.
+    hero-band marks flat-colour post headers: the title and date stay on the
+    tinted hero with compact padding, rather than being dropped onto page white.
 {% endcomment %}
 {% if include.type == 'post' %}
 {% if page.header-mask %}

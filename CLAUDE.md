@@ -140,31 +140,21 @@ inline colour cannot be overridden from a stylesheet. The file remains in `js/` 
 
 ## Post header (hero)
 
-Flat-colour headers carry their colour only in a band at the top — 58px on desktop, 56px below 768px —
-and put the title on the page's white background. A full-bleed block of one saturated colour was far too
-heavy above what is a single line of text, since `intro-header.html` keeps the subtitle commented out.
-`intro-header.html` tags these headers `.hero-band`; photo headers (About, Archive, 404, and the home
-page, which all set `header-img`) do not get the class and keep their full bleed. All 158 posts are
-flat-colour, so in practice the band is the post header.
+Flat-colour post headers (`.hero-band`) keep the title and date on the tinted
+hero — not on the page white — with tight vertical padding so the block reads as
+a slim bar rather than a full-bleed slab. Photo headers (About, Archive, 404,
+home) have no `.hero-band` class and keep their full bleed.
 
-The band height must stay at or above the navbar's 56px — the navbar is `position: absolute` over the
-header with white text, so any of it that overhangs the band lands on white and disappears. Both heights
-live in `less/variables.less` as `@hero-band-height{,-sm}` and drive the heading's top padding, so they
-only need changing in one place.
+The date shares the title's line — `.post-heading` is a baseline-aligned flex row.
+The title is `flex: 0 1 auto; min-width: 0` so it wraps on narrow screens instead
+of pushing the date off-screen; it must not grow or the date drifts to the column's
+right edge, which lines up with nothing (header is `col-lg-8`, article `col-lg-9`).
 
-The band's scrim is a flat 28% rather than a fade because the navbar's links are 12px and sit at
-y=20..40px: a fade starting at 0.30 is down to ~0.19 there, which leaves the lightest tag colours
-(Golang `#00ACD7` is 2.7:1 against white unaided) under 4.5:1.
+Padding lives in `less/variables.less` as `@hero-compact-pad-*`. Top must clear
+the overlaying navbar (~56px). `less/responsive.less` adds mobile overrides.
 
-The date shares the title's line — `.post-heading` is a baseline-aligned flex row — because a second
-line was most of what was left of the header's height. The title is `flex: 0 1 auto; min-width: 0`:
-it must not grow, or it stretches to the full column and pushes the date out to a right edge that
-lines up with nothing (the header column is `col-lg-8`, the article `col-lg-9`), and it needs
-`min-width: 0` so a long title wraps instead of overflowing a narrow screen.
-
-Note when screenshotting this: headless Chrome clamps `--window-size` to a 500px minimum width, so a
-`390` request silently lays out at 500 and then crops, which makes the date look like it has vanished.
-Load the page in a 390px-wide `<iframe>` instead to get a real narrow layout.
+Note when screenshotting: headless Chrome clamps `--window-size` to a 500px minimum
+width; use a 390px-wide `<iframe>` for real narrow layouts.
 
 ## Architecture
 

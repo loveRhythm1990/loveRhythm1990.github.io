@@ -473,27 +473,6 @@ samp {
 
 // Header
 
-// The colour band of .hero-band headers. The scrim is flat rather than a fade
-// because the navbar's 12px links sit at y=20..40px: a fade that starts at 0.30
-// is already down to ~0.19 there, which drops the lightest tag colours (Golang
-// #00ACD7 is only 2.7:1 against white on its own) below 4.5:1.
-.hero-band-bg(@h) {
-  background-image:
-    linear-gradient(
-      to bottom,
-      rgba(3, 10, 20, 0.28) 0,
-      rgba(3, 10, 20, 0.28) @h,
-      rgba(3, 10, 20, 0) @h
-    ),
-    linear-gradient(
-      to bottom,
-      var(--hero, @intro-header-bg) 0,
-      var(--hero, @intro-header-bg) @h,
-      white @h,
-      white 100%
-    );
-}
-
 .intro-header {
   &.style-text {
     background: none;
@@ -558,76 +537,49 @@ samp {
     margin-bottom: 20px; /* response on desktop */
   }
 
-  // Flat-colour headers keep the colour as a narrow band at the top — just tall
-  // enough to carry the overlaying navbar's white text — and drop the title onto
-  // the page's white background. A full-bleed block of one saturated colour read
-  // as far too heavy above a single line of title. Photo headers (About, Archive,
-  // 404) are untouched: they have no .hero-band class.
+  // Flat-colour post headers: title and date stay on the tinted hero (not dropped
+  // onto the page white), with tight vertical padding so the block reads as a
+  // slim bar rather than a full-bleed slab. Photo headers have no .hero-band.
   &.hero-band {
-    background-color: white;
-    .hero-band-bg(@hero-band-height-sm);
     margin-bottom: 0;
     @media only screen and (min-width: 768px) {
-      .hero-band-bg(@hero-band-height);
-      margin-bottom: 6px;
+      margin-bottom: 12px;
     }
 
     .site-heading,
     .post-heading,
     .page-heading {
-      // Top padding clears the band, so the title always lands on white
-      padding: (@hero-band-height-sm + 12px) 0 8px;
-      color: @gray-dark;
-      text-shadow: none;
+      padding: (@hero-compact-pad-top-sm + 4px) 0 @hero-compact-pad-bottom-sm;
+      color: white;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
       @media only screen and (min-width: 768px) {
-        padding: (@hero-band-height + 18px) 0 10px;
+        padding: (@hero-compact-pad-top + 6px) 0 @hero-compact-pad-bottom;
       }
     }
     .post-heading .meta,
     .site-heading .subheading,
     .page-heading .subheading {
-      // 4.7:1 on white — one step lighter fails AA for 16px text
-      color: lighten(@gray-dark, 20%);
+      color: @white-faded;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.22);
     }
     .post-heading {
-      // The date shares the title's line, on its baseline. On its own line it
-      // was costing the header a whole row of height for one short string.
-      // It trails the title rather than being pushed to the column's right edge:
-      // the header column is col-lg-8 while the article is col-lg-9, so that edge
-      // lines up with nothing and a date parked there just looks adrift.
       display: flex;
       align-items: baseline;
       h1 {
         margin-bottom: 0;
-        // Shrink but never grow: growing would stretch the title box to the full
-        // column and push the date back out to that unanchored right edge.
-        // min-width:0 is what lets a long title wrap rather than overflow.
         flex: 0 1 auto;
         min-width: 0;
       }
       .meta {
-        // The theme's italic serif meta was meant to sit on a photo; next to the
-        // title it reads better upright, with aligned digits.
         .sans-serif;
         flex: none;
-        margin-left: 20px;
+        margin-left: 16px;
         font-style: normal;
-        font-size: 14px;
+        font-size: 13px;
         letter-spacing: 0.02em;
         font-variant-numeric: tabular-nums;
         a {
           color: inherit;
-        }
-      }
-    }
-    .tags {
-      a,
-      .tag {
-        border-color: @gray-dark;
-        color: @gray-dark;
-        &:hover,
-        &:active {
-          background-color: rgba(0, 0, 0, 0.05);
         }
       }
     }

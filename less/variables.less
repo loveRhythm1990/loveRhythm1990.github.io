@@ -12,7 +12,9 @@
 // and its glow are derived from it in hux-blog.less.
 @intro-header-bg: #0097b8;
 
-// Height of the colour band on flat-colour headers. Must stay >= the navbar's
-// 56px so its white text never lands on the white part of the header.
-@hero-band-height: 58px;
-@hero-band-height-sm: 56px;
+// Compact flat-colour post hero. Top padding clears the overlaying navbar (56px);
+// bottom padding is kept small so the coloured block does not read as a tall slab.
+@hero-compact-pad-top: 56px;
+@hero-compact-pad-top-sm: 52px;
+@hero-compact-pad-bottom: 10px;
+@hero-compact-pad-bottom-sm: 8px;
