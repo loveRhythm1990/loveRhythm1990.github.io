@@ -120,7 +120,12 @@
     display: none;
   }
 
+  // Fixed rail column — not col-lg-2's 16.67%, which over-allocates ~45px at 1170px.
   .post-toc-side {
+    flex: 0 0 @toc-rail-width !important;
+    width: @toc-rail-width !important;
+    max-width: @toc-rail-width;
+
     .post-toc {
       position: sticky;
       top: var(--toc-rail-top, @toc-rail-top);
@@ -219,19 +224,14 @@
 }
 
 // Wide screens: park the rail in the viewport's left margin instead of in the
-// col-lg-2 column where it sat flush against the article. The article keeps the
-// same horizontal start (offset-2) so it still lines up with the post title.
+// sticky column. The column collapses to zero width; article/hero centre via
+// margin auto (typography.less).
 @media (min-width: @toc-viewport-pin) {
   .post-toc-side {
     flex: 0 0 0 !important;
     width: 0 !important;
     padding: 0;
     overflow: visible;
-  }
-
-  .post-row > .post-container.col-lg-9,
-  .post-row > .hero-col.col-lg-9 {
-    margin-left: 16.66666667%;
   }
 
   .post-toc-side .post-toc {

@@ -52,10 +52,20 @@
   padding-right: 0;
 }
 
-// Home, About, Archive: no TOC rail — centre the content column. Posts keep
-// col-lg-2 + margin-left for the sticky / fixed TOC; these pages were still
-// carrying the empty spacer, which pushed the grid left between 1200–1369px and
-// again at 1370px+ via post-toc.less's offset rule.
+// Posts: 150px TOC column + 80% article/hero centred in the remaining space
+// (1200–1369px sticky rail) or in the full container (>=1370px fixed gutter rail).
+@media (min-width: 1200px) {
+  .post-row:not(.page-row--centered) {
+    > .post-container.col-lg-9,
+    > .hero-col.col-lg-9 {
+      flex: 0 0 80%;
+      margin-left: auto;
+      margin-right: auto;
+    }
+  }
+}
+
+// Home, About, Archive: no TOC rail — centre the content column in the row.
 @media (min-width: 1200px) {
   .post-row.page-row--centered {
     justify-content: center;
@@ -63,18 +73,10 @@
     > .hero-col,
     > .postlist-container.hero-col {
       margin-left: 0 !important;
+      margin-right: 0 !important;
       flex: 0 0 80%;
       width: 80%;
       max-width: 80%;
-    }
-  }
-}
-
-@media (min-width: 1370px) {
-  .post-row.page-row--centered {
-    > .hero-col.col-lg-9,
-    > .postlist-container.hero-col.col-lg-9 {
-      margin-left: 0 !important;
     }
   }
 }
