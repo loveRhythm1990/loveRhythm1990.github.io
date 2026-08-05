@@ -576,10 +576,19 @@ h4 {
 }
 a {
   color: #404040;
+  -webkit-tap-highlight-color: transparent;
 }
 a:hover,
 a:focus {
   color: #0085a1;
+}
+a:focus,
+a:active {
+  outline: none;
+}
+a:focus-visible {
+  outline: 2px solid rgba(0, 133, 161, 0.5);
+  outline-offset: 2px;
 }
 a img:hover,
 a img:focus {
