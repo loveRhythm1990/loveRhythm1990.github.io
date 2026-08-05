@@ -651,7 +651,7 @@ samp {
       }
       display: flex;
       flex-wrap: wrap;
-      align-items: baseline;
+      align-items: stretch;
       gap: 6px 12px;
       h1 {
         // Bootstrap's 20px and the article's 30px both land here; the band's own
@@ -669,19 +669,23 @@ samp {
       }
       .hero-tags {
         .sans-serif;
+        // 1.7 from .sans-serif skews the tag row against the title line box.
+        line-height: 1;
         flex: 0 1 auto;
         display: flex;
         flex-wrap: wrap;
-        align-items: center;
+        align-items: stretch;
         gap: 6px;
         min-width: 0;
       }
       .hero-tag {
-        display: inline-block;
-        padding: 1px 10px;
+        display: inline-flex;
+        align-items: center;
+        align-self: stretch;
+        padding: 0 10px;
         border-radius: 999em;
         font-size: 11px;
-        line-height: 18px;
+        line-height: 1;
         font-weight: 500;
         letter-spacing: 0.01em;
         white-space: nowrap;
@@ -701,8 +705,7 @@ samp {
         }
         @media only screen and (min-width: 768px) {
           font-size: 12px;
-          line-height: 20px;
-          padding: 2px 11px;
+          padding: 0 11px;
         }
       }
       .meta {
