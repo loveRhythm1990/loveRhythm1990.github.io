@@ -1099,7 +1099,7 @@ samp {
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
   display: flex;
   flex-wrap: wrap;
-  align-items: stretch;
+  align-items: center;
   gap: 6px 12px;
 }
 @media only screen and (min-width: 768px) {
@@ -1114,7 +1114,7 @@ samp {
   min-width: 0;
   white-space: nowrap;
   font-size: 17px;
-  line-height: 1.2;
+  line-height: calc(1.2em + 10px);
 }
 @media only screen and (min-width: 768px) {
   .intro-header.hero-compact .post-heading h1 {
@@ -1132,18 +1132,16 @@ samp {
   flex: 0 1 auto;
   display: flex;
   flex-wrap: wrap;
-  align-items: stretch;
+  align-items: center;
   gap: 6px;
   min-width: 0;
 }
 .intro-header.hero-compact .post-heading .hero-tag {
-  display: inline-flex;
-  align-items: center;
-  align-self: stretch;
-  padding: 0 10px;
+  display: inline-block;
+  padding: 1px 10px;
   border-radius: 999em;
   font-size: 11px;
-  line-height: 1;
+  line-height: 18px;
   font-weight: 500;
   letter-spacing: 0.01em;
   white-space: nowrap;
@@ -1165,7 +1163,8 @@ samp {
 @media only screen and (min-width: 768px) {
   .intro-header.hero-compact .post-heading .hero-tag {
     font-size: 12px;
-    padding: 0 11px;
+    line-height: 20px;
+    padding: 2px 11px;
   }
 }
 .intro-header.hero-compact .post-heading .meta {
@@ -2420,7 +2419,7 @@ body {
   }
   .intro-header.hero-compact .post-heading h1 {
     margin-bottom: 0;
-    line-height: 1.2;
+    line-height: calc(1.2em + 10px);
   }
   .intro-header.hero-compact .site-heading h1,
   .intro-header.hero-compact #tag-heading h1 {
@@ -2432,7 +2431,8 @@ body {
   }
   .intro-header.hero-compact .post-heading .hero-tag {
     font-size: 10px;
-    padding: 0 8px;
+    line-height: 16px;
+    padding: 1px 8px;
   }
   .intro-header.hero-compact .post-heading .meta {
     font-size: 12px;
