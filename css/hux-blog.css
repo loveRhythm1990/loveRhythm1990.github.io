@@ -2392,6 +2392,29 @@ body {
 .postlist-container .highlighter-rouge {
   max-width: 100%;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.post-container .highlighter-rouge::-webkit-scrollbar,
+.postlist-container .highlighter-rouge::-webkit-scrollbar {
+  height: 0;
+}
+.post-container .highlighter-rouge:hover,
+.postlist-container .highlighter-rouge:hover {
+  scrollbar-width: thin;
+}
+.post-container .highlighter-rouge:hover::-webkit-scrollbar,
+.postlist-container .highlighter-rouge:hover::-webkit-scrollbar {
+  height: 6px;
+}
+.post-container .highlighter-rouge:hover::-webkit-scrollbar-thumb,
+.postlist-container .highlighter-rouge:hover::-webkit-scrollbar-thumb {
+  background: rgba(15, 23, 42, 0.22);
+  border-radius: 3px;
+}
+.post-container .highlighter-rouge:hover::-webkit-scrollbar-thumb:hover,
+.postlist-container .highlighter-rouge:hover::-webkit-scrollbar-thumb:hover {
+  background: rgba(15, 23, 42, 0.35);
 }
 .post-container .table-responsive,
 .postlist-container .table-responsive {
