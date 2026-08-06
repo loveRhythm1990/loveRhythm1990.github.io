@@ -193,6 +193,9 @@ pre.highlight {
     margin: 0;
     padding: 0;
     word-wrap: normal; // Safari Bug
+    // Bootstrap sets `pre { overflow: auto }`, which puts the scrollbar on this
+    // node instead of the outer .highlighter-rouge shell — scroll there instead.
+    overflow: visible;
   }
   .rouge-table {
     .rouge-gutter, .rouge-code {

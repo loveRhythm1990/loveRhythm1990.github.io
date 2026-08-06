@@ -16,15 +16,20 @@
 // Hide horizontal scrollbar until hover; overflow stays scrollable (wheel/trackpad).
 .scrollbar-x-on-hover() {
 	scrollbar-width: none;
+	-ms-overflow-style: none;
 
 	&::-webkit-scrollbar {
+		display: none;
+		width: 0;
 		height: 0;
 	}
 
-	&:hover {
+	&:hover,
+	&:focus-within {
 		scrollbar-width: thin;
 
 		&::-webkit-scrollbar {
+			display: block;
 			height: 6px;
 		}
 

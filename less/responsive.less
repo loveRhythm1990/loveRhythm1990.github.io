@@ -66,6 +66,13 @@ body {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   .scrollbar-x-on-hover();
+
+  // hux-blog.js wraps rouge line-number tables the same way as prose tables.
+  .table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    .scrollbar-x-on-hover();
+  }
 }
 
 // hux-blog.js wraps every table in .table-responsive on ready, but Bootstrap only
