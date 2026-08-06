@@ -13,29 +13,33 @@
     -o-background-size: cover;
 }
 
-// Hide horizontal scrollbar until hover; overflow stays scrollable (wheel/trackpad).
+// Horizontal scrollbar: thumb hidden until hover, but the 6px lane stays so
+// showing the bar does not change block height and shift the text below.
+@code-scrollbar-size: 6px;
+
 .scrollbar-x-on-hover() {
-	scrollbar-width: none;
-	-ms-overflow-style: none;
+	scrollbar-width: thin;
+	scrollbar-color: transparent transparent;
 
 	&::-webkit-scrollbar {
-		display: none;
-		width: 0;
-		height: 0;
+		height: @code-scrollbar-size;
+	}
+
+	&::-webkit-scrollbar-track {
+		background: transparent;
+	}
+
+	&::-webkit-scrollbar-thumb {
+		background: transparent;
+		border-radius: 3px;
 	}
 
 	&:hover,
 	&:focus-within {
-		scrollbar-width: thin;
-
-		&::-webkit-scrollbar {
-			display: block;
-			height: 6px;
-		}
+		scrollbar-color: rgba(15, 23, 42, 0.22) transparent;
 
 		&::-webkit-scrollbar-thumb {
 			background: rgba(15, 23, 42, 0.22);
-			border-radius: 3px;
 		}
 
 		&::-webkit-scrollbar-thumb:hover {

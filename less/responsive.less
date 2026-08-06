@@ -63,15 +63,19 @@ body {
 .post-container .highlighter-rouge,
 .postlist-container .highlighter-rouge {
   max-width: 100%;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  .scrollbar-x-on-hover();
 
-  // hux-blog.js wraps rouge line-number tables the same way as prose tables.
-  .table-responsive {
+  // Scroll inside the bordered .highlight so the horizontal bar does not add
+  // block height between the code box outline and the prose below it.
+  .highlight {
+    max-width: 100%;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     .scrollbar-x-on-hover();
+  }
+
+  // hux-blog.js wraps rouge line-number tables the same way as prose tables.
+  .highlight .table-responsive {
+    overflow-x: visible;
   }
 }
 

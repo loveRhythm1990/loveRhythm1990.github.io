@@ -71,6 +71,7 @@
 
     function update() {
         queued = false;
+        placeRail();
         var next = activeEntry();
         if (next === current) return;
         if (current) current.item.classList.remove('active');
