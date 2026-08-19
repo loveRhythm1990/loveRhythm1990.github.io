@@ -8,6 +8,8 @@ tags:
     - K8s生态
 ---
 
+本文最后验证于 **2026-08-20**；安装示例中的 Knative Serving、Kourier、kind 与 Kubernetes 版本应替换为实际验证过的版本。
+
 ## 一、为什么需要 Kubernetes Serverless
 
 Kubernetes 擅长编排容器，但「按请求伸缩、空闲缩到零、修订版流量切分」并不是开箱能力。典型对比：
@@ -15,18 +17,18 @@ Kubernetes 擅长编排容器，但「按请求伸缩、空闲缩到零、修订
 | 诉求 | 原生 K8s（Deployment + Service + HPA + Ingress） | Knative Serving |
 |------|--------------------------------------------------|-----------------|
 | 声明工作负载 | Deployment + Service + Ingress 多份 YAML | 一个 `Service` CR |
-| 空闲缩到 0 | 默认不行；`minReplicas=0` 也需额外方案且难保请求不丢 | 默认支持 scale-to-zero |
+| 空闲缩到 0 | 默认不会自动缩到 0；即使配置 `minReplicas=0`，也需要额外的请求接入与唤醒机制 | 默认支持 scale-to-zero |
 | 扩缩依据 | 多为 CPU / Memory | 默认按并发 / RPS（KPA） |
-| 冷启动不丢请求 | 需自建队列或依赖 Ingress 超时 | Activator 缓冲请求并唤醒 Pod |
+| 冷启动期间承接请求 | 需自建队列或依赖 Ingress 超时 | Activator 可缓冲并唤醒 Pod，但仍受超时和容量限制 |
 | 金丝雀 / 蓝绿 | 需 Ingress / Service Mesh 额外配置 | Route 按百分比切 Revision |
 
-**Knative 是什么**：用一组 CRD 与控制面组件，在 Kubernetes 上提供 serverless 运行时。三大块可独立使用：
+**Knative 是什么**：用一组 CRD 与控制面组件，在 Kubernetes 上提供 serverless 运行时。本文重点介绍 Serving；Eventing 是事件路由层，Functions 则是基于 `func` CLI 的开发、构建与部署体验，默认会生成 Knative Service：
 
 | 组件 | 职责 | 典型场景 |
 |------|------|----------|
 | **Serving** | HTTP 驱动的无状态服务：部署、路由、自动扩缩（含缩到零） | API、推理网关、短生命周期 Worker |
 | **Eventing** | 基于 CloudEvents 的异步事件路由 | 事件驱动流水线、解耦生产者/消费者 |
-| **Functions** | `func` CLI，少写 Dockerfile 的函数开发体验 | 快速原型；底层仍部署为 Serving Service |
+| **Functions** | `func` CLI，少写 Dockerfile 的函数开发体验 | 快速原型；默认部署为 Serving Service |
 
 ### Knative 整体架构
 
@@ -113,7 +115,7 @@ spec:
 
 `Service` 是编排器：创建并一直看着同名的 `Route` + `Configuration`。`Configuration` 保存期望状态（镜像、env、并发等）；每次改它就多一个不可变 `Revision`（图里叠着的黄块）。`Route` 把 URL 指到一个或多个 Revision：默认 100% latest ready，也可以按百分比切流（第五节）。
 
-这四件套是 `serving.knative.dev` 用户 API。Revision 就绪之后，**controller 才会**再派生 Kubernetes 对象：每个 Revision 一份 `Deployment`（Pod = queue-proxy + user-container）、`PodAutoscaler`、`ServerlessService`（再拆出 public/private `Service`）。这些内部对象不出现在对象模型图里，但 `kubectl get` 能看到。
+这四件套是 `serving.knative.dev` 用户 API。Revision controller 会为每个 Revision 创建并维护 `Deployment`（Pod = queue-proxy + user-container）、`PodAutoscaler`、`ServerlessService`（再拆出 public/private `Service`）；这些底层对象达到可服务状态后，Revision 才会变为 Ready。它们不出现在对象模型图里，但 `kubectl get` 能看到。
 
 按「创建一个 ksvc、一个 Revision 就绪」粗算，用户命名空间里常见对象量级如下（名称随 Revision 变化，可用 `kubectl get` 核对）：
 
@@ -362,10 +364,10 @@ kubectl get pod -l serving.knative.dev/service=hello -o yaml | less
 稳定态、非 Panic：
 
 ```
-期望副本 ≈ ceil( Revision 级平均 in-flight 并发 / 每 Pod 目标并发 )
+期望副本 ≈ ceil( Revision 级平均 in-flight 并发 / (每 Pod 目标并发 × target-utilization) )
 ```
 
-50 个 in-flight、`target=10` → 约 **5** 个 Pod。`autoscaling.knative.dev/metric: rps` 时按每秒请求数决策，适合短请求、高 QPS。
+默认 target-utilization 为 70% 时，`target=10` 的有效目标约为 7；50 个 in-flight 时约为 `ceil(50/7)=8` 个 Pod。若将 utilization 显式设为 100%，才可近似按 `ceil(50/10)=5` 估算。`autoscaling.knative.dev/metric: rps` 时按每秒请求数决策，适合短请求、高 QPS。
 
 ### 4.3 指标如何到 autoscaler，如何合成副本数
 
@@ -397,19 +399,19 @@ activator  ----WebSocket 推送---->  autoscaler
 
 每个 `Stat` 带 `PodName`，含 `AverageConcurrentRequests`（in-flight 均值）和 `RequestCount`（RPS）。scraper **随机采样**部分 Pod，相加后再按总数外推，得到 Revision 级 `observedStableValue` / `observedPanicValue`（约 60s / 6s 窗口）。
 
-稳定态期望副本：
+稳定态期望副本（忽略扩缩速率、min/max 和 panic 等因素）：
 
 ```
-dspc ≈ ceil( Revision 级观测并发 / 每 Pod 目标并发 )
+dspc ≈ ceil( Revision 级观测并发 / (每 Pod 目标并发 × target-utilization) )
 ```
 
-再乘 target-utilization（默认约 70%），并受 `min-scale` / `max-scale`、max-scale-up-rate 约束。若 `观测并发 / Ready Pod 数 ≥ panic 阈值`（默认 200% target），进入 panic：用短窗口算 `dppc`，取与 stable 中更大者，且通常不缩容。
+target-utilization（默认约 70%）使 Autoscaler 在达到声明目标之前开始扩容；最终结果还受 `min-scale` / `max-scale`、max-scale-up-rate 约束。若短窗口内的观测负载达到 panic 阈值（默认 200% target），进入 panic：用短窗口算 `dppc`，取与 stable 中更大者，且通常不缩容。
 
 最终 `desiredPodCount` 写入 `PodAutoscaler.status`，reconciler 改 `Deployment/<revision>-deployment` 的 `spec.replicas`。
 
 | 客户端 | target | 聚合后 in-flight 并发 | 期望副本 |
 |--------|--------|----------------|----------|
-| `hey -c 50`，每请求 `sleep=500ms` | 10 | ≈ 50 | `ceil(50/10)=5` |
+| `hey -c 50`，每请求 `sleep=500ms` | 10（utilization=70%） | ≈ 50 | `ceil(50/(10×0.7))≈8` |
 
 压测停止后，in-flight 数下降，stable 窗口内均值归零，副本回落，最终可到 0。观察：
 
@@ -466,7 +468,7 @@ Service `hello` 对应同名 Configuration，第一次模板是 `hello-00001`，
 
 在 kind 上用官方 YAML 安装 Serving + Kourier，再 `kubectl apply` 一个 Service：观察缩到零、冷启动唤醒、Revision 与按并发扩缩。
 
-前置：Docker 已运行；建议给集群约 **3 CPU / 4 GB RAM**（官方单节点建议更高）。`brew install kind kubectl`。YAML 清单从 GitHub Releases 拉取，**Serving 与 net-kourier 用同一个 `knative-vX.Y.Z` tag**（见 [Serving Releases](https://github.com/knative/serving/releases)、[net-kourier Releases](https://github.com/knative-extensions/net-kourier/releases)，或直接抄 [官方 YAML 安装页](https://knative.dev/docs/install/yaml-install/serving/install-serving-with-yaml/) 里的 tag）。
+前置：Docker 已运行；建议给集群约 **3 CPU / 4 GB RAM**（官方单节点建议更高）。`brew install kind kubectl`。YAML 清单从 GitHub Releases 拉取，Serving 与 net-kourier 应使用彼此兼容、且经过验证的 release tag（见 [Serving Releases](https://github.com/knative/serving/releases)、[net-kourier Releases](https://github.com/knative-extensions/net-kourier/releases)，或直接使用 [官方 YAML 安装页](https://knative.dev/docs/install/yaml-install/serving/install-serving-with-yaml/) 当前给出的 tag）。
 
 ### 6.1 建集群并安装 Serving
 
@@ -489,7 +491,7 @@ EOF
 安装顺序：CRD → Serving 核心 → 网络层 → 指定 ingress class → DNS 后缀。
 
 ```bash
-# 与官方 YAML 安装页 / GitHub Releases 上的稳定 tag 对齐，例如 knative-v1.x.y
+# 将下面的值替换为你实际验证过的 release tag；不要直接复制占位符。
 export KNATIVE_RELEASE=knative-vX.Y.Z
 
 # serving-crds.yaml：注册 Serving CRD（只定义 API，不跑进程）
@@ -564,7 +566,7 @@ NAME                                     READY   STATUS    RESTARTS   AGE
 3scale-kourier-gateway-d95dfffb6-kwqcf   1/1     Running   0          62s
 ```
 
-这些是集群级共享组件，不是每个 ksvc 一份。
+这些是集群级共享组件，不是每个 ksvc 一份。生产环境还应根据容量和故障域配置多副本、PDB 与资源请求；官方建议生产环境至少运行 3 个 Activator。
 
 ### 6.2 部署第一个 Service
 
@@ -808,7 +810,7 @@ export URL="http://127.0.0.1:8080"
 export KSVC_HOST="autoscale-go.default.127.0.0.1.sslip.io"
 ```
 
-#### 实验 A：50 in-flight → 约 5 个 Pod
+#### 实验 A：50 in-flight → 约 8 个 Pod
 
 ```bash
 # 终端 1
@@ -836,6 +838,8 @@ pod/autoscale-go-00001-deployment-69f9769f67-zbjhb   2/2     Running            
 NAME                                                                DESIREDSCALE   ACTUALSCALE   READY   REASON
 podautoscaler.autoscaling.internal.knative.dev/autoscale-go-00001   8              7             True
 ```
+
+在默认 target-utilization 为 70% 时，稳定状态通常会看到期望副本约为 8；短暂的 Ready 数量可能略低于期望值。
 
 这条 `hey` 在造 **稳定的 in-flight 并发**（concurrency），不是冲 QPS：
 
@@ -875,7 +879,7 @@ podautoscaler.autoscaling.internal.knative.dev/autoscale-go-00001   0           
 
 另开终端跑 `hey` 后，`DESIREDSCALE` / `ACTUALSCALE` 会涨，并出现 `pod/autoscale-go-00001-deployment-...`。`READY False` 在有流量时应变 `True`。若 hey 已经在跑仍停在 `NoTraffic`：看 hey 汇总是不是全 `404`（Host 没用上），以及该终端里 `URL` / `KSVC_HOST` 是否还在。
 
-稳定后副本约 **`ceil(50/10)=5`**（Panic 可能短暂更高）。压测结束后约 60s+ 回落，最终可到 0。
+默认 target-utilization 为 70%，稳定后副本约 **`ceil(50/(10×0.7))=8`**（实际会受采样、扩缩速率和 panic 影响）。压测结束后还要经过 stable window、scale-to-zero grace period 等配置才会回落，最终可到 0。
 
 #### 实验 B：硬并发上限
 
@@ -1028,7 +1032,7 @@ Serving 解决「HTTP 来了如何跑容器」；Eventing 解决「事件如何�
 
 ## 十、附录：Service 配置速查
 
-默认值以集群里 `knative-serving` 的 `config-defaults` / `config-autoscaler` 为准。扩缩 annotation 必须写在 `spec.template.metadata.annotations`。
+默认值以集群里 `knative-serving` 的 `config-defaults` / `config-autoscaler` 为准；不同 Knative 版本可能不同。扩缩 annotation 必须写在 `spec.template.metadata.annotations`。
 
 ### Revision spec（`spec.template.spec`）
 
@@ -1055,13 +1059,13 @@ Serving 解决「HTTP 来了如何跑容器」；Eventing 解决「事件如何�
 | `autoscaling.knative.dev/max-scale` | `0` = 不限制 | 上限，防止被打爆集群 |
 | `autoscaling.knative.dev/initial-scale` | `1` | **新建** Revision 先拉到的副本数，Ready 一次后作废，随后仍可按流量缩 |
 | `autoscaling.knative.dev/activation-scale` | `1` | 从 0 **唤醒**时至少拉起几个，避免第一波请求挤在单 Pod |
-| `autoscaling.knative.dev/window` | `60s` | stable 窗口。缩到 0 前，最后一副本要等窗口内**一直无流量** |
+| `autoscaling.knative.dev/window` | `60s` | stable 指标聚合窗口，不等同于完整的缩到零等待时间 |
 | `autoscaling.knative.dev/panic-window-percentage` | `10`（即 6s） | panic 用更短窗口，只快扩、期间通常不缩 |
 | `autoscaling.knative.dev/panic-threshold-percentage` | `200` | 观测负载 ≥ 当前副本能力的 200% 进 panic |
 | `autoscaling.knative.dev/scale-down-delay` | `0s` | 负载已低，再等这么久才真缩。与 `min-scale` 不同：到期仍可到 0 |
 | `autoscaling.knative.dev/target-burst-capacity` | `200` | 决定 Activator 是否留在数据面。`0`：仅从 0 拉起时经过 Activator；`-1`：始终经过 |
 
-缩容时间线：流量没了 → 等 **stable window**（以及可选的 **scale-down-delay**）→ 副本向 `min-scale` 靠。`min-scale: 0` 时才会真正没 Pod。`scale-down-delay` 是「先留着防抖」，不是下限。
+缩容时，Autoscaler 先按 stable window 聚合指标，再结合 `scale-down-delay`、`scale-to-zero-grace-period` 和 `scale-to-zero-pod-retention-period` 等配置决定是否继续缩容。`min-scale: 0` 且集群启用了 scale-to-zero 时才会真正没有 Pod；`scale-down-delay` 是「先留着防抖」，不是下限。
 
 `target-burst-capacity`（TBC）：KPA 估算「现有副本还能吃多少突发」。余量不够就把 Ingress 指回 **Activator**（缓冲 + 唤醒）；余量够则旁路，请求直打 queue-proxy。这就是第三节 Proxy / Serve 切换的旋钮。
 
@@ -1071,7 +1075,7 @@ Serving 解决「HTTP 来了如何跑容器」；Eventing 解决「事件如何�
 |-------------|------|--------|
 | `spec.traffic` | 100% → latest ready | `percent` 之和必须 100。`latestRevision: true` 跟 `revisionName` **不能写在同一条** |
 | `spec.template.metadata.name` | `{ksvc}-{generation}` 五位补零 | 即将创建的 Revision 名，如 `hello-v2`；命名空间内唯一 |
-| `networking.knative.dev/visibility: cluster-local` | 对外暴露 | 只给集群内 DNS（`*.svc.cluster.local`），不进公网 Ingress |
+| `metadata.labels.networking.knative.dev/visibility: cluster-local` | 对外暴露 | 这是 label，不是 annotation；只给集群内 DNS（`*.svc.cluster.local`），不进公网 Ingress |
 
 `traffic` 改的是网关后面的权重，旧 Revision 对象还在；`0` 副本只表示没流量，不是被删掉。切流 YAML 见第五节。
 
