@@ -62,8 +62,9 @@ Gateway 是二进制 `openshell-gateway`（对应 crate `openshell-server`）。
 
 ```mermaid
 flowchart TB
-  CLI[CLI / SDK] --> MX[multiplex]
-  MX --> AUTH[auth]
+  CLI[CLI / SDK] -- 一个 TCP 端口 --> MX[multiplex]
+  MX -- gRPC --> AUTH[auth]
+  MX -- 明文 HTTP --> AUTH
   AUTH --> PS[persistence]
   AUTH --> CD[compute/driver]
   AUTH --> SR[session registry]
@@ -71,6 +72,8 @@ flowchart TB
 ```
 
 Supervisor 不在这条链路上：它通过 `ConnectSupervisor` / `RelayStream` 单独接入 session registry，没有画在图里。
+
+`multiplex` 是"多路复用"：Gateway 对外只开一个 TCP 端口，但要同时服务两种协议，gRPC（跑在 HTTP/2 上，走 protobuf 二进制帧）和普通 HTTP（health 检查、WebSocket 隧道用的明文 HTTP/1.1）。要在同一个端口上分流，得在协议栈真正接管这条连接之前，先"偷看"一眼开头几个字节，判断这是 HTTP/2 的 connection preface 还是普通 HTTP 请求，再把连接转给对应的协议栈。这一步做完之后，两条协议路径才汇合到 `auth`，后面的鉴权、路由逻辑是共用的。
 
 | 模块 | 职责 |
 |------|------|
@@ -84,6 +87,8 @@ Supervisor 不在这条链路上：它通过 `ConnectSupervisor` / `RelayStream`
 | `grpc/*` | sandbox / provider / policy / workspace RPC |
 | `ws_tunnel` / `ssh_sessions` | 隧道与 SSH session 元数据 |
 | interceptors | 认证后、handler 前的 unary 拦截（allowlist；secret 字段从拦截载荷剥掉） |
+
+`persistence` 这个名字对应的是行为，不是随手起的：Gateway 里不是所有状态都会落盘。sandbox、provider、policy revision 这些核心对象走 `persistence` 模块，最终写进一个 protobuf 对象库（SQLite/Postgres），Gateway 重启也不会丢。同一张表里的 `supervisor_session` 是反例：它只存在 Gateway 进程内存里，不落库，Gateway 一重启，这些 in-flight 的 session 记录就没了（2.4 节的 Ready 合成为什么要求单副本，根源也在这里）。`persistence` 这个名字标的正是"这块状态是持久化的"，用来跟这些不持久化的模块区分开。
 
 ### 2.2 两种身份
 
