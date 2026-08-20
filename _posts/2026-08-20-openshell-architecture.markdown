@@ -166,6 +166,8 @@ Supervisor 以 root 身份跑，做隔离、出站代理、加载配置和凭证
 
 L7 这一层可以对 REST 的 method/path、WebSocket 文本消息、GraphQL 操作，以及 MCP/JSON-RPC 的请求方法（含部分请求体字段）执行策略；但目前 JSON-RPC 的 response 和 MCP server-to-client 的 SSE 消息还不会被完整解析。`https://inference.local` 这个地址会绕过普通的 OPA 网络规则，但仍然要经过本地 TLS、请求识别、凭证剥离和 router；如果 Agent 直连外部模型 URL 而不走 `inference.local`，走的还是普通出站策略。
 
+`inference.local` 不是一个真的能被 DNS 解析出来的域名，而是本机 proxy 代码里写死的一个匹配目标：proxy 处理 CONNECT 请求时专门检查目标是不是 `inference.local:443`，命中就直接回一个 `200 Connection Established`，把这条连接交给专门的拦截路径处理，不走普通出站策略。接下来它用本机的 sandbox CA 就地终止 TLS，识别出常见的 OpenAI/Anthropic 兼容请求格式，剥掉 Agent 自己带的凭证和不该出现的 Header，再经 `router` 转发到真正的模型后端，用的是 Gateway 下发的那份模型路由 bundle（也就是 2.1 节 `policy_store` / `inference` 模块管的那份配置）。Agent 代码里只要把 base URL 填成 `https://inference.local`，不需要知道背后接的是哪家模型、密钥是什么，这些都由 proxy 按策略路由过去。
+
 Agent 调用被策略允许的 API 时，明文密钥不需要进入子进程：凭证存在 Gateway，Supervisor 在运行时拉取，HTTP 请求上先用 `openshell:resolve:env:…` 这样的占位符代替真实值，等 proxy 确认目标和 L7 规则都通过之后，才把占位符换成真实的 Header 或 Query 参数。这只是调用路径上的一层附带控制，不是 Sandbox 存在的理由。Agent 的进程环境里只会出现策略和 provider 配置明确允许的变量，用于回连 Gateway 的 bootstrap JWT 对子进程不可见。静态凭证如果刷新失败，会直接吊销上一份，不会留下半新半旧的一组凭证；动态凭证刷新失败则按对应 provider 自己的快照策略处理。
 
 同一条 outbound session 上还承载着运行期间的持续通信：Supervisor 一侧推日志、策略加载结果（`LOADED` / `FAILED`）、L4 denial 摘要；Gateway 一侧下发配置、凭证、`RelayOpen`。配置轮询失败时会保留 last-known-good 的旧配置，而不是清空；一次不合法的热更新会被整包拒绝，不会部分生效。企业环境的正向代理配置写在 Supervisor 的**命令行**上：如果 TLS/CONNECT 代理配置无效，会直接 fail-closed；至于明文 HTTP 是否也经过企业代理，取决于当前协议适配器的实现，不要笼统地认为所有出站流量都会经过代理。
@@ -243,5 +245,6 @@ flowchart LR
 | [architecture/gateway.md](https://github.com/NVIDIA/OpenShell/blob/main/architecture/gateway.md) | Gateway：鉴权、持久化、session |
 | [architecture/sandbox.md](https://github.com/NVIDIA/OpenShell/blob/main/architecture/sandbox.md) | Supervisor：隔离、代理、凭证 |
 | [architecture/compute-runtimes.md](https://github.com/NVIDIA/OpenShell/blob/main/architecture/compute-runtimes.md) | Driver 契约与 Ready 合成 |
+| [Issue #1633](https://github.com/NVIDIA/OpenShell/issues/1633) | `inference.local` 拦截机制的实现细节，以及把这个模式推广到任意 host-local 服务的提案 |
 | [How OpenShell Works](https://docs.nvidia.com/openshell/latest/about/how-it-works) | 官方概念页 |
 | [NVIDIA/OpenShell](https://github.com/NVIDIA/OpenShell) | 源码 |
