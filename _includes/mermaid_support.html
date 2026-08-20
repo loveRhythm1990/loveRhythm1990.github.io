@@ -1,0 +1,64 @@
+<!-- add support for mermaid diagrams (opt-in via `mermaid: true` front matter) -->
+<style>
+  .mermaid-wrap {
+    display: flex;
+    justify-content: center;
+    margin: 28px auto;
+    padding: 18px;
+    max-width: 100%;
+    overflow-x: auto;
+    background: #fbfdfe;
+    border: 1px solid #dde7ea;
+    border-radius: 8px;
+  }
+  .mermaid-wrap svg {
+    max-width: 100%;
+    height: auto;
+  }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.15.0/mermaid.min.js"></script>
+<script type="text/javascript">
+  document.addEventListener("DOMContentLoaded", function () {
+    // kramdown + rouge don't have a "mermaid" lexer, so a ```mermaid fence
+    // renders as a plain <pre><code class="language-mermaid"> block (rouge
+    // just skips highlighting, it doesn't error). Swap those blocks for the
+    // <div class="mermaid"> mermaid.js expects, wrapped in a styled card.
+    document.querySelectorAll("code.language-mermaid").forEach(function (code) {
+      var host = code.closest(".language-mermaid.highlighter-rouge") || code.closest("pre");
+      if (!host) return;
+      var wrap = document.createElement("div");
+      wrap.className = "mermaid-wrap";
+      var graph = document.createElement("div");
+      graph.className = "mermaid";
+      graph.textContent = code.textContent;
+      wrap.appendChild(graph);
+      host.parentNode.replaceChild(wrap, host);
+    });
+
+    if (window.mermaid) {
+      mermaid.initialize({
+        startOnLoad: true,
+        theme: "base",
+        themeVariables: {
+          primaryColor: "#eaf6f9",
+          primaryBorderColor: "#0085A1",
+          primaryTextColor: "#1c2b33",
+          lineColor: "#5a7a82",
+          secondaryColor: "#fdf6ee",
+          secondaryBorderColor: "#c9a227",
+          tertiaryColor: "#f4f6f7",
+          clusterBkg: "#f4f9fa",
+          clusterBorder: "#0085A1",
+          edgeLabelBackground: "#ffffff",
+          noteBkgColor: "#fdf6ee",
+          noteBorderColor: "#c9a227",
+          noteTextColor: "#5c4b1a",
+          fontFamily: "-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif",
+          fontSize: "16px"
+        },
+        flowchart: { curve: "basis", htmlLabels: true },
+        sequence: { actorMargin: 60, boxMargin: 10, messageFontSize: 14 }
+      });
+    }
+  });
+</script>

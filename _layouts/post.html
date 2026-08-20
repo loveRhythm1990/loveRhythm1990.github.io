@@ -133,6 +133,11 @@ layout: default
   {% include mathjax_support.html %}
 {% endif %}
 
+<!-- add support for mermaid diagrams -->
+{% if page.mermaid %}
+  {% include mermaid_support.html %}
+{% endif %}
+
 <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
 <script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
 <script src="/js/md5.min.js"></script>
