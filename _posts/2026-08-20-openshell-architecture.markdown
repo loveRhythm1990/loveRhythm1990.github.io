@@ -35,7 +35,7 @@ flowchart LR
 | CLI / SDK / TUI | 本机 | 唯一用户入口。创建 Sandbox、改策略、`connect` / `exec`。不知道底下是 Docker 还是 K8s |
 | Gateway | 本机进程或集群 Service | 控制面：鉴权、状态、生命周期、配置下发、把终端字节转进 Sandbox |
 | Sandbox | 一个容器 / Pod / VM | 一次数据面 workload |
-| Supervisor | **Sandbox 里面**的入口进程 | 本地安全边界：隔离、出站代理、回连 Gateway、拉起 Agent |
+| Supervisor | Sandbox 里面的入口进程 | 本地安全边界：隔离、出站代理、回连 Gateway、拉起 Agent |
 | Agent | Supervisor 的子进程 | Claude Code / Codex / OpenCode 等 |
 | Driver | Gateway 旁边 | 把「起停一个 Sandbox」翻译成 Docker/K8s/VM，并回报 backend 状态与平台事件；不负责策略 enforcement |
 
@@ -88,7 +88,7 @@ Supervisor 不在这条链路上：它通过 `ConnectSupervisor` / `RelayStream`
 | `ws_tunnel` / `ssh_sessions` | 隧道与 SSH session 元数据 |
 | interceptors | 认证后、handler 前的 unary 拦截（allowlist；secret 字段从拦截载荷剥掉） |
 
-`persistence` 这个名字对应的是行为，不是随手起的：Gateway 里不是所有状态都会落盘。sandbox、provider、policy revision 这些核心对象走 `persistence` 模块，最终写进一个 protobuf 对象库（SQLite/Postgres），Gateway 重启也不会丢。同一张表里的 `supervisor_session` 是反例：它只存在 Gateway 进程内存里，不落库，Gateway 一重启，这些 in-flight 的 session 记录就没了（2.4 节的 Ready 合成为什么要求单副本，根源也在这里）。`persistence` 这个名字标的正是"这块状态是持久化的"，用来跟这些不持久化的模块区分开。
+`persistence` 这个名字对应的是行为，不是随手起的：Gateway 里不是所有状态都会落盘。sandbox、provider、policy revision 这些核心对象走 `persistence` 模块，最终写进一个 protobuf 对象库（SQLite/Postgres），Gateway 重启也不会丢。同一张表里的 `supervisor_session` 是反例：它只存在 Gateway 进程内存里，不落库，Gateway 一重启，这些 in-flight 的 session 记录就没了（2.4 节讲的 Ready 状态为什么要求单副本，根源也在这里）。`persistence` 这个名字标的正是"这块状态是持久化的"，用来跟这些不持久化的模块区分开。
 
 ### 2.2 两种身份
 
@@ -109,11 +109,11 @@ K8s 上，Supervisor 不用 mTLS 证明身份：用 projected SA token 调 `Issu
 
 Gateway 里的对象统一存成 protobuf payload 加一组索引列（核心字段是 id、type、name、scope、version、status、resource_version、labels；策略相关的对象还可能用到 dedup_key、hit_count）。sandbox、provider、policy revision、SSH session、inference route 共用同一个 Store：SQLite 是单人默认选项，Postgres 用于外置库场景，生产写入统一走 CAS（compare-and-swap）避免并发覆盖。Secret 单独走凭证后端；如果没有配置外部后端，Gateway 会把它加密后存进库里。
 
-### 2.4 Ready 是怎么合成的
+### 2.4 Ready 从哪来
 
-Driver 对 Ready 只负责报告 backend 层面的事实：容器或 Pod 是否在跑，顺带上报生命周期和平台事件。对外的 Ready 状态是 Gateway 合成的：backend 健康且 supervisor session 已注册才算 Ready。backend Ready 但 session 未到 → Provisioning（`SupervisorNotConnected`）；session 已到、backend 快照仍滞后 → 仍算 Ready。
+Ready 不是某个组件直接吐出来的一个字段，是 Gateway 拿两个信号拼出来的：Driver 报的 backend 事实（容器/Pod 是否在跑，顺带带上生命周期和平台事件），加上 supervisor session 有没有注册上。两个都满足才算 Ready。backend Ready 但 session 没到 → Provisioning（`SupervisorNotConnected`）；session 已经到、backend 快照还没跟上 → 仍然算 Ready。
 
-`Stop` 只关掉 exec/SSH，资源和磁盘都保留；`Start` 必须等到一个**新的** session 建立起来才算完成。`SupervisorSessionRegistry` 只在 Gateway 进程内存里，不落库，所以多副本部署会把 Ready 状态打乱（上游 issue #1868）；可靠的 Ready 合成实际上要求单副本。
+`Stop` 只关掉 exec/SSH，资源和磁盘都保留；`Start` 要等新 session 建立起来才算完成。`SupervisorSessionRegistry` 只在 Gateway 进程内存里，不落库，所以多副本部署会把 Ready 状态打乱（上游 issue #1868）；可靠的 Ready 状态实际上要求单副本。
 
 未认领 relay 的数量上限、超时时间、心跳间隔是实现细节，会随版本变化，以对应版本的 Gateway 配置和源码为准，不是稳定的 API 契约。
 
@@ -172,7 +172,7 @@ L7 这一层可以对 REST 的 method/path、WebSocket 文本消息、GraphQL �
 
 Agent 调用被策略允许的 API 时，明文密钥不需要进入子进程：凭证存在 Gateway，Supervisor 在运行时拉取，HTTP 请求上先用 `openshell:resolve:env:…` 这样的占位符代替真实值，等 proxy 确认目标和 L7 规则都通过之后，才把占位符换成真实的 Header 或 Query 参数。这只是调用路径上的一层附带控制，不是 Sandbox 存在的理由。Agent 的进程环境里只会出现策略和 provider 配置明确允许的变量，用于回连 Gateway 的 bootstrap JWT 对子进程不可见。静态凭证如果刷新失败，会直接吊销上一份，不会留下半新半旧的一组凭证；动态凭证刷新失败则按对应 provider 自己的快照策略处理。
 
-同一条 outbound session 上还承载着运行期间的持续通信：Supervisor 一侧推日志、策略加载结果（`LOADED` / `FAILED`）、L4 denial 摘要；Gateway 一侧下发配置、凭证、`RelayOpen`。配置轮询失败时会保留 last-known-good 的旧配置，而不是清空；一次不合法的热更新会被整包拒绝，不会部分生效。企业环境的正向代理配置写在 Supervisor 的**命令行**上：如果 TLS/CONNECT 代理配置无效，会直接 fail-closed；至于明文 HTTP 是否也经过企业代理，取决于当前协议适配器的实现，不要笼统地认为所有出站流量都会经过代理。
+同一条 outbound session 上还承载着运行期间的持续通信：Supervisor 一侧推日志、策略加载结果（`LOADED` / `FAILED`）、L4 denial 摘要；Gateway 一侧下发配置、凭证、`RelayOpen`。配置轮询失败时会保留 last-known-good 的旧配置，而不是清空；一次不合法的热更新会被整包拒绝，不会部分生效。企业环境的正向代理配置写在 Supervisor 的命令行上：如果 TLS/CONNECT 代理配置无效，会直接 fail-closed；至于明文 HTTP 是否也经过企业代理，取决于当前协议适配器的实现，不要笼统地认为所有出站流量都会经过代理。
 
 ## 4. 三条工作流
 
@@ -246,7 +246,7 @@ flowchart LR
 |------|------|
 | [architecture/gateway.md](https://github.com/NVIDIA/OpenShell/blob/main/architecture/gateway.md) | Gateway：鉴权、持久化、session |
 | [architecture/sandbox.md](https://github.com/NVIDIA/OpenShell/blob/main/architecture/sandbox.md) | Supervisor：隔离、代理、凭证 |
-| [architecture/compute-runtimes.md](https://github.com/NVIDIA/OpenShell/blob/main/architecture/compute-runtimes.md) | Driver 契约与 Ready 合成 |
+| [architecture/compute-runtimes.md](https://github.com/NVIDIA/OpenShell/blob/main/architecture/compute-runtimes.md) | Driver 契约与 Ready 状态 |
 | [Issue #1633](https://github.com/NVIDIA/OpenShell/issues/1633) | `inference.local` 拦截机制的实现细节，以及把这个模式推广到任意 host-local 服务的提案 |
 | [How OpenShell Works](https://docs.nvidia.com/openshell/latest/about/how-it-works) | 官方概念页 |
 | [NVIDIA/OpenShell](https://github.com/NVIDIA/OpenShell) | 源码 |
