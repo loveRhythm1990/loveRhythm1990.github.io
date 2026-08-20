@@ -9,9 +9,9 @@ tags:
     - Sandbox
 ---
 
-OpenShell 是给自主 Agent（Claude Code、Codex、OpenCode 这类可以执行命令的 agent binary）提供的**带策略的执行环境**。这类 agent binary 一旦能跑命令，理论上就能读本机任意文件、任意出网。OpenShell 的作用是把它们放进沙盒，用声明式 YAML 限制文件系统、进程权限和出站目标，把 Agent 的活动范围收在用户划定的边界内，防止它读到敏感数据、或者对宿主系统造成破坏。
+OpenShell 是给自主 Agent（Claude Code、Codex、OpenCode 这类可以执行命令的 agent binary）提供的**带策略的执行环境**。这类 agent binary 一旦能跑命令，理论上就能读本机任意文件、任意出网。OpenShell 的作用是把它们放进 Sandbox，用声明式 YAML 限制文件系统、进程权限和出站目标，把 Agent 的活动范围收在用户划定的边界内，防止它读到敏感数据、或者对宿主系统造成破坏。
 
-用法是 `sandbox create -- <命令>`，这条命令就成了 Supervisor 的受限子进程。运行时是三层：**CLI/SDK/TUI** 只和 **Gateway** 通信，每个沙盒里再跑一份 **Supervisor**，做本地隔离和出站策略。这套控制面（CLI ↔ Gateway ↔ Supervisor）跟沙盒具体怎么起来是分开的：本机用 Docker，远程用 Kubernetes，还有 Podman、VM，对 Gateway 来说都只是背后一个可插拔的 **Compute Driver**，只管底层怎么起容器/Pod，不参与控制面逻辑。
+用法是 `sandbox create -- <命令>`，这条命令就成了 Supervisor 的受限子进程。运行时是三层：**CLI/SDK/TUI** 只和 **Gateway** 通信，每个 Sandbox 里再跑一份 **Supervisor**，做本地隔离和出站策略。这套控制面（CLI ↔ Gateway ↔ Supervisor）跟 Sandbox 具体怎么起来是分开的：本机用 Docker，远程用 Kubernetes，还有 Podman、VM，对 Gateway 来说都只是背后一个可插拔的 **Compute Driver**，只管底层怎么起容器/Pod，不参与控制面逻辑。
 
 ## 1. 总览
 
@@ -29,12 +29,12 @@ flowchart LR
 
 | 名字 | 在哪 | 是什么 |
 |------|------|--------|
-| CLI / SDK / TUI | 本机 | 唯一用户入口。创建沙盒、改策略、`connect` / `exec`。不知道底下是 Docker 还是 K8s |
-| Gateway | 本机进程或集群 Service | 控制面：鉴权、状态、生命周期、配置下发、把终端字节转进沙盒 |
+| CLI / SDK / TUI | 本机 | 唯一用户入口。创建 Sandbox、改策略、`connect` / `exec`。不知道底下是 Docker 还是 K8s |
+| Gateway | 本机进程或集群 Service | 控制面：鉴权、状态、生命周期、配置下发、把终端字节转进 Sandbox |
 | Sandbox | 一个容器 / Pod / VM | 一次数据面 workload |
 | Supervisor | **Sandbox 里面**的入口进程 | 本地安全边界：隔离、出站代理、回连 Gateway、拉起 Agent |
 | Agent | Supervisor 的子进程 | Claude Code / Codex / OpenCode 等 |
-| Driver | Gateway 旁边 | 把「起停一个沙盒」翻译成 Docker/K8s/VM，并回报 backend 状态与平台事件；不负责策略 enforcement |
+| Driver | Gateway 旁边 | 把「起停一个 Sandbox」翻译成 Docker/K8s/VM，并回报 backend 状态与平台事件；不负责策略 enforcement |
 
 图中 Gateway 和 Supervisor 之间的虚线是**outbound session**：Supervisor 启动后主动 `ConnectSupervisor` 连上 Gateway，一直挂着，走配置、日志，以及"再开一条终端管道"这类信令。不是 Agent 出网的流量，也不是命令的 stdout 本身。
 
@@ -42,20 +42,20 @@ flowchart LR
 
 | | 例子 | 路径 |
 |--|------|------|
-| 人操作沙盒 | `connect`、`exec -- ls`、创建 | CLI → Gateway → Supervisor；默认不直接暴露 Pod/SSH，集群管理员仍可能通过 `kubectl exec` 等平台权限访问 |
-| Agent 自己出网 | 调模型、访问 GitHub | Agent → 沙盒内 proxy → 目标站点。不经 Gateway，也不经 CLI |
+| 人操作 Sandbox | `connect`、`exec -- ls`、创建 | CLI → Gateway → Supervisor；默认不直接暴露 Pod/SSH，集群管理员仍可能通过 `kubectl exec` 等平台权限访问 |
+| Agent 自己出网 | 调模型、访问 GitHub | Agent → Sandbox 内 proxy → 目标站点。不经 Gateway，也不经 CLI |
 
-职责划分：Gateway 拥有对象和授权（谁能做什么），Supervisor 拥有进程/文件/网络层面的实际 enforcement，Driver 只负责把「起停一个沙盒」翻译成具体平台的 API。静态隔离（Landlock、降权、seccomp、netns）在沙盒创建时钉死，要改只能重建沙盒；网络策略、凭证、推理路由可以在已有会话上热更新。会话断了，Agent 还能继续跑，只是 `connect` 和热更新会失败。
+职责划分：Gateway 拥有对象和授权（谁能做什么），Supervisor 拥有进程/文件/网络层面的实际 enforcement，Driver 只负责把「起停一个 Sandbox」翻译成具体平台的 API。静态隔离（Landlock、降权、seccomp、netns）在 Sandbox 创建时钉死，要改只能重建 Sandbox；网络策略、凭证、推理路由可以在已有会话上热更新。会话断了，Agent 还能继续跑，只是 `connect` 和热更新会失败。
 
 ## 2. Gateway：控制面
 
 Gateway 是二进制 `openshell-gateway`（对应 crate `openshell-server`）。CLI 和所有 Supervisor 都只连它，不会直连底层容器或 Pod。
 
-做：鉴权、持久化、让 Driver 起停 workload、下发策略/凭证/推理路由、把 CLI 的终端字节转发到对应 session。不做：拦截 Agent 出网、跑 Landlock，那是 Supervisor 的工作；Gateway 本身看不见沙盒里的进程身份和 socket。
+做：鉴权、持久化、让 Driver 起停 workload、下发策略/凭证/推理路由、把 CLI 的终端字节转发到对应 session。不做：拦截 Agent 出网、跑 Landlock，那是 Supervisor 的工作；Gateway 本身看不见 Sandbox 里的进程身份和 socket。
 
 ### 2.1 内部模块
 
-一个端口先做 multiplex，拆出 gRPC API 和 HTTP 隧道；鉴权层区分用户身份（mTLS/OIDC）和沙盒身份（JWT），二者不能互换；再往后分别落到持久化、compute+driver、session registry、policy/inference 几块，最终经拦截器交给 handler。下图是这条用户请求链路：
+一个端口先做 multiplex，拆出 gRPC API 和 HTTP 隧道；鉴权层区分用户身份（mTLS/OIDC）和 Sandbox 身份（JWT），二者不能互换；再往后分别落到持久化、compute+driver、session registry、policy/inference 几块，最终经拦截器交给 handler。下图是这条用户请求链路：
 
 ```mermaid
 flowchart TB
@@ -84,12 +84,12 @@ Supervisor 不在这条链路上：它通过 `ConnectSupervisor` / `RelayStream`
 
 ### 2.2 两种身份
 
-在启用 loopback listener 的部署中，一个端口同时跑 gRPC 和 HTTP（health、WebSocket 隧道）。loopback 明文 HTTP 只给沙盒服务子域，不承载 Gateway API；这不是所有远程部署的通用入口。
+在启用 loopback listener 的部署中，一个端口同时跑 gRPC 和 HTTP（health、WebSocket 隧道）。loopback 明文 HTTP 只给 Sandbox 服务子域，不承载 Gateway API；这不是所有远程部署的通用入口。
 
 | 调用方 | 怎么进 | 能调什么 |
 |--------|--------|----------|
-| CLI / SDK / TUI | 本地默认 mTLS；K8s 用 OIDC 或接入代理 | 沙盒 CRUD、策略、Provider、watch |
-| Supervisor | 沙盒 JWT | 仅 allowlist：`ConnectSupervisor`、`RelayStream`、续期、config sync、日志、策略状态 |
+| CLI / SDK / TUI | 本地默认 mTLS；K8s 用 OIDC 或接入代理 | Sandbox CRUD、策略、Provider、watch |
+| Supervisor | Sandbox JWT | 仅 allowlist：`ConnectSupervisor`、`RelayStream`、续期、config sync、日志、策略状态 |
 
 K8s 上，Supervisor 不用 mTLS 证明身份：用 projected SA token 调 `IssueSandboxToken`，Gateway 做 `TokenReview` 并核对 Pod / Sandbox 的 ownerReference 后签发 JWT。本机 Docker/Podman/VM 由 runtime 把初始 token 注入进程；这个 JWT 默认 `ttl_secs = 0`（不过期），共享集群应设正 TTL。
 
@@ -107,7 +107,7 @@ Driver 对 Ready 只负责报告 backend 层面的事实：容器或 Pod 是否�
 
 未认领 relay 的数量上限、超时时间、心跳间隔是实现细节，会随版本变化，以对应版本的 Gateway 配置和源码为准，不是稳定的 API 契约。
 
-## 3. Supervisor：沙盒里的安全边界
+## 3. Supervisor：Sandbox 里的安全边界
 
 `openshell-sandbox` 跑在每一个 Sandbox 里面，是该容器/Pod/VM 的入口进程，不是 Gateway 旁边的服务。
 
@@ -144,13 +144,13 @@ Supervisor 以 root 身份跑，做隔离、出站代理、加载配置和凭证
 
 L7 这一层可以对 REST 的 method/path、WebSocket 文本消息、GraphQL 操作，以及 MCP/JSON-RPC 的请求方法（含部分请求体字段）执行策略；但目前 JSON-RPC 的 response 和 MCP server-to-client 的 SSE 消息还不会被完整解析。`https://inference.local` 这个地址会绕过普通的 OPA 网络规则，但仍然要经过本地 TLS、请求识别、凭证剥离和 router；如果 Agent 直连外部模型 URL 而不走 `inference.local`，走的还是普通出站策略。
 
-Agent 调用被策略允许的 API 时，明文密钥不需要进入子进程：凭证存在 Gateway，Supervisor 在运行时拉取，HTTP 请求上先用 `openshell:resolve:env:…` 这样的占位符代替真实值，等 proxy 确认目标和 L7 规则都通过之后，才把占位符换成真实的 Header 或 Query 参数。这只是调用路径上的一层附带控制，不是沙盒存在的理由。Agent 的进程环境里只会出现策略和 provider 配置明确允许的变量，用于回连 Gateway 的 bootstrap JWT 对子进程不可见。静态凭证如果刷新失败，会直接吊销上一份，不会留下半新半旧的一组凭证；动态凭证刷新失败则按对应 provider 自己的快照策略处理。
+Agent 调用被策略允许的 API 时，明文密钥不需要进入子进程：凭证存在 Gateway，Supervisor 在运行时拉取，HTTP 请求上先用 `openshell:resolve:env:…` 这样的占位符代替真实值，等 proxy 确认目标和 L7 规则都通过之后，才把占位符换成真实的 Header 或 Query 参数。这只是调用路径上的一层附带控制，不是 Sandbox 存在的理由。Agent 的进程环境里只会出现策略和 provider 配置明确允许的变量，用于回连 Gateway 的 bootstrap JWT 对子进程不可见。静态凭证如果刷新失败，会直接吊销上一份，不会留下半新半旧的一组凭证；动态凭证刷新失败则按对应 provider 自己的快照策略处理。
 
 同一条 outbound session 上还承载着运行期间的持续通信：Supervisor 一侧推日志、策略加载结果（`LOADED` / `FAILED`）、L4 denial 摘要；Gateway 一侧下发配置、凭证、`RelayOpen`。配置轮询失败时会保留 last-known-good 的旧配置，而不是清空；一次不合法的热更新会被整包拒绝，不会部分生效。企业环境的正向代理配置写在 Supervisor 的**命令行**上：如果 TLS/CONNECT 代理配置无效，会直接 fail-closed；至于明文 HTTP 是否也经过企业代理，取决于当前协议适配器的实现，不要笼统地认为所有出站流量都会经过代理。
 
 ## 4. 三条工作流
 
-### 4.1 创建沙盒
+### 4.1 创建 Sandbox
 
 ```mermaid
 sequenceDiagram
@@ -169,7 +169,7 @@ Gateway 先写库、解析策略，再把 spec 交给 Driver；Driver 注入 cal
 
 ### 4.2 人看终端：`connect` / `exec`
 
-outbound session 只让 Gateway 知道这个沙盒还在；终端字节走的是另一条按次建立的 relay。
+outbound session 只让 Gateway 知道这个 Sandbox 还在；终端字节走的是另一条按次建立的 relay。
 
 ```mermaid
 sequenceDiagram
@@ -187,7 +187,7 @@ sequenceDiagram
   CLI-->>User: 终端输出
 ```
 
-交互式场景走的是 PTY，`exec` 则只是命令的 stdout/stderr；Gateway 不解释画面内容，只做转发。`sandbox logs` 是另外一条单独推送的日志流，跟这条 relay 无关。沙盒内的 HTTP 服务通过 CLI 支持的 relay/forwarding 能力对外暴露，不需要直接开 NodePort。
+交互式场景走的是 PTY，`exec` 则只是命令的 stdout/stderr；Gateway 不解释画面内容，只做转发。`sandbox logs` 是另外一条单独推送的日志流，跟这条 relay 无关。Sandbox 内的 HTTP 服务通过 CLI 支持的 relay/forwarding 能力对外暴露，不需要直接开 NodePort。
 
 ### 4.3 Agent 出网
 
