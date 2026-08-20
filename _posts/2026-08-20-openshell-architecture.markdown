@@ -41,7 +41,7 @@ flowchart LR
 
 图中 Gateway 和 Supervisor 之间的虚线是**outbound session**：Supervisor 启动后主动 `ConnectSupervisor` 连上 Gateway，一直挂着，走配置、日志，以及"再开一条终端管道"这类信令。不是 Agent 出网的流量，也不是命令的 stdout 本身。
 
-图上有两条互不相干的流量，不要混为一谈：
+图上有两条互不相干的流量：
 
 | | 例子 | 路径 |
 |--|------|------|
