@@ -147,15 +147,15 @@ Supervisor 以 root 身份跑，做隔离、出站代理、加载配置和凭证
 
 ### 3.1 前四层管的是什么
 
-前四层都是 Linux 内核原生机制，policy proxy 是 OpenShell 自己在用户态加的一层（下一段单独展开），这里只说内核那四层。
+前四层都是 Linux 内核原生机制，policy proxy 是 OpenShell 自己在用户态加的一层（下一段单独展开），这里只说内核那四层。这四层大致对应内核处理一次操作时依次经过的几个检查点：先看进程有没有资格做这件事（capability、Landlock 管的是这一层），再看这个系统调用本身允不允许被调用（seccomp 管这一层），最后对网络而言还要看物理上够不够得着目标（netns 管这一层）。
 
-**Landlock** 是 Linux 5.13 引入的 LSM，跟 SELinux、AppArmor 的关键区别是不需要管理员预先配置：任何非特权进程都能在自己（以及子进程）身上加限制，规则一旦施加，同一进程内只能收紧、不能放宽。Supervisor 用它给 Agent 的文件系统访问建白名单：哪些路径能读、能写、能执行，其余一律拒绝，不依赖 Agent 进程自己守规矩。新版 Landlock（ABI v4 起）已经能管 TCP 连接、v10 起还能管 UDP，但 OpenShell 这里只拿它管文件路径，网络交给下面的 netns，是有意的职责拆分，不是 Landlock 能力不够。
+**Landlock** 是 Linux 5.13 引入的 LSM（Linux Security Module，内核里一个通用的安全钩子框架）。LSM 本身不实现具体策略，只是在内核关键操作点（打开文件、执行程序、建立网络连接等）插入一批"钩子"，让接进来的安全模块在这些点上做额外的允许/拒绝判断，跑在传统的属主/属组/rwx 权限检查之后，是叠加的一层，不是替代。SELinux、AppArmor 也是接在这个框架上的实现，但它们要管理员预先给整机写好策略；Landlock 反过来，允许一个非特权进程给自己（以及它 fork 出来的子进程）加限制，不需要 root，也不需要管理员配置，而且规则一旦施加，同一进程内只能收紧、不能放宽。这对沙箱场景很关键：即使 Agent 进程本身被攻破，它也没法把已经收紧的规则再改宽。Supervisor 用 Landlock 给 Agent 的文件系统访问建白名单：哪些路径能读、能写、能执行，其余一律拒绝，不依赖 Agent 进程自己守规矩。新版 Landlock（ABI v4 起）已经能管 TCP 连接、v10 起还能管 UDP，但 OpenShell 这里只拿它管文件路径，网络交给下面的 netns，是有意的职责拆分，不是 Landlock 能力不够。
 
-**进程降权**说的是清空 capability bounding set。Linux 把传统意义上"root 无所不能"拆成了几十个细粒度的 capability，比如管网络配置的 `CAP_NET_ADMIN`、管挂载的 `CAP_SYS_ADMIN`。前面提到的 fail-closed 清空动作，就是把 Agent 进程能拿到的这些特权系统调用权限全部清空。即便 Agent 进程的 UID 还是 root，也等于把这个身份掏空了。
+**进程降权**说的是清空 capability bounding set。传统 Unix 权限模型只有 root 和非 root 两档，root 天下无敌；Linux 后来把 root 的这些超能力拆成了几十个可以单独开关的细粒度权限，叫 capability，比如管网络配置的 `CAP_NET_ADMIN`、管挂载文件系统的 `CAP_SYS_ADMIN`、管绕过文件权限检查的 `CAP_DAC_OVERRIDE`。一个进程实际能拿到的 capability，上限由它的 bounding set 决定：就算进程的 UID 显示是 0（root），只要 bounding set 是空的，它就调用不了任何需要 capability 的特权操作，跟普通用户没有区别。前面提到的 fail-closed 清空动作，就是在 spawn Agent 之前把这个 bounding set 清空，清不空就不启动。
 
-**seccomp**（secure computing mode）是在系统调用这一层再加一道过滤：用 BPF 程序对进程能调用哪些 syscall（以及参数）做白名单，把不该被用到的调用直接堵在内核入口，比如创建 raw socket，这个操作能绕过常规的网络限制去嗅探或伪造数据包。它和 capability 管的是两个维度：capability 决定"有没有权限"，seccomp 决定"这个系统调用本身能不能被调用"，就算权限没被拿干净，seccomp 也能兜底挡住。
+**seccomp**（secure computing mode）是在系统调用这一层再加一道过滤。能不能读某个文件、能不能拿到某个 capability，判断的是"有没有资格做这件事"；但一个进程真正能干什么，最终都要落到它调用了哪些系统调用（syscall），seccomp 管的就是这一层：用一段 BPF 程序对进程能调用哪些 syscall（以及带什么参数）做白名单，不在名单里的直接在内核入口被拒绝。典型例子是创建 raw socket，这个调用能绕开常规的 socket API 直接组装网络包，用来嗅探或伪造流量；就算前面的权限检查都没堵住，seccomp 也能单独把这个调用挡在外面。它和 capability 管的是两个维度：capability 决定"有没有权限"，seccomp 决定"这个系统调用本身能不能被调用"，就算权限没被拿干净，seccomp 也能兜底挡住。
 
-**netns**（网络命名空间）让 Agent 进程拥有自己独立的网络栈：网卡、路由表都是独立的，不共享宿主机的。Supervisor 把 Agent 放进一个只有一条内部虚拟网卡通向本机 policy proxy 的 netns 里，物理上就没有到公网的路由，不是靠防火墙规则"允许 / 拒绝"：Agent 想绕开 proxy 直连外网，在网络层面根本走不通。
+**netns**（网络命名空间）让 Agent 进程拥有自己独立的网络栈：网卡、路由表、iptables 规则都是独立的一份，不共享宿主机的。Linux 的命名空间机制能把同一台机器上的资源"分身"成互相看不见的多份，网络命名空间分的就是网络设备和路由表这一份。Supervisor 把 Agent 放进一个只有一条内部虚拟网卡（veth pair）通向本机 policy proxy 的 netns 里，这个 netns 里压根没有配置到公网的路由。不是靠防火墙规则去"允许 / 拒绝"某个目标地址（这类规则理论上还可能有漏洞被绕过）：这里是路由表这一层就没有路径可走，Agent 想绕开 proxy 直连外网，在网络层面根本走不通。
 
 四层各管一个维度：Landlock 管文件路径，降权和 seccomp 管进程能拿到什么权限、能调用什么系统调用，netns 管网络物理可达性。单独绕过其中一层，另外几层还是拦得住。
 
