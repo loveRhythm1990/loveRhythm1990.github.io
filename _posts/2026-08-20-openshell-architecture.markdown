@@ -22,8 +22,11 @@ flowchart LR
   CLI[CLI / SDK / TUI] -- gRPC/HTTP --> GW[Gateway]
   GW -- provision --> DRV[Driver]
   DRV --> RT[Docker / K8s / VM]
-  GW -.- SUP[Supervisor]
-  SUP --> AGT[Agent]
+  subgraph SB[Sandbox]
+    SUP[Supervisor] --> AGT[Agent]
+  end
+  RT --> SB
+  GW -.- SUP
   AGT -- 出网 --> EXT[外部 API]
 ```
 
