@@ -8,11 +8,9 @@ tags:
     - K8s生态
 ---
 
-本文最后验证于 **2026-08-20**；安装示例中的 Knative Serving、Kourier、kind 与 Kubernetes 版本应替换为实际验证过的版本。
-
 ## 一、为什么需要 Kubernetes Serverless
 
-Kubernetes 擅长编排容器，但「按请求伸缩、空闲缩到零、修订版流量切分」并不是开箱能力。典型对比：
+Kubernetes 擅长编排容器，但"按请求伸缩、空闲缩到零、修订版流量切分"并不是开箱能力。与 Knative 的典型对比：
 
 | 诉求 | 原生 K8s（Deployment + Service + HPA + Ingress） | Knative Serving |
 |------|--------------------------------------------------|-----------------|
@@ -820,7 +818,7 @@ hey -z 60s -c 50 -host "$KSVC_HOST" "${URL}?sleep=500"
 watch -n 2 'kubectl get deploy,pods,podautoscaler -l serving.knative.dev/service=autoscale-go'
 
 
-Every 2.0s: kubectl get deploy,pods,podautoscaler -l serving.knative.dev/service=autoscale-go                                       xbook: 四  8月/20 02:05:29 2026
+Every 2.0s: kubectl get deploy,pods,podautoscaler -l serving.knative.dev/service=autoscale-go                                       xbook: 四  5月/21 02:05:29 2026
                                                                                                                                                       in 0.356s (0)
 NAME                                            READY   UP-TO-DATE   AVAILABLE   AGE
 deployment.apps/autoscale-go-00001-deployment   7/8     8            7           6m58s
