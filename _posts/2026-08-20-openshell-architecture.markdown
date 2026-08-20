@@ -145,6 +145,20 @@ Supervisor 以 root 身份跑，做隔离、出站代理、加载配置和凭证
 | netns | 出站只能进本机 proxy，绕不过去 |
 | policy proxy | 校验目标、二进制身份、SSRF、L7 规则 |
 
+### 3.1 前四层管的是什么
+
+前四层都是 Linux 内核原生机制，policy proxy 是 OpenShell 自己在用户态加的一层（下一段单独展开），这里只说内核那四层。
+
+**Landlock** 是 Linux 5.13 引入的 LSM，跟 SELinux、AppArmor 的关键区别是不需要管理员预先配置：任何非特权进程都能在自己（以及子进程）身上加限制，规则一旦施加，同一进程内只能收紧、不能放宽。Supervisor 用它给 Agent 的文件系统访问建白名单：哪些路径能读、能写、能执行，其余一律拒绝，不依赖 Agent 进程自己守规矩。新版 Landlock（ABI v4 起）已经能管 TCP 连接、v10 起还能管 UDP，但 OpenShell 这里只拿它管文件路径，网络交给下面的 netns，是有意的职责拆分，不是 Landlock 能力不够。
+
+**进程降权**说的是清空 capability bounding set。Linux 把传统意义上"root 无所不能"拆成了几十个细粒度的 capability，比如管网络配置的 `CAP_NET_ADMIN`、管挂载的 `CAP_SYS_ADMIN`。前面提到的 fail-closed 清空动作，就是把 Agent 进程能拿到的这些特权系统调用权限全部清空。即便 Agent 进程的 UID 还是 root，也等于把这个身份掏空了。
+
+**seccomp**（secure computing mode）是在系统调用这一层再加一道过滤：用 BPF 程序对进程能调用哪些 syscall（以及参数）做白名单，把不该被用到的调用直接堵在内核入口，比如创建 raw socket，这个操作能绕过常规的网络限制去嗅探或伪造数据包。它和 capability 管的是两个维度：capability 决定"有没有权限"，seccomp 决定"这个系统调用本身能不能被调用"，就算权限没被拿干净，seccomp 也能兜底挡住。
+
+**netns**（网络命名空间）让 Agent 进程拥有自己独立的网络栈：网卡、路由表都是独立的，不共享宿主机的。Supervisor 把 Agent 放进一个只有一条内部虚拟网卡通向本机 policy proxy 的 netns 里，物理上就没有到公网的路由，不是靠防火墙规则"允许 / 拒绝"：Agent 想绕开 proxy 直连外网，在网络层面根本走不通。
+
+四层各管一个维度：Landlock 管文件路径，降权和 seccomp 管进程能拿到什么权限、能调用什么系统调用，netns 管网络物理可达性。单独绕过其中一层，另外几层还是拦得住。
+
 L7 这一层可以对 REST 的 method/path、WebSocket 文本消息、GraphQL 操作，以及 MCP/JSON-RPC 的请求方法（含部分请求体字段）执行策略；但目前 JSON-RPC 的 response 和 MCP server-to-client 的 SSE 消息还不会被完整解析。`https://inference.local` 这个地址会绕过普通的 OPA 网络规则，但仍然要经过本地 TLS、请求识别、凭证剥离和 router；如果 Agent 直连外部模型 URL 而不走 `inference.local`，走的还是普通出站策略。
 
 Agent 调用被策略允许的 API 时，明文密钥不需要进入子进程：凭证存在 Gateway，Supervisor 在运行时拉取，HTTP 请求上先用 `openshell:resolve:env:…` 这样的占位符代替真实值，等 proxy 确认目标和 L7 规则都通过之后，才把占位符换成真实的 Header 或 Query 参数。这只是调用路径上的一层附带控制，不是 Sandbox 存在的理由。Agent 的进程环境里只会出现策略和 provider 配置明确允许的变量，用于回连 Gateway 的 bootstrap JWT 对子进程不可见。静态凭证如果刷新失败，会直接吊销上一份，不会留下半新半旧的一组凭证；动态凭证刷新失败则按对应 provider 自己的快照策略处理。
