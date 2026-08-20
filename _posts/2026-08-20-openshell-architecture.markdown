@@ -11,7 +11,7 @@ tags:
 
 OpenShell 是给自主 Agent（Claude Code、Codex、OpenCode 这类可以执行命令的 agent binary）提供的**带策略的执行环境**。这类 agent binary 一旦能跑命令，理论上就能读本机任意文件、任意出网。OpenShell 的作用是把它们放进沙盒，用声明式 YAML 限制文件系统、进程权限和出站目标，把 Agent 的活动范围收在用户划定的边界内，防止它读到敏感数据、或者对宿主系统造成破坏。
 
-用法是 `sandbox create -- <命令>`，这条命令就成了 Supervisor 的受限子进程。运行时是三层：**CLI/SDK/TUI** 只和 **Gateway** 说话，每个沙盒里再跑一份 **Supervisor**，做本地隔离和出站策略。这套控制面（CLI ↔ Gateway ↔ Supervisor）跟沙盒具体怎么起来是分开的：本机用 Docker，远程用 Kubernetes，还有 Podman、VM，对 Gateway 来说都只是背后一个可插拔的 **Compute Driver**，只管底层怎么起容器/Pod，不参与控制面逻辑。
+用法是 `sandbox create -- <命令>`，这条命令就成了 Supervisor 的受限子进程。运行时是三层：**CLI/SDK/TUI** 只和 **Gateway** 通信，每个沙盒里再跑一份 **Supervisor**，做本地隔离和出站策略。这套控制面（CLI ↔ Gateway ↔ Supervisor）跟沙盒具体怎么起来是分开的：本机用 Docker，远程用 Kubernetes，还有 Podman、VM，对 Gateway 来说都只是背后一个可插拔的 **Compute Driver**，只管底层怎么起容器/Pod，不参与控制面逻辑。
 
 ## 1. 总览
 
