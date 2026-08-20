@@ -92,6 +92,8 @@ Supervisor 不在这条链路上：它通过 `ConnectSupervisor` / `RelayStream`
 
 ### 2.2 两种身份
 
+两种身份指用户身份（CLI/SDK/TUI，走 mTLS/OIDC）和 Sandbox 身份（Supervisor，走 JWT），2.1 节鉴权层区分的正是这两种。
+
 在启用 loopback listener 的部署中，一个端口同时跑 gRPC 和 HTTP（health、WebSocket 隧道）。loopback 明文 HTTP 只给 Sandbox 服务子域，不承载 Gateway API；这不是所有远程部署的通用入口。
 
 | 调用方 | 怎么进 | 能调什么 |
