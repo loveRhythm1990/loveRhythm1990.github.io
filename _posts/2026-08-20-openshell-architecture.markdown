@@ -4,7 +4,6 @@ title:      "OpenShell 架构"
 date:       2026-08-20 10:00:00
 author:     "lr90"
 header-img-credit: false
-mermaid:    true
 tags:
     - Sandbox
 ---
@@ -17,36 +16,31 @@ OpenShell 是给自主 Agent（Claude Code、Codex、OpenCode 这类可以执行
 
 OpenShell 的角色和连接关系：
 
-```mermaid
-flowchart LR
-  CLI[CLI / SDK / TUI] -- gRPC/HTTP --> GW[Gateway]
-  GW -- provision --> DRV[Driver]
-  DRV --> RT[Docker / K8s / VM]
-  subgraph SB[Sandbox]
-    SUP[Supervisor] --> AGT[Agent]
-  end
-  RT --> SB
-  GW -.- SUP
-  AGT -- 出网 --> EXT[外部 API]
+```text
+CLI / SDK / TUI
+      │  gRPC / HTTP
+      v
+   Gateway ──provision──► Driver ──► Docker / K8s / VM
+      :                                    │
+      :  outbound session                  │
+      :                                    v
+      :                                 Sandbox
+      └····················► Supervisor ──► Agent ──出网──► 外部 API
 ```
 
-| 名字 | 在哪 | 是什么 |
-|------|------|--------|
-| CLI / SDK / TUI | 本机 | 唯一用户入口。创建 Sandbox、改策略、`connect` / `exec`。不知道底下是 Docker 还是 K8s |
-| Gateway | 本机进程或集群 Service | 控制面：鉴权、状态、生命周期、配置下发、把终端字节转进 Sandbox |
-| Sandbox | 一个容器 / Pod / VM | 一次数据面 workload |
-| Supervisor | Sandbox 里面的入口进程 | 本地安全边界：隔离、出站代理、回连 Gateway、拉起 Agent |
-| Agent | Supervisor 的子进程 | Claude Code / Codex / OpenCode 等 |
-| Driver | Gateway 旁边 | 把「起停一个 Sandbox」翻译成 Docker/K8s/VM，并回报 backend 状态与平台事件；不负责策略 enforcement |
+- **CLI / SDK / TUI**（本机）：唯一用户入口。创建 Sandbox、改策略、`connect` / `exec`。不知道底下是 Docker 还是 K8s。
+- **Gateway**（本机进程或集群 Service）：控制面。鉴权、状态、生命周期、配置下发、把终端字节转进 Sandbox。
+- **Sandbox**（一个容器 / Pod / VM）：一次数据面 workload。
+- **Supervisor**（Sandbox 里面的入口进程）：本地安全边界。隔离、出站代理、回连 Gateway、拉起 Agent。
+- **Agent**（Supervisor 的子进程）：Claude Code / Codex / OpenCode 等。
+- **Driver**（Gateway 旁边）：把「起停一个 Sandbox」翻译成 Docker/K8s/VM，并回报 backend 状态与平台事件；不负责策略 enforcement。
 
 图中 Gateway 和 Supervisor 之间的虚线是**outbound session**：Supervisor 启动后主动 `ConnectSupervisor` 连上 Gateway，一直挂着，走配置、日志，以及"再开一条终端管道"这类信令。不是 Agent 出网的流量，也不是命令的 stdout 本身。
 
 图上有两条互不相干的流量：
 
-| | 例子 | 路径 |
-|--|------|------|
-| 人操作 Sandbox | `connect`、`exec -- ls`、创建 | CLI → Gateway → Supervisor；默认不直接暴露 Pod/SSH，集群管理员仍可能通过 `kubectl exec` 等平台权限访问 |
-| Agent 自己出网 | 调模型、访问 GitHub | Agent → Sandbox 内 proxy → 目标站点。不经 Gateway，也不经 CLI |
+- **人操作 Sandbox**（`connect`、`exec -- ls`、创建）：CLI → Gateway → Supervisor。默认不直接暴露 Pod/SSH，集群管理员仍可能通过 `kubectl exec` 等平台权限访问。
+- **Agent 自己出网**（调模型、访问 GitHub）：Agent → Sandbox 内 proxy → 目标站点。不经 Gateway，也不经 CLI。
 
 职责划分：Gateway 拥有对象和授权（谁能做什么），Supervisor 拥有进程/文件/网络层面的实际 enforcement，Driver 只负责把「起停一个 Sandbox」翻译成具体平台的 API。静态隔离（Landlock、降权、seccomp、netns）在 Sandbox 创建时钉死，要改只能重建 Sandbox；网络策略、凭证、推理路由可以在已有会话上热更新。会话断了，Agent 还能继续跑，只是 `connect` 和热更新会失败。
 
@@ -60,33 +54,37 @@ Gateway 是二进制 `openshell-gateway`（对应 crate `openshell-server`）。
 
 一个端口先做 multiplex，拆出 gRPC API 和 HTTP 隧道；鉴权层区分用户身份（mTLS/OIDC）和 Sandbox 身份（JWT），二者不能互换；再往后分别落到持久化、compute+driver、session registry、policy/inference 几块，最终经拦截器交给 handler。下图是这条用户请求链路：
 
-```mermaid
-flowchart TB
-  CLI[CLI / SDK] -- 一个 TCP 端口 --> MX[multiplex]
-  MX -- gRPC --> AUTH[auth]
-  MX -- 明文 HTTP --> AUTH
-  AUTH --> PS[persistence]
-  AUTH --> CD[compute/driver]
-  AUTH --> SR[session registry]
-  AUTH --> PL[policy/inference]
+```text
+CLI / SDK
+    │  一个 TCP 端口
+    v
+multiplex
+    ├── gRPC
+    └── HTTP（明文）
+          │
+          v
+        auth
+          │
+          ├── persistence
+          ├── compute/driver
+          ├── session registry
+          └── policy/inference
 ```
 
 Supervisor 不在这条链路上：它通过 `ConnectSupervisor` / `RelayStream` 单独接入 session registry，没有画在图里。
 
 `multiplex` 是"多路复用"：Gateway 对外只开一个 TCP 端口，但要同时服务两种协议，gRPC（跑在 HTTP/2 上，走 protobuf 二进制帧）和普通 HTTP（health 检查、WebSocket 隧道用的明文 HTTP/1.1）。要在同一个端口上分流，得在协议栈真正接管这条连接之前，先"偷看"一眼开头几个字节，判断这是 HTTP/2 的 connection preface 还是普通 HTTP 请求，再把连接转给对应的协议栈。这一步做完之后，两条协议路径才汇合到 `auth`，后面的鉴权、路由逻辑是共用的。
 
-| 模块 | 职责 |
-|------|------|
-| `multiplex` / `gateway_listener` | 一端口拆 gRPC 与 HTTP；Docker/Podman 可再开仅 sandbox RPC 的 callback 口 |
-| `auth` | 用户 vs `Principal::Sandbox`；`rpc_auth` 决定哪些 RPC 能出现在 callback 口 |
-| `persistence` | protobuf 对象库 |
-| `compute` | 生命周期；合成公开 `SandboxPhase` |
-| `credentials` / `provider_*` | 逻辑 Provider → Secret 后端 |
-| `policy_store` / `inference` | 策略 revision、模型路由 bundle |
-| `supervisor_session` | 进程内 session 表 + pending relay |
-| `grpc/*` | sandbox / provider / policy / workspace RPC |
-| `ws_tunnel` / `ssh_sessions` | 隧道与 SSH session 元数据 |
-| interceptors | 认证后、handler 前的 unary 拦截（allowlist；secret 字段从拦截载荷剥掉） |
+- `multiplex` / `gateway_listener`：一端口拆 gRPC 与 HTTP；Docker/Podman 可再开仅 sandbox RPC 的 callback 口。
+- `auth`：用户 vs `Principal::Sandbox`；`rpc_auth` 决定哪些 RPC 能出现在 callback 口。
+- `persistence`：protobuf 对象库。
+- `compute`：生命周期；合成公开 `SandboxPhase`。
+- `credentials` / `provider_*`：逻辑 Provider → Secret 后端。
+- `policy_store` / `inference`：策略 revision、模型路由 bundle。
+- `supervisor_session`：进程内 session 表 + pending relay。
+- `grpc/*`：sandbox / provider / policy / workspace RPC。
+- `ws_tunnel` / `ssh_sessions`：隧道与 SSH session 元数据。
+- interceptors：认证后、handler 前的 unary 拦截（allowlist；secret 字段从拦截载荷剥掉）。
 
 `persistence` 这个名字对应的是行为，不是随手起的：Gateway 里不是所有状态都会落盘。sandbox、provider、policy revision 这些核心对象走 `persistence` 模块，最终写进一个 protobuf 对象库（SQLite/Postgres），Gateway 重启也不会丢。同一张表里的 `supervisor_session` 是反例：它只存在 Gateway 进程内存里，不落库，Gateway 一重启，这些 in-flight 的 session 记录就没了（2.4 节讲的 Ready 状态为什么要求单副本，根源也在这里）。`persistence` 这个名字标的正是"这块状态是持久化的"，用来跟这些不持久化的模块区分开。
 
@@ -94,12 +92,10 @@ Supervisor 不在这条链路上：它通过 `ConnectSupervisor` / `RelayStream`
 
 两种身份指用户身份（CLI/SDK/TUI，走 mTLS/OIDC）和 Sandbox 身份（Supervisor，走 JWT），2.1 节鉴权层区分的正是这两种。
 
-在启用 loopback listener 的部署中，一个端口同时跑 gRPC 和 HTTP（health、WebSocket 隧道）。loopback 明文 HTTP 只给 Sandbox 服务子域，不承载 Gateway API；这不是所有远程部署的通用入口。
+在启用 loopback listener 的部署中，一个端口同时跑 gRPC 和 HTTP（health、WebSocket 隧道）。loopback 明文 HTTP 只给 Sandbox 服务子域，不承载 Gateway API；这不是所有远程部署的通用入口。两种调用方怎么进、能调什么：
 
-| 调用方 | 怎么进 | 能调什么 |
-|--------|--------|----------|
-| CLI / SDK / TUI | 本地默认 mTLS；K8s 用 OIDC 或接入代理 | Sandbox CRUD、策略、Provider、watch |
-| Supervisor | Sandbox JWT | 仅 allowlist：`ConnectSupervisor`、`RelayStream`、续期、config sync、日志、策略状态 |
+- **CLI / SDK / TUI**：本地默认 mTLS；K8s 用 OIDC 或接入代理。能调 Sandbox CRUD、策略、Provider、watch。
+- **Supervisor**：Sandbox JWT。仅 allowlist：`ConnectSupervisor`、`RelayStream`、续期、config sync、日志、策略状态。
 
 K8s 上，Supervisor 不用 mTLS 证明身份：用 projected SA token 调 `IssueSandboxToken`，Gateway 做 `TokenReview` 并核对 Pod / Sandbox 的 ownerReference 后签发 JWT。本机 Docker/Podman/VM 由 runtime 把初始 token 注入进程；这个 JWT 默认 `ttl_secs = 0`（不过期），共享集群应设正 TTL。
 
@@ -121,36 +117,36 @@ Ready 不是某个组件直接吐出来的一个字段，是 Gateway 拿两个�
 
 `openshell-sandbox` 跑在每一个 Sandbox 里面，是该容器/Pod/VM 的入口进程，不是 Gateway 旁边的服务。
 
-```mermaid
-flowchart TB
-  subgraph SB[Sandbox]
-    SUP[Supervisor] --> AGT[Agent]
-    AGT --> PX[Policy proxy]
-  end
-  PX --> EXT[外部 API]
-  PX --> INF[inference.local] --> MB[模型后端]
+```text
+Sandbox
+    Supervisor
+         │
+         v
+       Agent
+         │
+         v
+    Policy proxy
+         │
+         ├──► 外部 API
+         └──► inference.local ──► 模型后端
 ```
 
 Supervisor 以 root 身份跑，做隔离、出站代理、加载配置和凭证、回连 Gateway；它拉起的 Agent（Claude Code / Codex 等）是非特权进程。Linux 上 spawn Agent 时 fail-closed 清空 capability bounding set，清不空就不启动。
 
 启动顺序是固定的：runtime 注入身份与 callback → 加载策略 → 依次挂上 Landlock / 降权 / netns / proxy / 内部 SSH → `ConnectSupervisor` 回连 Gateway → 最后才 exec Agent。Driver 注入的环境变量会覆盖镜像里的同名变量，防止镜像伪造 callback 地址。
 
-| Crate | 职责 |
-|-------|------|
-| `openshell-sandbox` | 编排、OCSF、denial 聚合 |
-| `openshell-supervisor-process` | 降权、seccomp、netns、SSH、session 客户端、日志推送 |
-| `openshell-supervisor-network` | 出站代理、OPA、L7、推理拦截、SigV4 |
-| `openshell-supervisor-middleware` | L7 通过后、注凭证前的 HTTP 链 |
+- `openshell-sandbox`：编排、OCSF、denial 聚合。
+- `openshell-supervisor-process`：降权、seccomp、netns、SSH、session 客户端、日志推送。
+- `openshell-supervisor-network`：出站代理、OPA、L7、推理拦截、SigV4。
+- `openshell-supervisor-middleware`：L7 通过后、注凭证前的 HTTP 链。
 
 隔离是好几层叠加在一起，不是单一原语：
 
-| 层 | 作用 |
-|----|------|
-| Landlock | 限制文件路径 |
-| 进程降权 | 权限最小化 |
-| seccomp | 堵住 raw socket 等系统调用 |
-| netns | 出站只能进本机 proxy，绕不过去 |
-| policy proxy | 校验目标、二进制身份、SSRF、L7 规则 |
+- **Landlock**：限制文件路径。
+- **进程降权**：权限最小化。
+- **seccomp**：堵住 raw socket 等系统调用。
+- **netns**：出站只能进本机 proxy，绕不过去。
+- **policy proxy**：校验目标、二进制身份、SSRF、L7 规则。
 
 ### 3.1 前四层管的是什么
 
@@ -178,17 +174,23 @@ Agent 调用被策略允许的 API 时，明文密钥不需要进入子进程：
 
 ### 4.1 创建 Sandbox
 
-```mermaid
-sequenceDiagram
-  participant CLI
-  participant GW as Gateway
-  participant DRV as Driver
-  participant SUP as Supervisor
-  CLI->>GW: CreateSandbox
-  GW->>DRV: provision
-  DRV->>SUP: 启动 Sandbox（注入 callback）
-  SUP->>GW: ConnectSupervisor
-  GW-->>CLI: Ready
+```text
+CLI
+  │  CreateSandbox
+  v
+Gateway
+  │  provision
+  v
+Driver
+  │  启动 Sandbox（注入 callback）
+  v
+Supervisor
+  │  ConnectSupervisor
+  v
+Gateway
+  │  Ready
+  v
+CLI
 ```
 
 Gateway 先写库、解析策略，再把 spec 交给 Driver；Driver 注入 callback 之后起容器或 Pod；Supervisor 回连并注册 session 之后，Gateway 才对外报告 Ready。本地 Docker 与 K8s 走的是同一套契约：K8s 的 Driver 通过 Agent Sandbox CR 等 Kubernetes 对象，交给 Controller 去创建 Pod。
@@ -197,20 +199,30 @@ Gateway 先写库、解析策略，再把 spec 交给 Driver；Driver 注入 cal
 
 outbound session 只让 Gateway 知道这个 Sandbox 还在；终端字节走的是另一条按次建立的 relay。
 
-```mermaid
-sequenceDiagram
-  participant User as 键盘/命令
-  participant CLI
-  participant GW as Gateway
-  participant SUP as Supervisor
-  Note over SUP,GW: 平时：Supervisor 已通过 ConnectSupervisor 常驻连接
-  User->>CLI: connect / exec
-  CLI->>GW: 请求
-  GW->>SUP: RelayOpen
-  SUP->>SUP: 拨内部 SSH
-  SUP-->>GW: RelayStream
-  GW-->>CLI: PTY / stdout
-  CLI-->>User: 终端输出
+```text
+（平时：Supervisor 已通过 ConnectSupervisor 常驻连接 Gateway）
+
+键盘/命令
+    │  connect / exec
+    v
+   CLI
+    │  请求
+    v
+ Gateway
+    │  RelayOpen
+    v
+Supervisor ──拨内部 SSH──┐
+    │                    │
+    │◄───────────────────┘
+    │  RelayStream
+    v
+ Gateway
+    │  PTY / stdout
+    v
+   CLI
+    │  终端输出
+    v
+键盘/命令
 ```
 
 交互式场景走的是 PTY，`exec` 则只是命令的 stdout/stderr；Gateway 不解释画面内容，只做转发。`sandbox logs` 是另外一条单独推送的日志流，跟这条 relay 无关。Sandbox 内的 HTTP 服务通过 CLI 支持的 relay/forwarding 能力对外暴露，不需要直接开 NodePort。
@@ -219,34 +231,29 @@ sequenceDiagram
 
 这条路径完全不经过 Gateway，也不经过 CLI，人的终端不在这条路上。
 
-```mermaid
-flowchart LR
-  AGT[Agent] --> PX[Policy proxy]
-  PX --> OPA{OPA 评估}
-  OPA -->|允许| EXT[外部 API]
-  OPA -->|inference.local| MB[模型后端]
+```text
+Agent ──► Policy proxy ──► OPA 评估
+                              │
+                              ├── 允许 ──────────────► 外部 API
+                              └── inference.local ──► 模型后端
 ```
 
 允许通过的请求，凭证在 proxy 里注入；走 `inference.local` 的请求路由到对应的模型后端。
 
 ## 5. 其余模块与部署形态
 
-用户面由 `openshell-cli`、`sdk`、`tui`、`bootstrap` 几个组件组成；`openshell-core`、`policy`、`providers`、`router`、`ocsf`、`otel` 是 Gateway 和 Supervisor 共用的库。Compute driver 支持 `docker` / `podman` / `kubernetes` / `vm` 四种；凭证 driver 支持 `vault` / `kubernetes-secrets` / `db-credstore` 三种后端。
+用户面由 `openshell-cli`、`sdk`、`tui`、`bootstrap` 几个组件组成；`openshell-core`、`policy`、`providers`、`router`、`ocsf`、`otel` 是 Gateway 和 Supervisor 共用的库。Compute driver 支持 `docker` / `podman` / `kubernetes` / `vm` 四种；凭证 driver 支持 `vault` / `kubernetes-secrets` / `db-credstore` 三种后端。两种部署：
 
-| 部署 | Gateway | Compute | Supervisor 连谁 |
-|------|---------|---------|-----------------|
-| 本机 | 工作站进程 | Docker / Podman / VM | 本机 Gateway |
-| Kubernetes | 集群 Service | Agent Sandbox CR → Pod | `server.grpcEndpoint`（须 **Pod 内可达**，通常配置为集群内 Service/DNS） |
+- **本机**：Gateway 是工作站进程，Compute 用 Docker / Podman / VM，Supervisor 连本机 Gateway。
+- **Kubernetes**：Gateway 是集群 Service，Compute 走 Agent Sandbox CR → Pod，Supervisor 连 `server.grpcEndpoint`（须 **Pod 内可达**，通常配置为集群内 Service/DNS）。
 
 两种部署下，CLI 操作流程不变：`gateway add` → `sandbox create` → `connect`。Kubernetes 上的 Helm 部署目前仍处于实验性阶段，建议固定住 OpenShell 的 release/tag 或 commit 之后再对照本文阅读。
 
 ## 参考与延伸阅读
 
-| 链接 | 说明 |
-|------|------|
-| [architecture/gateway.md](https://github.com/NVIDIA/OpenShell/blob/main/architecture/gateway.md) | Gateway：鉴权、持久化、session |
-| [architecture/sandbox.md](https://github.com/NVIDIA/OpenShell/blob/main/architecture/sandbox.md) | Supervisor：隔离、代理、凭证 |
-| [architecture/compute-runtimes.md](https://github.com/NVIDIA/OpenShell/blob/main/architecture/compute-runtimes.md) | Driver 契约与 Ready 状态 |
-| [Issue #1633](https://github.com/NVIDIA/OpenShell/issues/1633) | `inference.local` 拦截机制的实现细节，以及把这个模式推广到任意 host-local 服务的提案 |
-| [How OpenShell Works](https://docs.nvidia.com/openshell/latest/about/how-it-works) | 官方概念页 |
-| [NVIDIA/OpenShell](https://github.com/NVIDIA/OpenShell) | 源码 |
+- [architecture/gateway.md](https://github.com/NVIDIA/OpenShell/blob/main/architecture/gateway.md)：Gateway 鉴权、持久化、session
+- [architecture/sandbox.md](https://github.com/NVIDIA/OpenShell/blob/main/architecture/sandbox.md)：Supervisor 隔离、代理、凭证
+- [architecture/compute-runtimes.md](https://github.com/NVIDIA/OpenShell/blob/main/architecture/compute-runtimes.md)：Driver 契约与 Ready 状态
+- [Issue #1633](https://github.com/NVIDIA/OpenShell/issues/1633)：`inference.local` 拦截机制的实现细节，以及把这个模式推广到任意 host-local 服务的提案
+- [How OpenShell Works](https://docs.nvidia.com/openshell/latest/about/how-it-works)：官方概念页
+- [NVIDIA/OpenShell](https://github.com/NVIDIA/OpenShell)：源码
