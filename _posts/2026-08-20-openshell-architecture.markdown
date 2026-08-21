@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "OpenShell 架构"
+title:      "General architecture of OpenShell"
 date:       2026-08-20 10:00:00
 author:     "lr90"
 header-img-credit: false
@@ -28,19 +28,18 @@ CLI / SDK / TUI
       └····················► Supervisor ──► Agent ──出网──► 外部 API
 ```
 
-- **CLI / SDK / TUI**（本机）：唯一用户入口。创建 Sandbox、改策略、`connect` / `exec`。不知道底下是 Docker 还是 K8s。
-- **Gateway**（本机进程或集群 Service）：控制面。鉴权、状态、生命周期、配置下发、把终端字节转进 Sandbox。
-- **Sandbox**（一个容器 / Pod / VM）：一次数据面 workload。
-- **Supervisor**（Sandbox 里面的入口进程）：本地安全边界。隔离、出站代理、回连 Gateway、拉起 Agent。
-- **Agent**（Supervisor 的子进程）：Claude Code / Codex / OpenCode 等。
-- **Driver**（Gateway 旁边）：把「起停一个 Sandbox」翻译成 Docker/K8s/VM，并回报 backend 状态与平台事件；不负责策略 enforcement。
+| 名字 | 在哪 | 是什么 |
+|------|------|--------|
+| CLI / SDK / TUI | 本机 | 唯一用户入口。创建 Sandbox、改策略、`connect` / `exec`。不知道底下是 Docker 还是 K8s |
+| Gateway | 本机进程或集群 Service | 控制面。鉴权、状态、生命周期、配置下发、把终端字节转进 Sandbox |
+| Sandbox | 一个容器 / Pod / VM | 一次数据面 workload |
+| Supervisor | Sandbox 里面的入口进程 | 本地安全边界。隔离、出站代理、回连 Gateway、拉起 Agent |
+| Agent | Supervisor 的子进程 | Claude Code / Codex / OpenCode 等 |
+| Driver | Gateway 旁边 | 把「起停一个 Sandbox」翻译成 Docker/K8s/VM，并回报 backend 状态与平台事件；不负责策略 enforcement |
 
 图中 Gateway 和 Supervisor 之间的虚线是**outbound session**：Supervisor 启动后主动 `ConnectSupervisor` 连上 Gateway，一直挂着，走配置、日志，以及"再开一条终端管道"这类信令。不是 Agent 出网的流量，也不是命令的 stdout 本身。
 
-图上有两条互不相干的流量：
-
-- **人操作 Sandbox**（`connect`、`exec -- ls`、创建）：CLI → Gateway → Supervisor。默认不直接暴露 Pod/SSH，集群管理员仍可能通过 `kubectl exec` 等平台权限访问。
-- **Agent 自己出网**（调模型、访问 GitHub）：Agent → Sandbox 内 proxy → 目标站点。不经 Gateway，也不经 CLI。
+图上有两条互不相干的流量：**人操作 Sandbox**（`connect`、`exec -- ls`、创建）：CLI → Gateway → Supervisor。默认不直接暴露 Pod/SSH，集群管理员仍可能通过 `kubectl exec` 等平台权限访问。**Agent 自己出网**（调模型、访问 GitHub）：Agent → Sandbox 内 proxy → 目标站点。不经 Gateway，也不经 CLI。
 
 职责划分：Gateway 拥有对象和授权（谁能做什么），Supervisor 拥有进程/文件/网络层面的实际 enforcement，Driver 只负责把「起停一个 Sandbox」翻译成具体平台的 API。静态隔离（Landlock、降权、seccomp、netns）在 Sandbox 创建时钉死，要改只能重建 Sandbox；网络策略、凭证、推理路由可以在已有会话上热更新。会话断了，Agent 还能继续跑，只是 `connect` 和热更新会失败。
 
@@ -92,10 +91,7 @@ Supervisor 不在这条链路上：它通过 `ConnectSupervisor` / `RelayStream`
 
 两种身份指用户身份（CLI/SDK/TUI，走 mTLS/OIDC）和 Sandbox 身份（Supervisor，走 JWT），2.1 节鉴权层区分的正是这两种。
 
-在启用 loopback listener 的部署中，一个端口同时跑 gRPC 和 HTTP（health、WebSocket 隧道）。loopback 明文 HTTP 只给 Sandbox 服务子域，不承载 Gateway API；这不是所有远程部署的通用入口。两种调用方怎么进、能调什么：
-
-- **CLI / SDK / TUI**：本地默认 mTLS；K8s 用 OIDC 或接入代理。能调 Sandbox CRUD、策略、Provider、watch。
-- **Supervisor**：Sandbox JWT。仅 allowlist：`ConnectSupervisor`、`RelayStream`、续期、config sync、日志、策略状态。
+在启用 loopback listener 的部署中，一个端口同时跑 gRPC 和 HTTP（health、WebSocket 隧道）。loopback 明文 HTTP 只给 Sandbox 服务子域，不承载 Gateway API；这不是所有远程部署的通用入口。两种调用方怎么进、能调什么：**CLI / SDK / TUI**：本地默认 mTLS；K8s 用 OIDC 或接入代理。能调 Sandbox CRUD、策略、Provider、watch。**Supervisor**：Sandbox JWT。仅 allowlist：`ConnectSupervisor`、`RelayStream`、续期、config sync、日志、策略状态。
 
 K8s 上，Supervisor 不用 mTLS 证明身份：用 projected SA token 调 `IssueSandboxToken`，Gateway 做 `TokenReview` 并核对 Pod / Sandbox 的 ownerReference 后签发 JWT。本机 Docker/Podman/VM 由 runtime 把初始 token 注入进程；这个 JWT 默认 `ttl_secs = 0`（不过期），共享集群应设正 TTL。
 
@@ -152,13 +148,21 @@ Supervisor 以 root 身份跑，做隔离、出站代理、加载配置和凭证
 
 前四层都是 Linux 内核原生机制，policy proxy 是 OpenShell 自己在用户态加的一层（下一段单独展开），这里只说内核那四层。这四层大致对应内核处理一次操作时依次经过的几个检查点：先看进程有没有资格做这件事（capability、Landlock 管的是这一层），再看这个系统调用本身允不允许被调用（seccomp 管这一层），最后对网络而言还要看物理上够不够得着目标（netns 管这一层）。
 
-**Landlock** 是 Linux 5.13 引入的 LSM（Linux Security Module，内核里一个通用的安全钩子框架）。LSM 本身不实现具体策略，只是在内核关键操作点（打开文件、执行程序、建立网络连接等）插入一批"钩子"，让接进来的安全模块在这些点上做额外的允许/拒绝判断，跑在传统的属主/属组/rwx 权限检查之后，是叠加的一层，不是替代。SELinux、AppArmor 也是接在这个框架上的实现，但它们要管理员预先给整机写好策略；Landlock 反过来，允许一个非特权进程给自己（以及它 fork 出来的子进程）加限制，不需要 root，也不需要管理员配置，而且规则一旦施加，同一进程内只能收紧、不能放宽。这对沙箱场景很关键：即使 Agent 进程本身被攻破，它也没法把已经收紧的规则再改宽。Supervisor 用 Landlock 给 Agent 的文件系统访问建白名单：哪些路径能读、能写、能执行，其余一律拒绝，不依赖 Agent 进程自己守规矩。新版 Landlock（ABI v4 起）已经能管 TCP 连接、v10 起还能管 UDP，但 OpenShell 这里只拿它管文件路径，网络交给下面的 netns，是有意的职责拆分，不是 Landlock 能力不够。
+#### Landlock
 
-**进程降权**说的是清空 capability bounding set。传统 Unix 权限模型只有 root 和非 root 两档，root 天下无敌；Linux 后来把 root 的这些超能力拆成了几十个可以单独开关的细粒度权限，叫 capability，比如管网络配置的 `CAP_NET_ADMIN`、管挂载文件系统的 `CAP_SYS_ADMIN`、管绕过文件权限检查的 `CAP_DAC_OVERRIDE`。一个进程实际能拿到的 capability，上限由它的 bounding set 决定：就算进程的 UID 显示是 0（root），只要 bounding set 是空的，它就调用不了任何需要 capability 的特权操作，跟普通用户没有区别。前面提到的 fail-closed 清空动作，就是在 spawn Agent 之前把这个 bounding set 清空，清不空就不启动。
+Landlock 是 Linux 5.13 引入的 LSM（Linux Security Module，内核里一个通用的安全钩子框架）。LSM 本身不实现具体策略，只是在内核关键操作点（打开文件、执行程序、建立网络连接等）插入一批"钩子"，让接进来的安全模块在这些点上做额外的允许/拒绝判断，跑在传统的属主/属组/rwx 权限检查之后，是叠加的一层，不是替代。SELinux、AppArmor 也是接在这个框架上的实现，但它们要管理员预先给整机写好策略；Landlock 反过来，允许一个非特权进程给自己（以及它 fork 出来的子进程）加限制，不需要 root，也不需要管理员配置，而且规则一旦施加，同一进程内只能收紧、不能放宽。这对沙箱场景很关键：即使 Agent 进程本身被攻破，它也没法把已经收紧的规则再改宽。Supervisor 用 Landlock 给 Agent 的文件系统访问建白名单：哪些路径能读、能写、能执行，其余一律拒绝，不依赖 Agent 进程自己守规矩。新版 Landlock（ABI v4 起）已经能管 TCP 连接、v10 起还能管 UDP，但 OpenShell 这里只拿它管文件路径，网络交给下面的 netns，是有意的职责拆分，不是 Landlock 能力不够。
 
-**seccomp**（secure computing mode）是在系统调用这一层再加一道过滤。能不能读某个文件、能不能拿到某个 capability，判断的是"有没有资格做这件事"；但一个进程真正能干什么，最终都要落到它调用了哪些系统调用（syscall），seccomp 管的就是这一层：用一段 BPF 程序对进程能调用哪些 syscall（以及带什么参数）做白名单，不在名单里的直接在内核入口被拒绝。典型例子是创建 raw socket，这个调用能绕开常规的 socket API 直接组装网络包，用来嗅探或伪造流量；就算前面的权限检查都没堵住，seccomp 也能单独把这个调用挡在外面。它和 capability 管的是两个维度：capability 决定"有没有权限"，seccomp 决定"这个系统调用本身能不能被调用"，就算权限没被拿干净，seccomp 也能兜底挡住。
+#### 进程降权
 
-**netns**（网络命名空间）让 Agent 进程拥有自己独立的网络栈：网卡、路由表、iptables 规则都是独立的一份，不共享宿主机的。Linux 的命名空间机制能把同一台机器上的资源"分身"成互相看不见的多份，网络命名空间分的就是网络设备和路由表这一份。Supervisor 把 Agent 放进一个只有一条内部虚拟网卡（veth pair）通向本机 policy proxy 的 netns 里，这个 netns 里压根没有配置到公网的路由。不是靠防火墙规则去"允许 / 拒绝"某个目标地址（这类规则理论上还可能有漏洞被绕过）：这里是路由表这一层就没有路径可走，Agent 想绕开 proxy 直连外网，在网络层面根本走不通。
+进程降权说的是清空 capability bounding set。传统 Unix 权限模型只有 root 和非 root 两档，root 天下无敌；Linux 后来把 root 的这些超能力拆成了几十个可以单独开关的细粒度权限，叫 capability，比如管网络配置的 `CAP_NET_ADMIN`、管挂载文件系统的 `CAP_SYS_ADMIN`、管绕过文件权限检查的 `CAP_DAC_OVERRIDE`。一个进程实际能拿到的 capability，上限由它的 bounding set 决定：就算进程的 UID 显示是 0（root），只要 bounding set 是空的，它就调用不了任何需要 capability 的特权操作，跟普通用户没有区别。前面提到的 fail-closed 清空动作，就是在 spawn Agent 之前把这个 bounding set 清空，清不空就不启动。
+
+#### seccomp
+
+seccomp（secure computing mode）是在系统调用这一层再加一道过滤。能不能读某个文件、能不能拿到某个 capability，判断的是"有没有资格做这件事"；但一个进程真正能干什么，最终都要落到它调用了哪些系统调用（syscall），seccomp 管的就是这一层：用一段 BPF 程序对进程能调用哪些 syscall（以及带什么参数）做白名单，不在名单里的直接在内核入口被拒绝。典型例子是创建 raw socket，这个调用能绕开常规的 socket API 直接组装网络包，用来嗅探或伪造流量；就算前面的权限检查都没堵住，seccomp 也能单独把这个调用挡在外面。它和 capability 管的是两个维度：capability 决定"有没有权限"，seccomp 决定"这个系统调用本身能不能被调用"，就算权限没被拿干净，seccomp 也能兜底挡住。
+
+#### netns
+
+netns（网络命名空间）让 Agent 进程拥有自己独立的网络栈：网卡、路由表、iptables 规则都是独立的一份，不共享宿主机的。Linux 的命名空间机制能把同一台机器上的资源"分身"成互相看不见的多份，网络命名空间分的就是网络设备和路由表这一份。Supervisor 把 Agent 放进一个只有一条内部虚拟网卡（veth pair）通向本机 policy proxy 的 netns 里，这个 netns 里压根没有配置到公网的路由。不是靠防火墙规则去"允许 / 拒绝"某个目标地址（这类规则理论上还可能有漏洞被绕过）：这里是路由表这一层就没有路径可走，Agent 想绕开 proxy 直连外网，在网络层面根本走不通。
 
 四层各管一个维度：Landlock 管文件路径，降权和 seccomp 管进程能拿到什么权限、能调用什么系统调用，netns 管网络物理可达性。单独绕过其中一层，另外几层还是拦得住。
 
@@ -242,10 +246,7 @@ Agent ──► Policy proxy ──► OPA 评估
 
 ## 5. 其余模块与部署形态
 
-用户面由 `openshell-cli`、`sdk`、`tui`、`bootstrap` 几个组件组成；`openshell-core`、`policy`、`providers`、`router`、`ocsf`、`otel` 是 Gateway 和 Supervisor 共用的库。Compute driver 支持 `docker` / `podman` / `kubernetes` / `vm` 四种；凭证 driver 支持 `vault` / `kubernetes-secrets` / `db-credstore` 三种后端。两种部署：
-
-- **本机**：Gateway 是工作站进程，Compute 用 Docker / Podman / VM，Supervisor 连本机 Gateway。
-- **Kubernetes**：Gateway 是集群 Service，Compute 走 Agent Sandbox CR → Pod，Supervisor 连 `server.grpcEndpoint`（须 **Pod 内可达**，通常配置为集群内 Service/DNS）。
+用户面由 `openshell-cli`、`sdk`、`tui`、`bootstrap` 几个组件组成；`openshell-core`、`policy`、`providers`、`router`、`ocsf`、`otel` 是 Gateway 和 Supervisor 共用的库。Compute driver 支持 `docker` / `podman` / `kubernetes` / `vm` 四种；凭证 driver 支持 `vault` / `kubernetes-secrets` / `db-credstore` 三种后端。两种部署：**本机**：Gateway 是工作站进程，Compute 用 Docker / Podman / VM，Supervisor 连本机 Gateway。**Kubernetes**：Gateway 是集群 Service，Compute 走 Agent Sandbox CR → Pod，Supervisor 连 `server.grpcEndpoint`（须 **Pod 内可达**，通常配置为集群内 Service/DNS）。
 
 两种部署下，CLI 操作流程不变：`gateway add` → `sandbox create` → `connect`。Kubernetes 上的 Helm 部署目前仍处于实验性阶段，建议固定住 OpenShell 的 release/tag 或 commit 之后再对照本文阅读。
 
