@@ -27,22 +27,20 @@ https://github.com/kitian616/jekyll-TeXt-theme
 				The `data-sort` attribute must stay the first thing inside each <a>: the
 				list is ordered by splitting this capture on </a> and sorting the raw
 				strings. Anything added ahead of it would sort on that instead.
-				Colours come from _config.yml's tag-colors, the same map the post header
-				uses, so a tag reads the same everywhere; unmapped tags fall back to grey.
+				Colours come from _config.yml's optional tag-colors overrides. Unmapped
+				tags receive a stable automatic colour from js/hux-blog.js.
 			{% endcomment %}
-			{% capture tags %}
-			{% for tag in site.tags %}{% assign _c = site.tag-colors[tag[0]] | default: '#8593a0' %}
-				<a data-sort="{{ site.posts.size | minus: tag[1].size | prepend: '0000' | slice: -4, 4 }}"
-					data-encode="{{ tag[0] | strip | url_encode }}"
-					class="tag-button"
-					title="{{ tag[0] }}" rel="{{ tag[1].size }}"
-					style="--tag: {{ _c }};">
-					{{ tag[0] }}
-					<sup>{{tag[1].size}}</sup>
-				</a>
-			{% endfor %}
-			{% endcapture %}
-        {{ tags | split:'</a>' | sort | join:'</a>' }}
+				{% capture tags %}{% for tag in site.tags %}{% assign _tag_name = tag[0] %}{% assign _c = site.tag-colors[_tag_name] %}
+					<a data-sort="{{ site.posts.size | minus: tag[1].size | prepend: '0000' | slice: -4, 4 }}"
+						data-encode="{{ _tag_name | strip | url_encode }}"
+						data-tag-color="{{ _tag_name | escape }}"
+						class="tag-button"
+						title="{{ _tag_name }}" rel="{{ tag[1].size }}"
+						{% if _c %}style="--tag: {{ _c }};"{% endif %}>
+						{{ _tag_name }}
+						<sup>{{tag[1].size}}</sup>
+					</a>{% endfor %}{% endcapture %}
+	        {{ tags | split:'</a>' | sort | join:'</a>' }}</a>
 			</div>
 
             <!-- Article List -->
@@ -82,9 +80,9 @@ https://github.com/kitian616/jekyll-TeXt-theme
 				the timeline node, the title hover and the pill can all read it.
 			{%- endcomment -%}
 			{%- assign _primary_tag = _article.tags | first -%}
-			{%- assign _tag_color = site.tag-colors[_primary_tag] | default: '#8593a0' -%}
+			{%- assign _tag_color = site.tag-colors[_primary_tag] -%}
 
-				<div class="archive-item item" data-tags="{{ _tags }}" style="--tag: {{ _tag_color }};">
+				<div class="archive-item item" data-tags="{{ _tags }}" data-tag-color="{{ _primary_tag | escape }}"{% if _tag_color %} style="--tag: {{ _tag_color }};"{% endif %}>
 					<a href="{{ _article.url | prepend: site.baseurl }}">
 						<time class="archive-date" datetime="{{ _article.date | date_to_xmlschema }}">{{ _article.date | date: '%m-%d' }}</time>
 						<span class="archive-body">

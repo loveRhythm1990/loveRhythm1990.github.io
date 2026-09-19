@@ -6,8 +6,8 @@
 // year <section> and on .item, so those two hooks and the data-tags attribute
 // have to survive any restyling.
 
-// --tag is set inline per item from _config.yml's tag-colors, the same map the
-// post header uses, so a tag reads the same in both places.
+// --tag comes from an optional _config.yml override or the stable name-based
+// palette in js/hux-blog.js, so a tag reads the same across every page.
 
 @archive-indent: 26px; // room for the rail and its nodes
 @archive-rail-x: 7px;
@@ -150,18 +150,33 @@
   }
 }
 
-// Tag filter: neutral pills when idle; selected (.focus from archive.js) fills
-// with brand blue and white type — clearer than a text-colour change alone.
+// Tag filter: each tag uses its own stable colour. The selected tag fills with
+// that colour and white type; "Show All" retains the site brand colour.
 #tag_cloud {
-  a.tag-button,
+  a.tag-button {
+    color: color-mix(in srgb, var(--tag, @brand-primary) 88%, #0b1620);
+    background: color-mix(in srgb, var(--tag, @brand-primary) 13%, #fff);
+
+    &:hover:not(.focus),
+    &:active:not(.focus) {
+      color: color-mix(in srgb, var(--tag, @brand-primary) 95%, #000);
+      background-color: color-mix(in srgb, var(--tag, @brand-primary) 20%, #fff) !important;
+    }
+
+    &.focus {
+      color: white !important;
+      background-color: var(--tag, @brand-primary) !important;
+      box-shadow: none;
+
+      > sup {
+        opacity: 0.9;
+      }
+    }
+  }
+
   a.tag-button--all {
     color: @gray-dark;
     background: #f3f5f5;
-
-    > sup {
-      color: inherit;
-      opacity: 0.65;
-    }
 
     &:hover:not(.focus),
     &:active:not(.focus) {
@@ -177,6 +192,14 @@
       > sup {
         opacity: 0.9;
       }
+    }
+  }
+
+  a.tag-button,
+  a.tag-button--all {
+    > sup {
+      color: inherit;
+      opacity: 0.65;
     }
   }
 }

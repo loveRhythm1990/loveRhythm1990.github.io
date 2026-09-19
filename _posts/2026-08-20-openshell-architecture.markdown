@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "General architecture of OpenShell"
+title:      "OpenShell：为 AI Agent 提供安全沙箱"
 date:       2026-08-20 10:00:00
 author:     "lr90"
 header-img-credit: false
@@ -8,253 +8,180 @@ tags:
     - Sandbox
 ---
 
-OpenShell 是给自主 Agent（Claude Code、Codex、OpenCode 这类可以执行命令的 agent binary）提供的**带策略的执行环境**。这类 agent binary 一旦能跑命令，理论上就能读本机任意文件、任意出网。OpenShell 的作用是把它们放进 Sandbox，用声明式 YAML 限制文件系统、进程权限和出站目标，把 Agent 的活动范围收在用户划定的边界内，防止它读到敏感数据、或者对宿主系统造成破坏。
+随着大模型的发展，AI 应用正从对话问答延伸到任务执行。Claude Code、OpenCode 等编码助手，以及 OpenClaw 这类通用 AI 助手，在执行任务时可能都需要运行代码、读写文件和访问外部服务。这些操作会访问本地数据、服务凭证和外部系统，如果缺少必要的权限约束，就可能带来密钥泄露、越权读写文件或未经授权的网络访问。
 
-用法是 `sandbox create -- <命令>`，这条命令就成了 Supervisor 的受限子进程。运行时是三层：**CLI/SDK/TUI** 只和 **Gateway** 通信，每个 Sandbox 里再跑一份 **Supervisor**，做本地隔离和出站策略。这套控制面（CLI ↔ Gateway ↔ Supervisor）跟 Sandbox 具体怎么起来是分开的：本机用 Docker，远程用 Kubernetes，还有 Podman、VM，对 Gateway 来说都只是背后一个可插拔的 **Compute Driver**，只管底层怎么起容器/Pod，不参与控制面逻辑。
+要控制这些风险，运行环境需要根据任务类型授予必要的权限，并在程序非法访问时及时阻止。沙箱（sandbox）通过隔离执行环境、限制资源访问，为这类控制提供基础设施。
 
-## 1. 总览
+OpenShell 是 NVIDIA 面向这类场景开源的沙箱运行时。开发者指定镜像、启动命令和访问策略，OpenShell 负责创建环境，并在执行过程中限制资源访问。下文以 Linux 沙箱为例，说明这些权限控制如何落实到进程启动、文件操作和网络请求中。
 
-OpenShell 的角色和连接关系：
+## 1. 整体架构：Gateway 与 Supervisor
 
-```text
-CLI / SDK / TUI
-      │  gRPC / HTTP
-      v
-   Gateway ──provision──► Driver ──► Docker / K8s / VM
-      :                                    │
-      :  outbound session                  │
-      :                                    v
-      :                                 Sandbox
-      └····················► Supervisor ──► Agent ──出网──► 外部 API
+OpenShell 通过控制面组件 **Gateway** 管理沙箱。Gateway 向 CLI、SDK 提供接口，保存沙箱状态、安全策略和凭证（secret）配置，并通过 Compute Driver 对接 Docker、Kubernetes 等基础设施。
+
+沙箱内部的 **Supervisor** 负责管理用户进程、执行权限限制，并运行本地网络代理。它与 Gateway 同步策略配置和状态，具体的文件访问限制与网络放行在沙箱侧执行。
+
+Supervisor 启动后会主动连接 Gateway，并保持一条经过认证的控制会话。Gateway 通过这条会话下发配置，CLI 发起的连接、命令执行和文件传输也由它转发。创建沙箱时，底层容器或 Pod 启动后， Supervisor 完成初始化并建立会话后，沙箱才进入 `Ready` 状态。
+
+不同运行环境由 Compute Driver 对接适配。具体可以使用 Docker、Podman 或 VM，集群环境可以使用 Kubernetes。无论底层环境如何，沙箱的创建接口和策略执行模型保持一致。
+
+![OpenShell 的管理路径与业务网络路径](/pics/01-openshell-architecture.png)
+
+*创建接口与策略配置经过 Gateway；用户进程访问外部服务时，由沙箱内的代理检查并转发。*
+
+## 2. 本地安装与创建沙箱
+
+以下以 macOS 和 Docker Desktop 环境为例，在本地部署 OpenShell，并创建一个通用沙箱来演示一下使用和配置过程。OpenShell CLI 和 Gateway 直接运行在 macOS 上，Docker Desktop 为沙箱提供容器运行环境。开始前请确认 Docker Desktop 已经启动。
+
+### 2.1 安装 OpenShell
+
+运行下面的官方脚本来安装 OpenShell CLI 和启动 Gateway 服务。
+
+```shell
+curl -LsSf https://raw.githubusercontent.com/NVIDIA/OpenShell/main/install.sh | sh
 ```
 
-| 名字 | 在哪 | 是什么 |
-|------|------|--------|
-| CLI / SDK / TUI | 本机 | 唯一用户入口。创建 Sandbox、改策略、`connect` / `exec`。不知道底下是 Docker 还是 K8s |
-| Gateway | 本机进程或集群 Service | 控制面。鉴权、状态、生命周期、配置下发、把终端字节转进 Sandbox |
-| Sandbox | 一个容器 / Pod / VM | 一次数据面 workload |
-| Supervisor | Sandbox 里面的入口进程 | 本地安全边界。隔离、出站代理、回连 Gateway、拉起 Agent |
-| Agent | Supervisor 的子进程 | Claude Code / Codex / OpenCode 等 |
-| Driver | Gateway 旁边 | 把「起停一个 Sandbox」翻译成 Docker/K8s/VM，并回报 backend 状态与平台事件；不负责策略 enforcement |
+安装脚本会通过 Homebrew 安装 OpenShell CLI 和 Gateway，并将 Gateway 注册为 Homebrew 后台服务。该服务由 macOS 的 `launchd` 管理并直接运行在宿主机上。如果命令成功退出，本地 Gateway 就已经启动了，可以通过下面命令检查连接状态：
 
-图中 Gateway 和 Supervisor 之间的虚线是**outbound session**：Supervisor 启动后主动 `ConnectSupervisor` 连上 Gateway，一直挂着，走配置、日志，以及"再开一条终端管道"这类信令。不是 Agent 出网的流量，也不是命令的 stdout 本身。
+```console
+$ openshell status
 
-图上有两条互不相干的流量：**人操作 Sandbox**（`connect`、`exec -- ls`、创建）：CLI → Gateway → Supervisor。默认不直接暴露 Pod/SSH，集群管理员仍可能通过 `kubectl exec` 等平台权限访问。**Agent 自己出网**（调模型、访问 GitHub）：Agent → Sandbox 内 proxy → 目标站点。不经 Gateway，也不经 CLI。
+Server Status
 
-职责划分：Gateway 拥有对象和授权（谁能做什么），Supervisor 拥有进程/文件/网络层面的实际 enforcement，Driver 只负责把「起停一个 Sandbox」翻译成具体平台的 API。静态隔离（Landlock、降权、seccomp、netns）在 Sandbox 创建时钉死，要改只能重建 Sandbox；网络策略、凭证、推理路由可以在已有会话上热更新。会话断了，Agent 还能继续跑，只是 `connect` 和热更新会失败。
-
-## 2. Gateway：控制面
-
-Gateway 是二进制 `openshell-gateway`（对应 crate `openshell-server`）。CLI 和所有 Supervisor 都只连它，不会直连底层容器或 Pod。
-
-做：鉴权、持久化、让 Driver 起停 workload、下发策略/凭证/推理路由、把 CLI 的终端字节转发到对应 session。不做：拦截 Agent 出网、跑 Landlock，那是 Supervisor 的工作；Gateway 本身看不见 Sandbox 里的进程身份和 socket。
-
-### 2.1 内部模块
-
-一个端口先做 multiplex，拆出 gRPC API 和 HTTP 隧道；鉴权层区分用户身份（mTLS/OIDC）和 Sandbox 身份（JWT），二者不能互换；再往后分别落到持久化、compute+driver、session registry、policy/inference 几块，最终经拦截器交给 handler。下图是这条用户请求链路：
-
-```text
-CLI / SDK
-    │  一个 TCP 端口
-    v
-multiplex
-    ├── gRPC
-    └── HTTP（明文）
-          │
-          v
-        auth
-          │
-          ├── persistence
-          ├── compute/driver
-          ├── session registry
-          └── policy/inference
+  Gateway: openshell
+  Server: https://localhost:17670
+  Status: Connected
+  Authentication: Authenticated (mTLS transport)
+  Version: 0.0.116
 ```
 
-Supervisor 不在这条链路上：它通过 `ConnectSupervisor` / `RelayStream` 单独接入 session registry，没有画在图里。
+Gateway 启动时会检测 Docker Desktop 并启用 Docker Driver。执行 `openshell sandbox create` 后，Gateway 通过 Docker API 拉取默认镜像、创建沙箱容器，并在其中启动 Supervisor。Supervisor 连接 Gateway 后，沙箱进入就绪状态。
 
-`multiplex` 是"多路复用"：Gateway 对外只开一个 TCP 端口，但要同时服务两种协议，gRPC（跑在 HTTP/2 上，走 protobuf 二进制帧）和普通 HTTP（health 检查、WebSocket 隧道用的明文 HTTP/1.1）。要在同一个端口上分流，得在协议栈真正接管这条连接之前，先"偷看"一眼开头几个字节，判断这是 HTTP/2 的 connection preface 还是普通 HTTP 请求，再把连接转给对应的协议栈。这一步做完之后，两条协议路径才汇合到 `auth`，后面的鉴权、路由逻辑是共用的。
+### 2.2 创建一个交互式沙箱
 
-- `multiplex` / `gateway_listener`：一端口拆 gRPC 与 HTTP；Docker/Podman 可再开仅 sandbox RPC 的 callback 口。
-- `auth`：用户 vs `Principal::Sandbox`；`rpc_auth` 决定哪些 RPC 能出现在 callback 口。
-- `persistence`：protobuf 对象库。
-- `compute`：生命周期；合成公开 `SandboxPhase`。
-- `credentials` / `provider_*`：逻辑 Provider → Secret 后端。
-- `policy_store` / `inference`：策略 revision、模型路由 bundle。
-- `supervisor_session`：进程内 session 表 + pending relay。
-- `grpc/*`：sandbox / provider / policy / workspace RPC。
-- `ws_tunnel` / `ssh_sessions`：隧道与 SSH session 元数据。
-- interceptors：认证后、handler 前的 unary 拦截（allowlist；secret 字段从拦截载荷剥掉）。
+安装完成并确认 Gateway 可以连接后，创建名为 `shell-demo` 的沙箱并进入其登录 Shell：
 
-`persistence` 这个名字对应的是行为，不是随手起的：Gateway 里不是所有状态都会落盘。sandbox、provider、policy revision 这些核心对象走 `persistence` 模块，最终写进一个 protobuf 对象库（SQLite/Postgres），Gateway 重启也不会丢。同一张表里的 `supervisor_session` 是反例：它只存在 Gateway 进程内存里，不落库，Gateway 一重启，这些 in-flight 的 session 记录就没了（2.4 节讲的 Ready 状态为什么要求单副本，根源也在这里）。`persistence` 这个名字标的正是"这块状态是持久化的"，用来跟这些不持久化的模块区分开。
-
-### 2.2 两种身份
-
-两种身份指用户身份（CLI/SDK/TUI，走 mTLS/OIDC）和 Sandbox 身份（Supervisor，走 JWT），2.1 节鉴权层区分的正是这两种。
-
-在启用 loopback listener 的部署中，一个端口同时跑 gRPC 和 HTTP（health、WebSocket 隧道）。loopback 明文 HTTP 只给 Sandbox 服务子域，不承载 Gateway API；这不是所有远程部署的通用入口。两种调用方怎么进、能调什么：**CLI / SDK / TUI**：本地默认 mTLS；K8s 用 OIDC 或接入代理。能调 Sandbox CRUD、策略、Provider、watch。**Supervisor**：Sandbox JWT。仅 allowlist：`ConnectSupervisor`、`RelayStream`、续期、config sync、日志、策略状态。
-
-K8s 上，Supervisor 不用 mTLS 证明身份：用 projected SA token 调 `IssueSandboxToken`，Gateway 做 `TokenReview` 并核对 Pod / Sandbox 的 ownerReference 后签发 JWT。本机 Docker/Podman/VM 由 runtime 把初始 token 注入进程；这个 JWT 默认 `ttl_secs = 0`（不过期），共享集群应设正 TTL。
-
-`Health` 接口不鉴权，CLI 用 `GetGatewayInfo` 来判断用户是否已登录：返回 `Unauthenticated` 说明凭证被拒，返回 `PermissionDenied` 则说明身份验证过了，只是没有 admin 权限。
-
-### 2.3 持久化
-
-Gateway 里的对象统一存成 protobuf payload 加一组索引列（核心字段是 id、type、name、scope、version、status、resource_version、labels；策略相关的对象还可能用到 dedup_key、hit_count）。sandbox、provider、policy revision、SSH session、inference route 共用同一个 Store：SQLite 是单人默认选项，Postgres 用于外置库场景，生产写入统一走 CAS（compare-and-swap）避免并发覆盖。Secret 单独走凭证后端；如果没有配置外部后端，Gateway 会把它加密后存进库里。
-
-### 2.4 Ready 从哪来
-
-Ready 不是某个组件直接吐出来的一个字段，是 Gateway 拿两个信号拼出来的：Driver 报的 backend 事实（容器/Pod 是否在跑，顺带带上生命周期和平台事件），加上 supervisor session 有没有注册上。两个都满足才算 Ready。backend Ready 但 session 没到 → Provisioning（`SupervisorNotConnected`）；session 已经到、backend 快照还没跟上 → 仍然算 Ready。
-
-`Stop` 只关掉 exec/SSH，资源和磁盘都保留；`Start` 要等新 session 建立起来才算完成。`SupervisorSessionRegistry` 只在 Gateway 进程内存里，不落库，所以多副本部署会把 Ready 状态打乱（上游 issue #1868）；可靠的 Ready 状态实际上要求单副本。
-
-未认领 relay 的数量上限、超时时间、心跳间隔是实现细节，会随版本变化，以对应版本的 Gateway 配置和源码为准，不是稳定的 API 契约。
-
-## 3. Supervisor：Sandbox 里的安全边界
-
-`openshell-sandbox` 跑在每一个 Sandbox 里面，是该容器/Pod/VM 的入口进程，不是 Gateway 旁边的服务。
-
-```text
-Sandbox
-    Supervisor
-         │
-         v
-       Agent
-         │
-         v
-    Policy proxy
-         │
-         ├──► 外部 API
-         └──► inference.local ──► 模型后端
+```shell
+openshell sandbox create --name shell-demo
 ```
 
-Supervisor 以 root 身份跑，做隔离、出站代理、加载配置和凭证、回连 Gateway；它拉起的 Agent（Claude Code / Codex 等）是非特权进程。Linux 上 spawn Agent 时 fail-closed 清空 capability bounding set，清不空就不启动。
+Gateway 创建沙箱容器后，Supervisor 加载策略并启动登录 Shell，CLI 随即将当前终端接入沙箱。进入沙箱后，可以像使用普通 Linux 环境一样执行命令。例如，创建并运行一个简单的 Python 脚本：
 
-启动顺序是固定的：runtime 注入身份与 callback → 加载策略 → 依次挂上 Landlock / 降权 / netns / proxy / 内部 SSH → `ConnectSupervisor` 回连 Gateway → 最后才 exec Agent。Driver 注入的环境变量会覆盖镜像里的同名变量，防止镜像伪造 callback 地址。
-
-- `openshell-sandbox`：编排、OCSF、denial 聚合。
-- `openshell-supervisor-process`：降权、seccomp、netns、SSH、session 客户端、日志推送。
-- `openshell-supervisor-network`：出站代理、OPA、L7、推理拦截、SigV4。
-- `openshell-supervisor-middleware`：L7 通过后、注凭证前的 HTTP 链。
-
-隔离是好几层叠加在一起，不是单一原语：
-
-- **Landlock**：限制文件路径。
-- **进程降权**：权限最小化。
-- **seccomp**：堵住 raw socket 等系统调用。
-- **netns**：出站只能进本机 proxy，绕不过去。
-- **policy proxy**：校验目标、二进制身份、SSRF、L7 规则。
-
-### 3.1 前四层管的是什么
-
-前四层都是 Linux 内核原生机制，policy proxy 是 OpenShell 自己在用户态加的一层（下一段单独展开），这里只说内核那四层。这四层大致对应内核处理一次操作时依次经过的几个检查点：先看进程有没有资格做这件事（capability、Landlock 管的是这一层），再看这个系统调用本身允不允许被调用（seccomp 管这一层），最后对网络而言还要看物理上够不够得着目标（netns 管这一层）。
-
-#### Landlock
-
-Landlock 是 Linux 5.13 引入的 LSM（Linux Security Module，内核里一个通用的安全钩子框架）。LSM 本身不实现具体策略，只是在内核关键操作点（打开文件、执行程序、建立网络连接等）插入一批"钩子"，让接进来的安全模块在这些点上做额外的允许/拒绝判断，跑在传统的属主/属组/rwx 权限检查之后，是叠加的一层，不是替代。SELinux、AppArmor 也是接在这个框架上的实现，但它们要管理员预先给整机写好策略；Landlock 反过来，允许一个非特权进程给自己（以及它 fork 出来的子进程）加限制，不需要 root，也不需要管理员配置，而且规则一旦施加，同一进程内只能收紧、不能放宽。这对沙箱场景很关键：即使 Agent 进程本身被攻破，它也没法把已经收紧的规则再改宽。Supervisor 用 Landlock 给 Agent 的文件系统访问建白名单：哪些路径能读、能写、能执行，其余一律拒绝，不依赖 Agent 进程自己守规矩。新版 Landlock（ABI v4 起）已经能管 TCP 连接、v10 起还能管 UDP，但 OpenShell 这里只拿它管文件路径，网络交给下面的 netns，是有意的职责拆分，不是 Landlock 能力不够。
-
-#### 进程降权
-
-进程降权说的是清空 capability bounding set。传统 Unix 权限模型只有 root 和非 root 两档，root 天下无敌；Linux 后来把 root 的这些超能力拆成了几十个可以单独开关的细粒度权限，叫 capability，比如管网络配置的 `CAP_NET_ADMIN`、管挂载文件系统的 `CAP_SYS_ADMIN`、管绕过文件权限检查的 `CAP_DAC_OVERRIDE`。一个进程实际能拿到的 capability，上限由它的 bounding set 决定：就算进程的 UID 显示是 0（root），只要 bounding set 是空的，它就调用不了任何需要 capability 的特权操作，跟普通用户没有区别。前面提到的 fail-closed 清空动作，就是在 spawn Agent 之前把这个 bounding set 清空，清不空就不启动。
-
-#### seccomp
-
-seccomp（secure computing mode）是在系统调用这一层再加一道过滤。能不能读某个文件、能不能拿到某个 capability，判断的是"有没有资格做这件事"；但一个进程真正能干什么，最终都要落到它调用了哪些系统调用（syscall），seccomp 管的就是这一层：用一段 BPF 程序对进程能调用哪些 syscall（以及带什么参数）做白名单，不在名单里的直接在内核入口被拒绝。典型例子是创建 raw socket，这个调用能绕开常规的 socket API 直接组装网络包，用来嗅探或伪造流量；就算前面的权限检查都没堵住，seccomp 也能单独把这个调用挡在外面。它和 capability 管的是两个维度：capability 决定"有没有权限"，seccomp 决定"这个系统调用本身能不能被调用"，就算权限没被拿干净，seccomp 也能兜底挡住。
-
-#### netns
-
-netns（网络命名空间）让 Agent 进程拥有自己独立的网络栈：网卡、路由表、iptables 规则都是独立的一份，不共享宿主机的。Linux 的命名空间机制能把同一台机器上的资源"分身"成互相看不见的多份，网络命名空间分的就是网络设备和路由表这一份。Supervisor 把 Agent 放进一个只有一条内部虚拟网卡（veth pair）通向本机 policy proxy 的 netns 里，这个 netns 里压根没有配置到公网的路由。不是靠防火墙规则去"允许 / 拒绝"某个目标地址（这类规则理论上还可能有漏洞被绕过）：这里是路由表这一层就没有路径可走，Agent 想绕开 proxy 直连外网，在网络层面根本走不通。
-
-四层各管一个维度：Landlock 管文件路径，降权和 seccomp 管进程能拿到什么权限、能调用什么系统调用，netns 管网络物理可达性。单独绕过其中一层，另外几层还是拦得住。
-
-L7 这一层可以对 REST 的 method/path、WebSocket 文本消息、GraphQL 操作，以及 MCP/JSON-RPC 的请求方法（含部分请求体字段）执行策略；但目前 JSON-RPC 的 response 和 MCP server-to-client 的 SSE 消息还不会被完整解析。`https://inference.local` 这个地址会绕过普通的 OPA 网络规则，但仍然要经过本地 TLS、请求识别、凭证剥离和 router；如果 Agent 直连外部模型 URL 而不走 `inference.local`，走的还是普通出站策略。
-
-`inference.local` 不是一个真的能被 DNS 解析出来的域名，而是本机 proxy 代码里写死的一个匹配目标：proxy 处理 CONNECT 请求时专门检查目标是不是 `inference.local:443`，命中就直接回一个 `200 Connection Established`，把这条连接交给专门的拦截路径处理，不走普通出站策略。接下来它用本机的 sandbox CA 就地终止 TLS，识别出常见的 OpenAI/Anthropic 兼容请求格式，剥掉 Agent 自己带的凭证和不该出现的 Header，再经 `router` 转发到真正的模型后端，用的是 Gateway 下发的那份模型路由 bundle（也就是 2.1 节 `policy_store` / `inference` 模块管的那份配置）。Agent 代码里只要把 base URL 填成 `https://inference.local`，不需要知道背后接的是哪家模型、密钥是什么，这些都由 proxy 按策略路由过去。
-
-Agent 调用被策略允许的 API 时，明文密钥不需要进入子进程：凭证存在 Gateway，Supervisor 在运行时拉取，HTTP 请求上先用 `openshell:resolve:env:…` 这样的占位符代替真实值，等 proxy 确认目标和 L7 规则都通过之后，才把占位符换成真实的 Header 或 Query 参数。这只是调用路径上的一层附带控制，不是 Sandbox 存在的理由。Agent 的进程环境里只会出现策略和 provider 配置明确允许的变量，用于回连 Gateway 的 bootstrap JWT 对子进程不可见。静态凭证如果刷新失败，会直接吊销上一份，不会留下半新半旧的一组凭证；动态凭证刷新失败则按对应 provider 自己的快照策略处理。
-
-同一条 outbound session 上还承载着运行期间的持续通信：Supervisor 一侧推日志、策略加载结果（`LOADED` / `FAILED`）、L4 denial 摘要；Gateway 一侧下发配置、凭证、`RelayOpen`。配置轮询失败时会保留 last-known-good 的旧配置，而不是清空；一次不合法的热更新会被整包拒绝，不会部分生效。企业环境的正向代理配置写在 Supervisor 的命令行上：如果 TLS/CONNECT 代理配置无效，会直接 fail-closed；至于明文 HTTP 是否也经过企业代理，取决于当前协议适配器的实现，不要笼统地认为所有出站流量都会经过代理。
-
-## 4. 三条工作流
-
-### 4.1 创建 Sandbox
-
-```text
-CLI
-  │  CreateSandbox
-  v
-Gateway
-  │  provision
-  v
-Driver
-  │  启动 Sandbox（注入 callback）
-  v
-Supervisor
-  │  ConnectSupervisor
-  v
-Gateway
-  │  Ready
-  v
-CLI
+```console
+$ echo 'print("Hello from OpenShell")' > hello.py
+$ python hello.py
+Hello from OpenShell
 ```
 
-Gateway 先写库、解析策略，再把 spec 交给 Driver；Driver 注入 callback 之后起容器或 Pod；Supervisor 回连并注册 session 之后，Gateway 才对外报告 Ready。本地 Docker 与 K8s 走的是同一套契约：K8s 的 Driver 通过 Agent Sandbox CR 等 Kubernetes 对象，交给 Controller 去创建 Pod。
+这两条命令在沙箱工作目录中创建并运行一个 Python 脚本。脚本执行、文件读写以及后续启动的其他程序都会受到沙箱策略约束。除了 Bash、Python 等常用工具，OpenShell 也可以把 Agent 作为沙箱的启动命令。例如：
 
-### 4.2 人看终端：`connect` / `exec`
-
-outbound session 只让 Gateway 知道这个 Sandbox 还在；终端字节走的是另一条按次建立的 relay。
-
-```text
-（平时：Supervisor 已通过 ConnectSupervisor 常驻连接 Gateway）
-
-键盘/命令
-    │  connect / exec
-    v
-   CLI
-    │  请求
-    v
- Gateway
-    │  RelayOpen
-    v
-Supervisor ──拨内部 SSH──┐
-    │                    │
-    │◄───────────────────┘
-    │  RelayStream
-    v
- Gateway
-    │  PTY / stdout
-    v
-   CLI
-    │  终端输出
-    v
-键盘/命令
+```shell
+openshell sandbox create --name codex-demo -- codex
 ```
 
-交互式场景走的是 PTY，`exec` 则只是命令的 stdout/stderr；Gateway 不解释画面内容，只做转发。`sandbox logs` 是另外一条单独推送的日志流，跟这条 relay 无关。Sandbox 内的 HTTP 服务通过 CLI 支持的 relay/forwarding 能力对外暴露，不需要直接开 NodePort。
+`-- codex` 表示沙箱就绪后启动 Codex，并将它作为沙箱的主进程。OpenShell 根据主进程的运行状态管理沙箱生命周期；Codex 发起的命令执行、文件读写和网络访问同样受沙箱策略约束。这些限制通过安全策略统一配置。
 
-### 4.3 Agent 出网
+## 3. 配置 OpenShell 中的安全策略
 
-这条路径完全不经过 Gateway，也不经过 CLI，人的终端不在这条路上。
+OpenShell 使用 YAML 文件定义沙箱安全策略，再由 Supervisor 负责在沙箱内执行这些安全策略。
 
-```text
-Agent ──► Policy proxy ──► OPA 评估
-                              │
-                              ├── 允许 ──────────────► 外部 API
-                              └── inference.local ──► 模型后端
+### 3.1 基础策略配置示例
+
+下面是一份基础安全策略，该策略配置了沙箱所需的文件访问范围，并允许 `curl` 连接 NVIDIA 官方文档站点：
+
+```yaml
+version: 1
+
+filesystem_policy:
+  include_workdir: true
+  read_only: [/usr, /lib, /proc, /dev/urandom, /app, /etc, /var/log]
+  read_write: [/tmp, /dev/null]
+
+landlock:
+  compatibility: best_effort
+
+network_policies:
+  nvidia_docs:
+    name: nvidia-docs
+    endpoints:
+      - host: docs.nvidia.com
+        port: 443
+    binaries:
+      - path: /usr/bin/curl
 ```
 
-允许通过的请求，凭证在 proxy 里注入；走 `inference.local` 的请求路由到对应的模型后端。
+`filesystem_policy` 配置项将常用系统目录设为只读，允许工作目录和 `/tmp` 写入，未列出的路径不可访问。Supervisor 在启动用户程序前通过 Linux Landlock 施加这些限制。`include_workdir: true` 表示将沙箱工作目录自动加入可写范围。
 
-## 5. 其余模块与部署形态
+`network_policies` 将目标地址与获准联网的程序绑定起来：这项配置仅允许 `/usr/bin/curl` 连接 `docs.nvidia.com:443`。该规则只控制网络连接，不检查具体的 HTTP 方法和路径。
 
-用户面由 `openshell-cli`、`sdk`、`tui`、`bootstrap` 几个组件组成；`openshell-core`、`policy`、`providers`、`router`、`ocsf`、`otel` 是 Gateway 和 Supervisor 共用的库。Compute driver 支持 `docker` / `podman` / `kubernetes` / `vm` 四种；凭证 driver 支持 `vault` / `kubernetes-secrets` / `db-credstore` 三种后端。两种部署：**本机**：Gateway 是工作站进程，Compute 用 Docker / Podman / VM，Supervisor 连本机 Gateway。**Kubernetes**：Gateway 是集群 Service，Compute 走 Agent Sandbox CR → Pod，Supervisor 连 `server.grpcEndpoint`（须 **Pod 内可达**，通常配置为集群内 Service/DNS）。
+### 3.2 网络策略如何生效
 
-两种部署下，CLI 操作流程不变：`gateway add` → `sandbox create` → `connect`。Kubernetes 上的 Helm 部署目前仍处于实验性阶段，建议固定住 OpenShell 的 release/tag 或 commit 之后再对照本文阅读。
+当沙箱中的程序发起外部请求时，请求会被强制转发到本地代理（沙箱内运行的 proxy 进程）。Supervisor 识别发起连接的 binary，再结合目标地址和请求规则判断是否放行；没有匹配规则的请求默认拒绝。
 
-## 参考与延伸阅读
+![网络请求从进程识别到获准转发](/pics/02-openshell-enforcement.png)
 
-- [architecture/gateway.md](https://github.com/NVIDIA/OpenShell/blob/main/architecture/gateway.md)：Gateway 鉴权、持久化、session
-- [architecture/sandbox.md](https://github.com/NVIDIA/OpenShell/blob/main/architecture/sandbox.md)：Supervisor 隔离、代理、凭证
-- [architecture/compute-runtimes.md](https://github.com/NVIDIA/OpenShell/blob/main/architecture/compute-runtimes.md)：Driver 契约与 Ready 状态
-- [Issue #1633](https://github.com/NVIDIA/OpenShell/issues/1633)：`inference.local` 拦截机制的实现细节，以及把这个模式推广到任意 host-local 服务的提案
-- [How OpenShell Works](https://docs.nvidia.com/openshell/latest/about/how-it-works)：官方概念页
-- [NVIDIA/OpenShell](https://github.com/NVIDIA/OpenShell)：源码
+要按 HTTP 方法和路径执行 `request` 规则，代理还需要读取 HTTP 请求。对于启用了 `request` 检查的 HTTPS 端点，OpenShell 使用沙箱的临时 CA 建立信任，由本地代理终止客户端 TLS，读取请求，再通过 TLS 连接上游服务。
+
+这样，网络策略既可以限制哪些程序能够访问哪些地址，也可以进一步限制具体的 HTTP 请求。
+
+## 4. 网络策略示例：只读访问 GitHub API
+
+下面以访问 GitHub API 为例，在运行中的沙箱更新网络规则，并验证更新前后的访问结果。将上一章节中的基础配置保存为 `basic.yaml`文件，并使用该策略创建 `demo` 沙箱：
+
+```shell
+openshell sandbox create --name demo --policy basic.yaml --detach
+```
+
+`--detach` 让沙箱在后台运行，后续命令通过 `sandbox exec` 从宿主机执行，以便连续验证策略更新前后的结果。文件系统和进程配置会在创建沙箱时固定下来，网络规则可以在运行过程中更新。此时策略只允许 `curl` 访问 NVIDIA 官方文档站点，请求 GitHub API 会被拒绝：
+
+```console
+$ openshell sandbox exec -n demo -- curl https://api.github.com/zen
+curl: (56) CONNECT tunnel failed, response 403
+```
+
+这条错误说明代理拒绝了连接，请求没有发送到 GitHub。将下面的 `github_api` 规则加入 `basic.yaml` 现有的 `network_policies` 中：
+
+```yaml
+  github_api:
+    name: github-api-readonly
+    endpoints:
+      - host: api.github.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        access: read-only
+    binaries:
+      - path: /usr/bin/curl
+```
+
+`endpoints` 限定目标，`binaries` 限定发起请求的程序；`protocol: rest` 开启 HTTP 请求检查，`enforcement: enforce` 表示违规时阻断，`access: read-only` 只允许 GET、HEAD 和 OPTIONS。`policy set` 会替换整份策略，因此更新文件时需要保留 `basic.yaml` 中原有的文件系统、Landlock 和网络配置。完成编辑后，应用更新后的策略：
+
+```console
+$ openshell policy set demo --policy basic.yaml --wait
+
+✓ Policy version 2 submitted (hash: 3251220cf714)
+✓ Policy version 2 loaded (active version: 2)
+```
+
+`--wait` 会等待 Supervisor 确认新策略已经加载，更新网络规则不需要重新创建沙箱。再次执行 GET 请求，可以正常获得响应：
+
+```console
+$ openshell sandbox exec -n demo -- curl https://api.github.com/zen
+Practicality beats purity.
+```
+
+该规则中的“只读”按 HTTP 方法判断，会放行 GET、HEAD 和 OPTIONS 请求，不分析远端接口的业务语义。OpenShell 的网络策略会同时检查调用程序、目标地址和具体请求。
+
+## 5. 总结
+
+OpenShell 将沙箱管理与运行时控制分开：Gateway 负责创建环境、保存配置和管理状态，Supervisor 在沙箱内部启动用户程序并执行安全策略。不同 Compute Driver 可以对接 Docker、Kubernetes 等基础设施，而上层使用方式保持一致。
+
+对 AI Agent 而言，这套机制提供了隔离、受控的执行环境，同时将文件访问和外部网络请求限制在明确的策略范围内。在此基础上，平台还可以进一步优化沙箱的交付方式、启动效率和生命周期管理。
+
+## 6. 参考资料
+
+- [NVIDIA/OpenShell GitHub 仓库](https://github.com/NVIDIA/OpenShell)
+- [OpenShell 官方文档：产品概览](https://docs.nvidia.com/openshell/about/overview)
+- [OpenShell 官方文档：工作原理](https://docs.nvidia.com/openshell/about/how-it-works)
+- [OpenShell 官方文档：安装指南](https://docs.nvidia.com/openshell/latest/about/installation)
+- [OpenShell 官方教程：配置第一个沙箱网络策略](https://docs.nvidia.com/openshell/get-started/tutorials/first-network-policy)
+- [OpenShell 官方文档：Policy Schema Reference](https://docs.nvidia.com/openshell/reference/policy-schema)

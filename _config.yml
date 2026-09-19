@@ -141,8 +141,8 @@ friends: [
     }
 ]
 
-# Tag → header gradient color mapping
-# Each value is the "start" color; a darker shade is auto-derived in intro-header.html
+# Optional tag color overrides. Unmapped tags get a stable automatic color from
+# js/hux-blog.js; use this map only when a tag needs a specific brand color.
 tag-colors:
   K8s:          "#326CE5"   # Kubernetes 官方蓝
   Golang:       "#00ACD7"   # Go 官方青

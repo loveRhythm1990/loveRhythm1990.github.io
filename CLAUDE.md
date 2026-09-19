@@ -133,9 +133,10 @@ filters it by toggling `.d-none` — which carries `!important` — on each year
 `.item`, so those two hooks and the `data-tags` attribute have to survive any restyling. The rail is
 drawn per item rather than once per section, so it stays continuous when the filter hides rows.
 
-Tag colours come from `_config.yml`'s `tag-colors`, the same map the post header uses, so a tag reads
-the same in both places. The template passes the colour in as an inline `--tag` custom property and
-`color-mix()` derives the pill and node tints from it; unmapped tags arrive as grey.
+Tag colours use `_config.yml`'s `tag-colors` as optional overrides. Unmapped tags are assigned a
+stable, accessible colour from the name-based palette in `js/hux-blog.js`, so new tags require no
+configuration and keep the same colour on the home, archive, and post pages. `color-mix()` derives
+the pill and node tints from the resulting `--tag` custom property.
 
 `jquery.tagcloud.js` is deliberately no longer loaded — it tinted each tag inline by post count, and an
 inline colour cannot be overridden from a stylesheet. The file remains in `js/` but is unreferenced.

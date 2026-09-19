@@ -10,8 +10,8 @@ description: ""
         <div class="post-preview-meta">
             {% if post.tags and post.tags.size > 0 %}
             {% assign _preview_tag = post.tags[0] %}
-            {% assign _preview_tag_color = site.tag-colors[_preview_tag] | default: '#8593a0' %}
-            <span class="post-preview-tag" style="--tag: {{ _preview_tag_color }}">{{ _preview_tag }}</span>
+            {% assign _preview_tag_color = site.tag-colors[_preview_tag] %}
+            <span class="post-preview-tag" data-tag-color="{{ _preview_tag | escape }}"{% if _preview_tag_color %} style="--tag: {{ _preview_tag_color }}"{% endif %}>{{ _preview_tag }}</span>
             {% endif %}
             <time class="post-preview-date" datetime="{{ post.date | date_to_xmlschema }}">{{ post.date | date: "%Y-%m-%d" }}</time>
         </div>

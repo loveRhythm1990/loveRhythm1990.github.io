@@ -6,6 +6,7 @@
 {% comment %} Resolve header background: explicit css > tag color > site default.
    Cleared first so a value can never carry over from an earlier render. {% endcomment %}
 {% assign _header_bg = nil %}
+{% assign _header_tag = nil %}
 {% if page.header-bg-css %}
   {% assign _header_bg = page.header-bg-css %}
 {% elsif page.tags and page.tags.size > 0 %}
@@ -13,6 +14,8 @@
   {% assign _tag_color = site.tag-colors[_first_tag] %}
   {% if _tag_color %}
     {% assign _header_bg = _tag_color %}
+  {% else %}
+    {% assign _header_tag = _first_tag %}
   {% endif %}
 {% endif %}
 
@@ -39,7 +42,7 @@
 {% if page.header-style == 'text' %}
 <header class="intro-header style-text" >
 {% else %}
-<header class="intro-header hero-band hero-compact"{% if _header_bg %} style="--hero: {{ _header_bg }};"{% endif %} >
+<header class="intro-header hero-band hero-compact"{% if _header_bg %} style="--hero: {{ _header_bg }};"{% elsif _header_tag %} data-tag-color="{{ _header_tag | escape }}" data-tag-color-property="--hero"{% endif %} >
 {% endif %}
     {% if page.header-mask %}
     <div class="header-mask"></div>
@@ -58,8 +61,8 @@
                     {% if page.tags and page.tags.size > 0 %}
                     <div class="hero-tags">
                         {% for tag in page.tags %}
-                        {% assign _tag_color = site.tag-colors[tag] | default: '#8593a0' %}
-                        <a class="hero-tag" href="{{ site.baseurl }}/archive/?tag={{ tag | url_encode }}" title="{{ tag }}" style="--tag: {{ _tag_color }}">{{ tag }}</a>
+                        {% assign _tag_color = site.tag-colors[tag] %}
+                        <a class="hero-tag" href="{{ site.baseurl }}/archive/?tag={{ tag | url_encode }}" title="{{ tag }}" data-tag-color="{{ tag | escape }}"{% if _tag_color %} style="--tag: {{ _tag_color }}"{% endif %}>{{ tag }}</a>
                         {% endfor %}
                     </div>
                     {% endif %}
