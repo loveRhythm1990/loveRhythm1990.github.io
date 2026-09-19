@@ -28,7 +28,7 @@ Kubernetes 擅长编排容器，但"按请求伸缩、空闲缩到零、修订�
 | **Eventing** | 基于 CloudEvents 的异步事件路由 | 事件驱动流水线、解耦生产者/消费者 |
 | **Functions** | `func` CLI，少写 Dockerfile 的函数开发体验 | 快速原型；默认部署为 Serving Service |
 
-### Knative 整体架构
+### 1.1 Knative 整体架构
 
 控制面组件跑在 `knative-serving` / `knative-eventing` 等命名空间，多服务共享；数据面则是每个 Revision 的 Pod（用户容器 + `queue-proxy` sidecar）。网络层可插拔（本文实验用 **Kourier**）。图来自 [Serving Architecture](https://knative.dev/docs/serving/architecture/)。
 
@@ -49,8 +49,6 @@ Kubernetes 擅长编排容器，但"按请求伸缩、空闲缩到零、修订�
 
 下文以 **Serving** 为主（serverless 的核心），Eventing 在文末简要串联。
 
----
-
 ## 二、Serving 核心对象
 
 创建顶层资源 `Service`（`serving.knative.dev/v1`，常简称 **ksvc**）后，控制面会自动维护其余 Serving CR：
@@ -65,8 +63,10 @@ Service (ksvc)
 |------|------|
 | **Service** | 生命周期入口；保证有 Route + Configuration，并随更新产生新 Revision |
 | **Configuration** | 期望状态（镜像、环境变量、资源等）；变更 → 新 Revision |
-| **Revision** | 代码与配置的不可变快照；Autoscaler 扩缩的是它对应的 Pod。默认名 `{Configuration 名}-{generation，五位补零}`（如 `hello-00001`）；也可在 `spec.template.metadata.name` 自定 |
+| **Revision** | 代码与配置的不可变快照；Autoscaler 扩缩它对应的 Pod |
 | **Route** | 对外 URL 与流量策略（可把流量按比例分给多个 Revision） |
+
+Revision 默认命名为 `{Configuration 名}-{generation，五位补零}`，例如 `hello-00001`；也可以通过 `spec.template.metadata.name` 指定。
 
 日常只提交 **Service** YAML；Configuration、Revision、Route 由控制面 reconcile，调试时再 `kubectl get configuration,revision,route`。
 
@@ -89,7 +89,7 @@ spec:
               value: "World"
 ```
 
-### Service 关键配置
+### 2.1 Service 关键配置
 
 日常只改 **Service**。写错层会踩坑：
 
@@ -103,11 +103,11 @@ spec:
 
 容器按普通 Pod 写（`image` / `ports` / `env` / `resources`）；queue-proxy 由控制器注入，YAML 里不要写。切流见第五节。
 
-### Service CR 与 Kubernetes 资源对应
+### 2.2 Service CR 与 Kubernetes 资源对应
 
 一份 ksvc **不是**只变成一个 Deployment。用户 API 是下面这张对象模型（[Serving Overview](https://knative.dev/docs/serving/)）；控制面 / 数据面怎么跑见第一节官方架构图。
 
-#### 对象模型：你提交的 YAML 变成哪几个 CR
+#### 对象模型：YAML 如何转化为 Serving CR
 
 ![Serving 资源如何互相协作](/img/in-post/knative/object_model.png)
 
@@ -115,22 +115,15 @@ spec:
 
 这四件套是 `serving.knative.dev` 用户 API。Revision controller 会为每个 Revision 创建并维护 `Deployment`（Pod = queue-proxy + user-container）、`PodAutoscaler`、`ServerlessService`（再拆出 public/private `Service`）；这些底层对象达到可服务状态后，Revision 才会变为 Ready。它们不出现在对象模型图里，但 `kubectl get` 能看到。
 
-按「创建一个 ksvc、一个 Revision 就绪」粗算，用户命名空间里常见对象量级如下（名称随 Revision 变化，可用 `kubectl get` 核对）：
+按「创建一个 ksvc、一个 Revision 就绪」粗算，用户命名空间里会出现以下资源（名称随 Revision 变化，可用 `kubectl get` 核对）：
 
-| 层级 | 资源 | 典型数量（单 Revision） | 说明 |
-|------|------|-------------------------|------|
-| Serving CR | Service / Configuration / Route | 各 1 | 与 ksvc 同名 |
-| Serving CR | Revision | ≥1 | 每次变更 +1，旧的可保留 |
-| 扩缩内部 CR | PodAutoscaler、Metric、ServerlessService | 各 1 / Revision | `*.internal.knative.dev` |
-| 核心 K8s | Deployment | 1 / Revision | 由 Revision 创建 |
-| 核心 K8s | Pod | 0…N | 含 2 容器：queue-proxy + 业务 |
-| 核心 K8s | Service | 2 / Revision | SKS 的 public + private |
-| 核心 K8s | Endpoints / EndpointSlice | 随 Service | proxy 模式时 public 可指到 Activator |
-| 网络 | Knative Ingress + net-* 产物 | ≥1 套 / Route | 集群级 Activator/Autoscaler **不**按服务复制 |
+- **Serving CR**：一组同名的 Service、Configuration 和 Route；每次更新配置都会新增一个 Revision，旧 Revision 可以继续保留。
+- **扩缩资源**：每个 Revision 对应一组 PodAutoscaler、Metric 和 ServerlessService（`*.internal.knative.dev`）。
+- **Kubernetes 工作负载**：每个 Revision 对应一个 Deployment，Pod 数量在 0 到 N 之间；Pod 通常包含 queue-proxy 和业务容器。
+- **服务发现资源**：ServerlessService 通常维护 public、private 两个 Kubernetes Service，并生成相应的 Endpoints 或 EndpointSlice。Proxy 模式下，public Service 可以指向 Activator。
+- **网络资源**：每个 Route 至少对应一组 Knative Ingress 及所选 `net-*` 插件生成的资源。
 
 集群级（安装 Serving 时已有，非每个 ksvc 新建）：`activator`、`autoscaler`、`controller`、`webhook`，以及所选网络层的网关 Pod。
-
----
 
 ## 三、请求路径与 Scale-to-Zero（端到端原理）
 
@@ -198,8 +191,6 @@ Client --> Ingress --> queue-proxy --> 用户容器
 | 优雅退出 | 拒绝新请求、继续完成 in-flight 请求 |
 | 探测加速 | 比 kubelet 更积极地探测用户容器就绪，缩短冷启动可服务时间 |
 
----
-
 ## 四、自动扩缩：KPA 要点
 
 默认使用 **Knative Pod Autoscaler（KPA）**，可缩到零；也可选装 Kubernetes HPA 类，但 **HPA 路径不支持 scale-to-zero**。
@@ -261,14 +252,14 @@ activator  ----WebSocket 推送 Stat---->  autoscaler
 （仅 Proxy 模式）
 ```
 
-| 角色 | 谁在做 |
-|------|--------|
-| **计量** | queue-proxy 统计 **本 Pod** in-flight 请求数、请求计数；Activator 在 Proxy 模式下统计经其转发的 in-flight 请求 |
-| **暴露 / 上报** | queue-proxy **不主动找 autoscaler**；在 `:9090/metrics` 暴露 Protobuf 指标，由 autoscaler **定时拉取（scrape）**。Activator 在 Proxy 模式下通过 **WebSocket 主动推送** Stat 给 autoscaler |
-| **聚合** | autoscaler 对每个 Revision 采样多个 Pod 的 queue-proxy 指标并**加总/外推**，得到 Revision 级 in-flight 并发或 RPS；与 Activator 指标合并 |
-| **决策** | KPA 在 stable / panic 窗口内平滑上述 Revision 级指标，计算期望副本数 |
-| **执行** | KPA 更新 `PodAutoscaler`，并改对应 `Deployment` 的 `replicas` |
-| **硬限流** | 若设置了 `containerConcurrency`，超出部分在 queue-proxy **本地排队**，不会压垮用户容器 |
+这条扩缩链路可以拆成六步：
+
+1. **计量**：queue-proxy 统计本 Pod 的 in-flight 请求数和请求计数；Proxy 模式下，Activator 也会统计经其转发的请求。
+2. **采集**：queue-proxy 在 `:9090/metrics` 暴露 Protobuf 指标，由 autoscaler 定时拉取；Activator 则通过 WebSocket 主动推送 Stat。
+3. **聚合**：autoscaler 汇总并外推多个 Pod 的采样值，得到 Revision 级并发或 RPS，并与 Activator 指标合并。
+4. **决策**：KPA 在 stable 和 panic 窗口内平滑指标，计算期望副本数。
+5. **执行**：KPA 更新 `PodAutoscaler`，并调整对应 Deployment 的 `replicas`。
+6. **限流**：如果设置了 `containerConcurrency`，超出上限的请求会在 queue-proxy 本地排队。
 
 因此：**客户端发请求 → 请求在 queue-proxy 里算 in-flight → autoscaler 看见压力 → 加副本**。请求结束（连接关闭、handler 返回）后，in-flight 数下降，稳定窗口过后副本才会缩回去。
 
@@ -407,9 +398,9 @@ target-utilization（默认约 70%）使 Autoscaler 在达到声明目标之前�
 
 最终 `desiredPodCount` 写入 `PodAutoscaler.status`，reconciler 改 `Deployment/<revision>-deployment` 的 `spec.replicas`。
 
-| 客户端 | target | 聚合后 in-flight 并发 | 期望副本 |
-|--------|--------|----------------|----------|
-| `hey -c 50`，每请求 `sleep=500ms` | 10（utilization=70%） | ≈ 50 | `ceil(50/(10×0.7))≈8` |
+例如，使用 `hey -c 50` 并让每个请求等待 `500ms`，聚合后的 in-flight 并发约为 50。当 `target=10`、`target-utilization=70%` 时：
+
+> 期望副本数约为 `ceil(50 / (10 × 0.7)) = 8`。
 
 压测停止后，in-flight 数下降，stable 窗口内均值归零，副本回落，最终可到 0。观察：
 
@@ -421,8 +412,6 @@ kubectl get podautoscaler -l serving.knative.dev/service=autoscale-go \
 
 kubectl get deploy -l serving.knative.dev/service=autoscale-go
 ```
-
----
 
 ## 五、流量切分与 Revision
 
@@ -459,8 +448,6 @@ Revision.metadata.name = {Configuration 名}-{generation，五位补零}
 ```
 
 Service `hello` 对应同名 Configuration，第一次模板是 `hello-00001`，再变一次是 `hello-00002`。`kubectl get revision` 里的 `GENERATION` 就是这个序号。若像上面那样指定 `template.metadata.name: hello-v2`，即将创建的那一版会叫 `hello-v2`（须在命名空间内唯一），而不是继续 `hello-00003`。
-
----
 
 ## 六、本地端到端实验（Mac M2 / Apple Silicon）
 
@@ -839,14 +826,12 @@ podautoscaler.autoscaling.internal.knative.dev/autoscale-go-00001   8           
 
 在默认 target-utilization 为 70% 时，稳定状态通常会看到期望副本约为 8；短暂的 Ready 数量可能略低于期望值。
 
-这条 `hey` 在造 **稳定的 in-flight 并发**（concurrency），不是冲 QPS：
+这条 `hey` 用来制造**稳定的 in-flight 并发**（concurrency），不是追求 QPS。几个参数分别表示：
 
-| 参数 | 作用 |
-| --- | --- |
-| `-z 60s` | 压 60 秒后停（按时长，不是发满 N 个请求） |
-| `-c 50` | 50 个并发 worker；一个返回立刻发下一个，in-flight 数大致钉在 50 |
-| `-host "$KSVC_HOST"` | 设置 HTTP `Host`（必须用 `-host`，见下）。请求打到 `127.0.0.1:8080`，Kourier 靠 Host 路由到 `autoscale-go` |
-| `?sleep=500` | `autoscale-go` 的 query，单位毫秒：handler 睡 500ms 再返回 |
+- `-z 60s`：持续压测 60 秒。
+- `-c 50`：启动 50 个并发 worker；一个请求返回后立即发送下一个，使 in-flight 数大致保持在 50。
+- `-host "$KSVC_HOST"`：设置 HTTP `Host`。请求发往 `127.0.0.1:8080`，Kourier 根据 Host 将其路由到 `autoscale-go`。
+- `?sleep=500`：让 `autoscale-go` 的 handler 等待 500 毫秒后返回。
 
 `sleep` 必须够长：每个请求占着一个 worker 约 0.5s，50 个 worker 才能把 concurrency 撑满。`sleep=0` 时请求瞬间结束，in-flight 数远低于 50，扩容看不出来。
 
@@ -883,7 +868,7 @@ podautoscaler.autoscaling.internal.knative.dev/autoscale-go-00001   0           
 
 `containerConcurrency` 是 **每个副本** 允许同时进入 **user-container** 的 in-flight 请求上限，写在 `spec.template.spec` 上（不是 annotation）。由 **queue-proxy** 强制：已有 N 个请求正在处理时，第 N+1 个进 sidecar 队列，**不会**再转给应用。这和 K8s Deployment 无关——kubelet / Service 都不按「in-flight HTTP 数」限流。
 
-| | 软目标 `autoscaling.knative.dev/target` | 硬上限 `containerConcurrency` |
+| 对比项 | 软目标 `autoscaling.knative.dev/target` | 硬上限 `containerConcurrency` |
 |---|---|---|
 | 作用 | 告诉 KPA「希望每 Pod 平均接近这个并发」 | 告诉 queue-proxy「应用最多同时处理这么多个」 |
 | 能否超过 | 能（突发、窗口均值） | 不能；多出来的在 sidecar 等 |
@@ -947,8 +932,6 @@ kubectl delete ksvc hello autoscale-go --ignore-not-found
 kind delete cluster --name knative
 ```
 
----
-
 ## 七、Eventing 如何接上（概念串联）
 
 Serving 解决「HTTP 来了如何跑容器」；Eventing 解决「事件如何可靠地送到消费者」。
@@ -966,8 +949,6 @@ Serving 解决「HTTP 来了如何跑容器」；Eventing 解决「事件如何�
 
 最小心智模型：Source 产生事件 → Broker 接收 → Trigger 按属性过滤 → 投递到 Serving Service 的 HTTP 端点。消费者仍是无状态 HTTP 服务，可继续享受 scale-to-zero。
 
----
-
 ## 八、Knative vs KEDA
 
 二者都能「闲时缩副本、忙时拉起来」，但**不是同一层抽象**，常被误当成二选一替代品。KEDA 是 CNCF Graduated 的**事件驱动自动扩缩器**；Knative Serving 是**请求驱动的应用运行时**（部署 + 路由 + 扩缩一体）。
@@ -976,25 +957,30 @@ Serving 解决「HTTP 来了如何跑容器」；Eventing 解决「事件如何�
 
 | 维度 | Knative Serving | KEDA |
 |------|-----------------|------|
-| 核心问题 | 如何把无状态容器变成可缩到零的 **HTTP 服务** | 如何按**外部信号**改已有工作负载的副本数 |
-| 抽象层级 | 应用平台：自有 CR（ksvc / Revision / Route）+ 数据面（Activator、queue-proxy） | 扩缩插件：`ScaledObject` / `ScaledJob` 挂在 Deployment、Job 等之上 |
-| 扩缩信号 | in-flight 请求并发、RPS（活流量） | Kafka lag、SQS 深度、Prometheus、Cron、SQL 等 **60+ scaler** |
-| 流量路径 | 拥有入口与冷启动缓冲；零副本时请求先进 Activator | **默认不接管 HTTP 路径**；缩到 0 后新请求会失败，除非另加 KEDA HTTP add-on 等 |
-| 与 HPA 关系 | 自研 KPA（也可接 HPA class，但无缩到零） | 通常**创建/驱动 HPA**，把外部指标变成 HPA 能用的 metric |
-| 部署模型 | 换一套 Service 模型（Revision、流量百分比） | **保留**原有 Deployment/Service/Ingress，侵入小 |
-| 附加能力 | 金丝雀、Revision、可选 Eventing/Functions | 专注扩缩；路由与发布策略仍用原生 K8s / Mesh |
+| 定位 | 请求驱动的 HTTP 应用运行时 | 事件驱动的自动扩缩器 |
+| 扩缩信号 | in-flight 并发、RPS | 队列积压、Prometheus、Cron、SQL 等外部信号 |
+| 缩到零后的入口 | Activator 承接请求并唤醒 Pod | 默认不接管 HTTP 请求路径 |
+| 工作负载模型 | Service、Revision、Route | 保留 Deployment、Job 等原有资源 |
+
+Knative 使用 KPA 完成请求驱动扩缩，并提供 Revision 流量切分；KEDA 通常创建或驱动 HPA，把外部指标转换为副本数。KEDA 若要在 HTTP 服务缩到零后承接请求，还需要 KEDA HTTP add-on 等额外组件。
 
 一句话：Knative 问的是「服务怎么被请求驱动地跑起来」；KEDA 问的是「副本数听谁的」。
 
 ### 8.2 使用场景
 
-| 更适合 Knative | 更适合 KEDA |
-|----------------|-------------|
-| 对外 / 对内 **HTTP(S) API**，要按并发扩缩 | **队列 / 流消费者**（Kafka、RabbitMQ、SQS…）按积压扩 |
-| 需要 **scale-to-zero 且冷启动不丢请求**（Activator） | 已有 Deployment，只想加扩缩，不想换网络与 CR 体系 |
-| Revision 流量切分、金丝雀发布 | Cron 定时拉起批处理；按 Prometheus 自定义指标扩 |
-| 与 Knative Eventing 一体的 CloudEvents 流水线 | GPU 推理批任务、异步 pipeline；常与 Karpenter 等节点扩缩组合 |
-| 想要 Cloud Run 类体验、自建集群 | 多工作负载类型（Deployment / Job / StatefulSet）统一用 scaler |
+**Knative 更适合：**
+
+- 按并发扩缩的内部或外部 HTTP(S) API。
+- 需要 scale-to-zero，并希望由 Activator 在冷启动期间承接请求的服务。
+- 需要 Revision 流量切分、金丝雀发布，或者 Cloud Run 类使用体验的自建平台。
+- 与 Knative Eventing 组合的 CloudEvents 流水线。
+
+**KEDA 更适合：**
+
+- 根据 Kafka、RabbitMQ、SQS 等队列积压扩缩的消费者。
+- 保留现有 Deployment、Service 和 Ingress，只增加自动扩缩能力的工作负载。
+- Cron 批处理、Prometheus 自定义指标、GPU 推理批任务和异步流水线。
+- 需要以统一 scaler 管理 Deployment、Job、StatefulSet 等多类工作负载的场景。
 
 **不宜互相硬替**
 
@@ -1003,19 +989,15 @@ Serving 解决「HTTP 来了如何跑容器」；Eventing 解决「事件如何�
 
 **可组合**：同一集群里 HTTP 入口走 Knative，后台 worker 用 Deployment + KEDA；注意**同一负载不要两个扩缩器抢 replicas**。
 
-### 8.3 其他边界
+### 8.3 其他方案的边界
 
-| 方案 | 关系 / 差异 |
-|------|-------------|
-| **Deployment + HPA** | 更通用；无原生缩到零与 Activator 语义；运维面更碎 |
-| **Cloud Run** | 体验接近 Knative Serving；托管、省运维，绑定 GCP |
-| **AWS Lambda** | 函数粒度与事件生态强；不是「任意容器 + 任意集群」模型 |
-| **Agent Sandbox / 有状态会话** | Knative 适合**无状态**请求；缩到零再拉起是**新实例**，无「同一沙箱身份 + PVC + 快照」连续性。本仓库另有 Agent Sandbox 对比（有状态会话，不在本篇范围） |
+- **Deployment + HPA** 更通用，但没有原生缩到零和 Activator 语义，需要分别维护部署、入口和扩缩配置。
+- **Cloud Run** 的体验接近 Knative Serving，由云平台托管，但与 GCP 绑定。
+- **AWS Lambda** 具有成熟的函数和事件生态，不属于“任意容器运行在任意集群”的模型。
+- **Agent Sandbox / 有状态会话** 需要保持沙箱身份、PVC 或快照连续性。Knative 面向无状态请求，缩到零后再次拉起的是新实例。
 
 适合 Knative 的：突发 HTTP API、间歇流量、需要金丝雀的无状态服务。  
 不适合硬套的：强会话粘滞、本地磁盘状态、长生命周期 IDE/沙箱、无法接受冷启动的超低延迟路径（除非 `min-scale≥1` 并接受成本）。
-
----
 
 ## 九、生产落地时多想一步
 
@@ -1026,42 +1008,52 @@ Serving 解决「HTTP 来了如何跑容器」；Eventing 解决「事件如何�
 5. **可观测性**：关注 Activator 是否在路径上、queue-proxy 指标、Revision 与 Deployment 事件。
 6. **安装**：YAML 清单透明、适合对照控制面；Operator 便于升级与配置。清单 tag 以当时官方 YAML 安装页为准。
 
----
-
 ## 十、附录：Service 配置速查
 
 默认值以集群里 `knative-serving` 的 `config-defaults` / `config-autoscaler` 为准；不同 Knative 版本可能不同。扩缩 annotation 必须写在 `spec.template.metadata.annotations`。
 
 ### Revision spec（`spec.template.spec`）
 
-容器按普通 Pod 写：`image` / `ports` / `env` / `resources` / probes；queue-proxy 由控制器注入。其余 `serviceAccountName` 等照 Kubernetes。
+容器按普通 Pod 写：`image` / `ports` / `env` / `resources` / probes；queue-proxy 由控制器注入。其余 `serviceAccountName` 等照 Kubernetes。常用字段如下：
 
-| 字段 | 默认 | 做什么 |
-|------|------|--------|
-| `containerConcurrency` | `0`（不限制） | 每副本进 user-container 的 in-flight **硬上限**，queue-proxy 强制；与 `target` 同时写时扩缩取较小值。见 6.5 实验 B |
-| `timeoutSeconds` | `300`（上限常见 `600`） | 整次请求最长多久。到期：若还没写出响应，queue-proxy 回 **504** 并 cancel 上游；若已经在流式输出，则停掉 copy，客户端连接会在中途断掉。同步等 LLM 往往要加大 |
-| `responseStartTimeoutSeconds` | `300` | 交给容器后，**首字节**必须在此时限内出现。到期且还没开始写响应 → 同样 **504**；已经开始吐数据则不再用这条杀请求 |
-| `idleTimeoutSeconds` | `0`（不限制） | 已经有流量之后，**后续空闲**（应用不再吐字节）允许多久。流式/SSE 才需要盯 |
+- **`containerConcurrency`**：默认 `0`，表示不限制。它是每个副本进入 user-container 的 in-flight 硬上限，由 queue-proxy 强制执行；与 `target` 同时设置时，扩缩目标取较小值。参见 6.5 实验 B。
+- **`timeoutSeconds`**：默认 `300`。限制一次请求从开始到结束的总时长；尚未输出响应时超时，queue-proxy 返回 504。已经开始流式输出时，客户端连接会被中断。
+- **`responseStartTimeoutSeconds`**：默认 `300`。限制用户容器开始返回首字节的时间；响应已经开始后不再受该字段控制。
+- **`idleTimeoutSeconds`**：默认 `0`，表示不限制。它限制响应开始后两次数据写入之间允许空闲的时间，主要用于流式或 SSE 接口。
 
 超时三件套：`timeoutSeconds` 管「从头到尾」；`responseStartTimeoutSeconds` 管「有没有开始说话」；`idleTimeoutSeconds` 管「说话中途停太久」。到期时 queue-proxy 对客户端写 **504 Gateway Timeout**（响应已开始则只能掐流），并 cancel 打到 user-container 的上游请求。流式接口把 idle 留 `0`、把总超时加大。
 
 ### 扩缩 annotations
 
-| annotation | 默认 | 做什么 |
+为了便于查找，下面按用途拆成三组。
+
+**指标与目标**
+
+| annotation | 默认 | 作用 |
 |------|------|--------|
-| `autoscaling.knative.dev/class` | `kpa.autoscaling.knative.dev` | KPA 可缩到 0；`hpa.autoscaling.knative.dev` **不能**缩到 0 |
-| `autoscaling.knative.dev/metric` | `concurrency` | `concurrency`：按 in-flight；`rps`：按每秒请求数（短请求、高 QPS） |
-| `autoscaling.knative.dev/target` | concurrency 约 `100`，rps 约 `200` | **软目标**：希望每 Pod 平均接近的值，突发可超过 |
-| `autoscaling.knative.dev/target-utilization-percentage` | `70` | 实际瞄准 `target × 70%`，在顶满硬上限**之前**加副本 |
-| `autoscaling.knative.dev/min-scale` | KPA 且允许缩到 0 时为 `0` | 下限。`≥1` 则永不缩到 0，换延迟、付常驻成本 |
-| `autoscaling.knative.dev/max-scale` | `0` = 不限制 | 上限，防止被打爆集群 |
-| `autoscaling.knative.dev/initial-scale` | `1` | **新建** Revision 先拉到的副本数，Ready 一次后作废，随后仍可按流量缩 |
-| `autoscaling.knative.dev/activation-scale` | `1` | 从 0 **唤醒**时至少拉起几个，避免第一波请求挤在单 Pod |
-| `autoscaling.knative.dev/window` | `60s` | stable 指标聚合窗口，不等同于完整的缩到零等待时间 |
-| `autoscaling.knative.dev/panic-window-percentage` | `10`（即 6s） | panic 用更短窗口，只快扩、期间通常不缩 |
-| `autoscaling.knative.dev/panic-threshold-percentage` | `200` | 观测负载 ≥ 当前副本能力的 200% 进 panic |
-| `autoscaling.knative.dev/scale-down-delay` | `0s` | 负载已低，再等这么久才真缩。与 `min-scale` 不同：到期仍可到 0 |
-| `autoscaling.knative.dev/target-burst-capacity` | `200` | 决定 Activator 是否留在数据面。`0`：仅从 0 拉起时经过 Activator；`-1`：始终经过 |
+| `autoscaling.knative.dev/class` | `kpa.autoscaling.knative.dev` | 选择扩缩器；KPA 可缩到 0，HPA class 不支持缩到 0 |
+| `autoscaling.knative.dev/metric` | `concurrency` | 使用 in-flight 并发或 RPS 作为指标 |
+| `autoscaling.knative.dev/target` | concurrency 约 `100`，rps 约 `200` | 每个 Pod 的软目标，突发时可以超过 |
+| `autoscaling.knative.dev/target-utilization-percentage` | `70` | 按 `target × 70%` 提前扩容 |
+
+**副本边界与启动规模**
+
+| annotation | 默认 | 作用 |
+|------|------|--------|
+| `autoscaling.knative.dev/min-scale` | 允许缩到 0 时为 `0` | 设置副本下限；`≥1` 表示保留常驻副本 |
+| `autoscaling.knative.dev/max-scale` | `0`（不限制） | 设置副本上限，避免耗尽集群容量 |
+| `autoscaling.knative.dev/initial-scale` | `1` | 新 Revision 首次启动时的副本数，Ready 后不再生效 |
+| `autoscaling.knative.dev/activation-scale` | `1` | 从 0 唤醒时至少启动的副本数 |
+
+**扩缩窗口与流量路径**
+
+| annotation | 默认 | 作用 |
+|------|------|--------|
+| `autoscaling.knative.dev/window` | `60s` | stable 指标聚合窗口 |
+| `autoscaling.knative.dev/panic-window-percentage` | `10`（即 6s） | panic 使用的短窗口，期间通常只扩不缩 |
+| `autoscaling.knative.dev/panic-threshold-percentage` | `200` | 观测负载达到当前容量的 200% 时进入 panic |
+| `autoscaling.knative.dev/scale-down-delay` | `0s` | 负载降低后延迟执行缩容 |
+| `autoscaling.knative.dev/target-burst-capacity` | `200` | 决定 Activator 是否留在数据面；`0` 表示仅从 0 拉起时经过，`-1` 表示始终经过 |
 
 缩容时，Autoscaler 先按 stable window 聚合指标，再结合 `scale-down-delay`、`scale-to-zero-grace-period` 和 `scale-to-zero-pod-retention-period` 等配置决定是否继续缩容。`min-scale: 0` 且集群启用了 scale-to-zero 时才会真正没有 Pod；`scale-down-delay` 是「先留着防抖」，不是下限。
 
@@ -1077,28 +1069,32 @@ Serving 解决「HTTP 来了如何跑容器」；Eventing 解决「事件如何�
 
 `traffic` 改的是网关后面的权重，旧 Revision 对象还在；`0` 副本只表示没流量，不是被删掉。切流 YAML 见第五节。
 
----
-
 ## 参考与延伸阅读
 
-| 链接 | 说明 |
-|------|------|
-| [Knative 文档首页](https://knative.dev/docs/) | 官方总入口：概念、安装、Serving / Eventing |
-| [Install Serving with YAML](https://knative.dev/docs/install/yaml-install/serving/install-serving-with-yaml/) | Serving YAML 安装（第六节） |
-| [Deploying a Knative Service](https://knative.dev/docs/getting-started/first-service/) | helloworld 官方入门 |
-| [Knative Serving Overview](https://knative.dev/docs/serving/) | Service / Route / Configuration / Revision 对象模型（本文 `object_model.png`） |
-| [Knative Serving Architecture](https://knative.dev/docs/serving/architecture/) | 控制面组件、Proxy/Serve、KIngress（本文 `serving-architecture*.png`） |
-| [HTTP Request Flows](https://knative.dev/docs/serving/request-flow/) | Activator / 高流量旁路 / queue-proxy 权威说明 |
-| [Demystifying Activator on the data path](https://knative.dev/blog/articles/demystifying-activator-on-path/) | Service→PA→SKS→K8s Service 派生链与 proxy/serve 模式 |
-| [Serving API](https://knative.dev/docs/serving/reference/serving-api/) | Service / Revision 字段：`timeoutSeconds`、`containerConcurrency`、`traffic` |
-| [config-defaults](https://knative.dev/docs/serving/configuration/config-defaults/) | 超时、资源 request、`containerConcurrency` 全局默认 |
-| [Configuring concurrency](https://knative.dev/docs/serving/autoscaling/concurrency/) | 软目标 vs 硬上限、target-utilization |
-| [Scale bounds](https://knative.dev/docs/serving/autoscaling/scale-bounds/) | min/max/initial/activation-scale、scale-down-delay |
-| [KPA-specific settings](https://knative.dev/docs/serving/autoscaling/kpa-specific/) | stable/panic 窗口与阈值 |
-| [Target burst capacity](https://knative.dev/docs/serving/load-balancing/target-burst-capacity/) | TBC 如何把 Activator 切进/切出数据面 |
-| [Autoscale Sample App - Go](https://knative.dev/docs/serving/autoscaling/autoscale-go/) | 官方 queue-proxy/KPA 压测实验（本文 6.5 节来源） |
-| [Install Eventing with YAML](https://knative.dev/docs/install/yaml-install/eventing/install-eventing-with-yaml/) | Eventing CRD / core / Broker 的 YAML 安装 |
-| [Knative Operator](https://knative.dev/docs/install/operator/knative-with-operators/) | 用 Operator 安装与升级 Serving/Eventing |
-| [SREKubeCraft: Knative guide](https://srekubecraft.io/posts/knative/) | 面向平台工程的 Serving/Eventing/Functions 综述 |
-| [KEDA 官网](https://keda.sh/) | 事件驱动扩缩：ScaledObject、scaler 列表 |
-| [KEDA vs Knative vs HPA](https://thinhdanggroup.github.io/keda-knative-kubenetes/) | 三种扩缩策略的场景划分（工程向） |
+**入门与架构**
+
+- [Knative 文档首页](https://knative.dev/docs/)：概念、安装、Serving 与 Eventing 的官方入口。
+- [Deploying a Knative Service](https://knative.dev/docs/getting-started/first-service/)：部署第一个 Knative Service。
+- [Knative Serving Overview](https://knative.dev/docs/serving/)：Service、Route、Configuration 和 Revision 对象模型。
+- [Knative Serving Architecture](https://knative.dev/docs/serving/architecture/)：控制面组件、Proxy/Serve 模式和 KIngress。
+- [HTTP Request Flows](https://knative.dev/docs/serving/request-flow/)：Activator、Queue-Proxy 与高流量旁路。
+- [Demystifying Activator on the data path](https://knative.dev/blog/articles/demystifying-activator-on-path/)：Service、PA、SKS 与 Kubernetes Service 的派生关系。
+
+**配置与自动扩缩**
+
+- [Serving API](https://knative.dev/docs/serving/reference/serving-api/)：Service 与 Revision 字段参考。
+- [config-defaults](https://knative.dev/docs/serving/configuration/config-defaults/)：超时、资源请求和并发的全局默认值。
+- [Configuring concurrency](https://knative.dev/docs/serving/autoscaling/concurrency/)：软目标、硬上限和 target utilization。
+- [Scale bounds](https://knative.dev/docs/serving/autoscaling/scale-bounds/)：副本上下限、初始规模和缩容延迟。
+- [KPA-specific settings](https://knative.dev/docs/serving/autoscaling/kpa-specific/)：stable、panic 窗口及阈值。
+- [Target burst capacity](https://knative.dev/docs/serving/load-balancing/target-burst-capacity/)：Activator 进入或退出数据面的条件。
+- [Autoscale Sample App - Go](https://knative.dev/docs/serving/autoscaling/autoscale-go/)：官方 Queue-Proxy 与 KPA 压测示例。
+
+**安装、Eventing 与相关方案**
+
+- [Install Serving with YAML](https://knative.dev/docs/install/yaml-install/serving/install-serving-with-yaml/)：使用 YAML 安装 Serving。
+- [Install Eventing with YAML](https://knative.dev/docs/install/yaml-install/eventing/install-eventing-with-yaml/)：安装 Eventing CRD、核心组件和 Broker。
+- [Knative Operator](https://knative.dev/docs/install/operator/knative-with-operators/)：使用 Operator 安装和升级 Knative。
+- [SREKubeCraft: Knative guide](https://srekubecraft.io/posts/knative/)：Serving、Eventing 与 Functions 综述。
+- [KEDA 官网](https://keda.sh/)：ScaledObject 与事件源 scaler。
+- [KEDA vs Knative vs HPA](https://thinhdanggroup.github.io/keda-knative-kubenetes/)：三种扩缩策略的工程选型。
