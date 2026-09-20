@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "OpenShell：为 AI Agent 提供安全沙箱"
+title:      "AI Agent 安全沙箱 OpenShell"
 date:       2026-08-20 10:00:00
 author:     "lr90"
 header-img-credit: false
