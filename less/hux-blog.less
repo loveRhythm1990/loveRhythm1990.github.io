@@ -108,6 +108,19 @@ select {
 table{
   margin-top: 10px;
 }
+
+// Fixed first-column width so a run of same-shaped tables (e.g. the four
+// harness-capability tables in a post) line up instead of each auto-sizing
+// to its own longest term.
+.capability-table {
+  table-layout: fixed;
+  width: 100%;
+
+  th:first-child,
+  td:first-child {
+    width: 28%;
+  }
+}
 table.table > tbody, table.table > thead {
   th,
   td {
