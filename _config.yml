@@ -32,6 +32,7 @@ paginate: 10
 exclude:
   - less
   - node_modules
+  - code-examples
   - Gruntfile.js
   - package.json
   - package-lock.json
