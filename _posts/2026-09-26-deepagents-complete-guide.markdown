@@ -8,7 +8,7 @@ tags:
 
 ## 简介
 
-**DeepAgents** 是 LangChain 官方维护的一个独立 Python 包，它被称为一个 **agent harness**，[官方](https://docs.langchain.com/oss/python/deepagents/overview)定位是：
+[DeepAgents](https://github.com/langchain-ai/deepagents) 是 LangChain 官方维护的一个独立 Python 开源项目，它被称为一个 **agent harness**，[官方](https://docs.langchain.com/oss/python/deepagents/overview)定位是：
 
 > "Deep Agents is the easiest way to start building agents and applications that are powered by LLMs — with built-in capabilities for file systems for context management, subagent-spawning, and long-term memory."
 > 
@@ -19,7 +19,7 @@ tags:
 
 ---
 
-## 官方能力分类
+## 官方 harness 能力
 
 官方文档用一张图把 DeepAgents 的能力分成四类，这是理解这个包最直接的方式：
 ![DeepAgents agent harness capabilities by category](/pics/deepagents-harness-capabilities.png)
@@ -49,7 +49,7 @@ tags:
 | Prompt caching | Anthropic / Amazon Bedrock 模型上自动生效，缓存系统提示中不变的部分 |
 {: .capability-table}
 
-Memory 这一行(agents.md)的具体机制见后面「记忆」一节。
+Memory 这一行 agents.md 的具体机制见后面「记忆」一节。
 
 **Delegation**
 
@@ -375,11 +375,11 @@ index 这个参数不是可选的装饰，是真正做语义检索的前提，�
 
 create_manage_memory_tool 只管 C/U/D，不管 R——读取(语义检索)完全是 create_search_memory_tool 的职责，两者共享同一个 store 和 namespace，但没有耦合关系。看真实源码可以发现，三种 action 对应的底层逻辑很直接：
 
-- **create**：id 不能传(传了会报错)，内部自动生成 `id = uuid.uuid4()`，调用 `store.put(namespace, key=str(id), value={"content": content})`
-- **update**：id 必须传，调用的是**同一个** `store.put(...)`——跟 create 走的是完全一样的底层调用，区别只是 key 是不是已存在
-- **delete**：id 必须传，调用 `store.delete(namespace, key=str(id))`
+- create：id 不能传(传了会报错)，内部自动生成 `id = uuid.uuid4()`，调用 `store.put(namespace, key=str(id), value={"content": content})`
+- update：id 必须传，调用的是**同一个** `store.put(...)`——跟 create 走的是完全一样的底层调用，区别只是 key 是不是已存在
+- delete：id 必须传，调用 `store.delete(namespace, key=str(id))`
 
-底层根本没有"更新"这个操作——`BaseStore.put` 本身就是 upsert 语义，有就覆盖，没有就新建。LangMem 不做任何 diff 或合并：模型如果想"更新"一条记忆，必须把完整的新内容重新传一遍 content，不是传增量，这也是为什么工具的 description 会明确提醒模型更新/删除时必须带 MEMORY ID、创建时不要带。
+底层没有"更新"这个操作——`BaseStore.put` 本身就是 upsert 语义，有就覆盖，没有就新建。LangMem 不做任何 diff 或合并：模型如果想"更新"一条记忆，必须把完整的新内容重新传一遍 content，不是传增量，这也是为什么工具的 description 会明确提醒模型更新/删除时必须带 MEMORY ID、创建时不要带。
 
 存储结构是最朴素的三元组：
 * namespace: 可以用 `{langgraph_user_id}` 这类占位符在运行时从 config 动态填充，实现按用户/按团队隔离
@@ -434,16 +434,6 @@ LangChain 的 `HumanInTheLoopMiddleware`。选择哪个取决于你要不要这�
 - 只需要一个纯粹的工具调用循环，自己控制一切细节 → `langchain.agents.create_agent`
 - 需要完全自定义的多节点工作流(条件分支、循环、并行) → 直接用 `langgraph.graph.StateGraph`
 - 需要权限、审批、子 agent、记忆这些开箱即用 → `deepagents.create_deep_agent`
-
----
-
-
-## 相关资源
-
-- [官方文档：DeepAgents Overview](https://docs.langchain.com/oss/python/deepagents/overview)
-- [官方文档：LangGraph](https://langchain-ai.github.io/langgraph/)
-- [完整可运行代码](https://github.com/loveRhythm1990/loveRhythm1990.github.io/tree/master/code-examples/deepagents/) —— 本文所有代码片段均节选自这里, 已实际验证跑通
-- [案例分析：Included Health](https://www.langchain.com/blog/how-included-health-built-federated-agents-for-healthcare-navigation-with-deep-agents-and-langgraph)
 
 ---
 
