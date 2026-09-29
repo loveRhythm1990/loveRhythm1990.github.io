@@ -11,8 +11,8 @@
 运行：python -m features.01_hot_path
 """
 
+from langchain.agents import create_agent
 from langgraph.checkpoint.memory import MemorySaver
-from langgraph.prebuilt import create_react_agent
 from langgraph.store.memory import InMemoryStore
 from langmem import create_manage_memory_tool, create_search_memory_tool
 
@@ -24,7 +24,7 @@ store = InMemoryStore(
     index={"dims": EMBEDDING_DIMS, "embed": get_embeddings()}  # 不配 index 就没有语义检索
 )
 
-agent = create_react_agent(
+agent = create_agent(
     llm,
     tools=[
         create_manage_memory_tool(namespace=("memories", "{user_id}")),
