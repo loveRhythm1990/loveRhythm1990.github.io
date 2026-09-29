@@ -64,14 +64,14 @@ create_manage_memory_tool 和 create_search_memory_tool 返回的都是单个普
 
 ![Hot path vs background memory processing](/pics/langmem-hot_path_vs_background.png){:height="70%" width="70%"}
 
+**Hot Path** 是主动、同步的记忆处理：把 manage_memory/search_memory 两个工具塞进 agent 的工具箱，模型在对话过程中自己判断"这个值得记"并调用工具。优点是立即生效、实现简单；缺点是增加了感知延迟，而且多了一类工具决策，可能干扰 agent 完成用户本来的需求。上一节的例子就是 Hot Path。
+
+**Background** 是后台异步的记忆：对话照常进行，事后再让一个 memory manager 回顾对话、提取记忆。不增加延迟、不干扰 agent 决策，提取也更充分。典型写法（完整代码见 [features/02_background_reflection.py](https://github.com/loveRhythm1990/loveRhythm1990.github.io/blob/master/code-examples/langmem/features/02_background_reflection.py)）：
+
 | 形成方式 | 延迟影响 | 生效速度 | 处理开销 | 适用场景 |
 |---------|---------|---------|---------|---------|
 | Hot Path（热路径） | 增加对话延迟 | 立即 | 对话过程中 | 关键上下文需要立刻记住 |
 | Background（后台） | 无 | 延迟 | 对话间隙/之后 | 模式分析、总结、深度提取 |
-
-**Hot Path** 是主动、同步的记忆处理：把 manage_memory/search_memory 两个工具塞进 agent 的工具箱，模型在对话过程中自己判断"这个值得记"并调用工具。优点是立即生效、实现简单；缺点是增加了感知延迟，而且多了一类工具决策，可能干扰 agent 完成用户本来的需求。上一节的例子就是 Hot Path。
-
-**Background** 是后台异步的记忆：对话照常进行，事后再让一个 memory manager 回顾对话、提取记忆。不增加延迟、不干扰 agent 决策，提取也更充分。典型写法（完整代码见 [features/02_background_reflection.py](https://github.com/loveRhythm1990/loveRhythm1990.github.io/blob/master/code-examples/langmem/features/02_background_reflection.py)）：
 
 ```python
 memory_manager = create_memory_store_manager(llm, namespace=("memories", "{user_id}"))
@@ -111,13 +111,13 @@ LangMem 的记忆分类借鉴了人类记忆结构，每种类型服务不同目
 
 **Procedural**
 
-程序记忆编码"agent 应该怎么做事"。语义记忆存事实（用户偏好深色模式），情景记忆存一次完整经验（上次用家谱类比讲二叉树奏效了），程序记忆存的是可复用的行为规则：语气、格式、决策边界、特定场景下该怎么响应。
+程序记忆编码 "agent 应该怎么做事"。语义记忆存事实（用户偏好深色模式），情景记忆存一次完整经验（上次用家谱类比讲二叉树奏效了），程序记忆存的是可复用的行为规则：语气、格式、决策边界、特定场景下该怎么响应。
 
 落地形态有两种，对应表格里的"Prompt 规则或 Collection"。
 
 第一种是写进 system prompt，每次对话都生效。初始 prompt 定义核心性格，再根据对话轨迹和用户反馈持续改写：
 
-![Instructions update process](/pics/langmem-update-instructions.png){:height="70%" width="70%"}
+![Instructions update process](/pics/langmem-update-instructions.png){:height="40%" width="40%"}
 
 这就是 create_prompt_optimizer 干的事，单独在“优化 Prompt” 一节讲。适合必须始终遵守的规则：人设、安全边界、默认输出格式。代价是 prompt 会越改越长，所有对话都要带上整份规则。
 
@@ -129,9 +129,41 @@ LangMem 的记忆分类借鉴了人类记忆结构，每种类型服务不同目
 
 #### create_memory_manager
 
-create_memory_manager 是 Core API 的入口。除模型外，签名上最要紧的是三组参数：schemas 定义记忆的 Pydantic 结构（可传多个）；instructions 是提取指令（默认值见附录）；enable_inserts / enable_updates / enable_deletes 三个开关分别控制允许新建、更新、删除——注意删除默认是关的。
+create_memory_manager 的作用是：看一段对话（以及可选的既有记忆），决定记忆该怎么变——新建、改写或删掉过时条目——然后把更新后的记忆列表返回给你。它是纯函数，不读写任何数据库：输入 messages 加 optional existing，输出 ExtractedMemory 列表，持久化完全由调用方决定。后面的 create_memory_store_manager 就是在它外面自动接上 BaseStore 的 search / put / delete。
 
-create_memory_manager 底层是 [trustcall](https://github.com/hinthornw/trustcall) 的 create_extractor：你传的每个 schema 都变成 LLM 的一个工具，模型通过并行工具调用来"写"记忆；更新已有记忆时走 JSONPatch 机制，删除则返回 RemoveDoc 对象。提示词的组装方式是：system 固定为 "You are a memory subroutine for an AI."，user 消息则是你的 instructions 加上一段固定后缀（要求单次并行工具调用完成所有操作、避免重复提取），再加上用 `<session_{uuid}>` 标签包裹的对话全文。它还支持多步提取：传 `max_steps=N` 时，第二轮起工具列表里会加一个 Done 工具，模型可以反复修补记忆、完成后调用 Done 收尾；默认 `max_steps=1`，一轮并行工具调用出所有结果。另外，Profile 模式的实现就是 `enable_inserts=False`：不许新建，模型只能更新既有文档。
+除模型外，签名上最要紧的是三组参数：schemas 定义记忆的 Pydantic 结构（可传多个）；instructions 是提取指令（默认值见附录）；enable_inserts / enable_updates / enable_deletes 三个开关分别控制允许新建、更新、删除——注意删除默认是关的。
+
+用法是先定义记忆结构，再对每轮对话 invoke；上一轮的返回值作为下一轮的 existing 传回去（完整代码见 [features/03_memory_manager.py](https://github.com/loveRhythm1990/loveRhythm1990.github.io/blob/master/code-examples/langmem/features/03_memory_manager.py)）：
+
+```python
+from pydantic import BaseModel
+from langmem import create_memory_manager
+
+class Triple(BaseModel):
+    """Store all new facts, preferences, and relationships as triples."""
+    subject: str
+    predicate: str
+    object: str
+    context: str | None = None
+
+manager = create_memory_manager(
+    llm,
+    schemas=[Triple],
+    instructions="Extract user preferences and any other useful information",
+    enable_inserts=True,
+    enable_deletes=True,  # 默认 False，过时事实不会被删
+)
+
+memories = manager.invoke({
+    "messages": [{"role": "user", "content": "Alice manages the ML team and mentors Bob."}],
+})
+
+# 把上一轮结果原样传回，模型才能对照着更新 / 删除
+memories = manager.invoke({
+    "messages": [{"role": "user", "content": "Bob now leads the ML team and the NLP project."}],
+    "existing": memories,
+})
+```
 
 实测三轮对话的增删改（模型 deepseek-chat）：
 
@@ -159,9 +191,12 @@ create_memory_store_manager 在上面纯函数的基础上接了 BaseStore，数
 
 store 不会自动进入对话模型的上下文。manager 调用时固定走 search → 把命中条目的 content 当作 existing 交给提取 LLM → 有变化再 put/delete。这条路径只服务记忆提取，写回仓库后，正在聊天的 agent 并不会因此看见新记忆；对话要用，还得让模型调 search_memory，或者你自己 search 后拼进 system prompt。每条存的是 `{"kind": ..., "content": ...}` 这份正文，created_at / score 只用于检索排序，不是另一套元数据 API。
 
-谁来触发这些读写，取决于你怎么接线，LangGraph 不会在对话开始时自己扫一遍 store。三种用法：1. 把 manage_memory / search_memory 塞进 create_agent 的 tools，对话模型自己决定何时 put、何时 search，开发者不用再碰 store 接口，但模型不调工具就既不记也不查；2. 把 manager 交给 ReflectionExecutor.submit，或在节点里手动 manager.invoke，这一次 invoke 内部会自动完成 search 和写回，开发者不用自己调 put/search，但必须有人发起这次 invoke——executor 只是延时代劳，不是对话结束的钩子；3. 需要每次回复前都带上记忆，就得自己在节点里 store.search 再拼进 prompt，这条路径没有任何自动注入。create_agent(store=...) 和 create_memory_store_manager(store=...) 只是把 store 配置上，不调用就不会发生读写。
+谁来触发这些读写，取决于使用方式，LangGraph 不会在对话开始时自己扫一遍 store。三种用法：
+1. 把 manage_memory / search_memory 塞进 create_agent 的 tools，对话模型自己决定何时 put、何时 search，开发者不用再碰 store 接口，但模型不调工具就既不记也不查；
+2. 把 manager 交给 ReflectionExecutor.submit，或在节点里手动 manager.invoke，这一次 invoke 内部会自动完成 search 和写回，开发者不用自己调 put/search，但必须有人发起这次 invoke——executor 只是延时代劳，不是对话结束的钩子；
+3. 需要每次回复前都带上记忆，就得自己在节点里 store.search 再拼进 prompt，这条路径没有任何自动注入。create_agent(store=...) 和 create_memory_store_manager(store=...) 只是把 store 配置上，不调用就不会发生读写。
 
-### 优化 Prompt
+### Prompt 优化
 
 程序记忆的落地 API 是 `create_prompt_optimizer(model, kind=...)`：输入"对话轨迹 + 可选反馈 + 当前 prompt"，输出改写后的 prompt。三种策略（langmem/prompts/ 目录）：
 
@@ -171,10 +206,7 @@ store 不会自动进入对话模型的上下文。manager 调用时固定走 se
 | metaprompt | 1~5 次 | 反思循环，每步 1 次调用 | 性价比平衡 |
 | gradient | 2~10 次 | 每步 2 次调用：先 think/critique 找问题，再 recommend 决策 | 最彻底，最贵 |
 
-
-#### create_prompt_optimizer
-
-"gradient" 这个名字其实是个隐喻——它跟数值梯度没有关系，整套机制是用工具调用搭出来的反思循环。它先定义三个"假工具"：think（思考）、critique（批判）、recommend（决策，带 warrants_adjustment/hypotheses/full_recommendations 参数），用 trustcall 的 create_extractor 强制模型以工具调用形式输出。反思循环按步数强制切换 tool_choice：前 min_reflection_steps 步只允许 think/critique（强制充分反思），中间步三选一，最后一步强制 recommend（必须给结论）。如果模型判断 `warrants_adjustment=False`，就原样返回旧 prompt；否则把 hypotheses 和 recommendations 填进第二个提示词（DEFAULT_GRADIENT_METAPROMPT），再做一次结构化抽取得到 improved_prompt。
+create_prompt_optimizer 中的 "gradient" 这个名字其实是个隐喻——它跟数值梯度没有关系，整套机制是用工具调用搭出来的反思循环。它先定义三个"假工具"：think（思考）、critique（批判）、recommend（决策，带 warrants_adjustment/hypotheses/full_recommendations 参数），用 trustcall 的 create_extractor 强制模型以工具调用形式输出。反思循环按步数强制切换 tool_choice：前 min_reflection_steps 步只允许 think/critique（强制充分反思），中间步三选一，最后一步强制 recommend（必须给结论）。如果模型判断 `warrants_adjustment=False`，就原样返回旧 prompt；否则把 hypotheses 和 recommendations 填进第二个提示词（DEFAULT_GRADIENT_METAPROMPT），再做一次结构化抽取得到 improved_prompt。
 
 也就是说"梯度"对应的是：think/critique ≈ 计算梯度（找方向），recommend ≈ 走一步梯度下降（应用更新）。metaprompt 是同一个循环的简化版（每步一次调用），prompt_memory 则退化成单发调用。三个策略的默认提示词全文见附录。
 
