@@ -1,0 +1,17 @@
+# LangMem 示例代码依赖
+
+# 核心
+langmem>=0.0.30
+langchain>=1.4.0
+langchain-openai>=1.0.0
+langgraph>=1.0.0
+
+# 环境变量管理
+python-dotenv>=1.0.0
+
+# InMemoryStore 向量计算加速（不装则退化为纯 Python 实现并打印警告）
+numpy>=1.26.0
+
+# 功能 5（外部存储 Postgres）需要
+langgraph-checkpoint-postgres>=3.0.0
+psycopg[binary]>=3.0.0
