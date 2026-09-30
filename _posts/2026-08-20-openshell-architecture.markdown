@@ -24,7 +24,7 @@ Supervisor 启动后会主动连接 Gateway，并保持一条经过认证的控�
 
 不同运行环境由 Compute Driver 对接适配。具体可以使用 Docker、Podman 或 VM，集群环境可以使用 Kubernetes。无论底层环境如何，沙箱的创建接口和策略执行模型保持一致。
 
-![OpenShell 的管理路径与业务网络路径](/pics/01-openshell-architecture.png)
+![OpenShell 的管理路径与业务网络路径](/pics/01-openshell-architecture.png){:height="70%" width="70%"}
 
 *创建接口与策略配置经过 Gateway；用户进程访问外部服务时，由沙箱内的代理检查并转发。*
 
@@ -117,7 +117,7 @@ network_policies:
 
 当沙箱中的程序发起外部请求时，请求会被强制转发到本地代理（沙箱内运行的 proxy 进程）。Supervisor 识别发起连接的 binary，再结合目标地址和请求规则判断是否放行；没有匹配规则的请求默认拒绝。
 
-![网络请求从进程识别到获准转发](/pics/02-openshell-enforcement.png)
+![网络请求从进程识别到获准转发](/pics/02-openshell-enforcement.png){:height="60%" width="60%"}
 
 要按 HTTP 方法和路径执行 `request` 规则，代理还需要读取 HTTP 请求。对于启用了 `request` 检查的 HTTPS 端点，OpenShell 使用沙箱的临时 CA 建立信任，由本地代理终止客户端 TLS，读取请求，再通过 TLS 连接上游服务。
 
