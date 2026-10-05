@@ -131,7 +131,7 @@ LangMem 的记忆分类借鉴了人类记忆结构，每种类型服务不同目
 
 create_memory_manager 的作用是：看一段对话（以及可选的既有记忆），决定记忆该怎么变——新建、改写或删掉过时条目——然后把更新后的记忆列表返回给你。它是纯函数，不读写任何数据库：输入 messages 加 optional existing，输出 ExtractedMemory 列表，持久化完全由调用方决定。后面的 create_memory_store_manager 就是在它外面自动接上 BaseStore 的 search / put / delete。
 
-除模型外，签名上最要紧的是三组参数：schemas 定义记忆的 Pydantic 结构（可传多个）；instructions 是提取指令（默认值见附录）；enable_inserts / enable_updates / enable_deletes 三个开关分别控制允许新建、更新、删除——注意删除默认是关的。
+除模型外，签名上最要紧的是三组参数：schemas 定义记忆的 Pydantic 结构（可传多个）；instructions 是提取指令（默认值见附录）；enable_inserts / enable_updates / enable_deletes 三个开关分别控制允许新建、更新、删除——注意删除默认是关的（`create_memory_store_manager` 的 docstring 写的是默认 `True`，与签名不一致，以签名为准）。
 
 用法是先定义记忆结构，再对每轮对话 invoke；上一轮的返回值作为下一轮的 existing 传回去（完整代码见 [features/03_memory_manager.py](https://github.com/loveRhythm1990/loveRhythm1990.github.io/blob/master/code-examples/langmem/features/03_memory_manager.py)）：
 
@@ -183,18 +183,18 @@ memories = manager.invoke({
 
 #### create_memory_store_manager
 
-create_memory_store_manager 在上面纯函数的基础上接了 BaseStore，数据流变成全自动：收到对话后先在 store 里搜相关记忆（默认 `query_limit=5`，还可以用 query_model 配一个更快的小模型专门生成搜索词），连同既有记忆一起交给 LLM 提取/更新，最后把结果自动 upsert/delete 回 store。
+create_memory_store_manager 在上面纯函数的基础上接了 BaseStore，数据流变成全自动：收到对话后先在 store 里检索相关记忆（默认最多 5 条，检索细节见下文“历史记忆”），连同既有记忆一起交给 LLM 提取/更新，最后把结果自动 upsert/delete 回 store。
 
 它还支持 default / default_factory 参数：没有任何记忆时先初始化一份默认值（比如应用级的默认偏好），之后在这份默认值上演化——很适合 Profile 场景。
 
-这里的 store 和 create_agent 的 store 参数是同一个类型：LangGraph 的 BaseStore，一块跨线程的 KV。create_agent 只是把实例挂到图上，对话循环自己不会去读；manager 不显式传 store 时，invoke 会从当前图上下文里取那一份。Hot Path 的记忆工具也是同一套回退——所以工具和 manager 挂在同一张图上、都不传 store，读写的就是同一块数据。显式各传一个独立的 InMemoryStore，两边互不可见。
+manager 不显式传 store 时，invoke 会从当前图上下文里取 `create_agent` 挂载的那一份。Hot Path 的记忆工具也走同一套回退，所以工具和 manager 挂在同一张图上、都不传 store 时，读写的是同一块数据；显式各传一个独立的 InMemoryStore，两边互不可见。
 
-store 不会自动进入对话模型的上下文。manager 调用时固定走 search → 把命中条目的 content 当作 existing 交给提取 LLM → 有变化再 put/delete。这条路径只服务记忆提取，写回仓库后，正在聊天的 agent 并不会因此看见新记忆；对话要用，还得让模型调 search_memory，或者你自己 search 后拼进 system prompt。每条存的是 `{"kind": ..., "content": ...}` 这份正文，created_at / score 只用于检索排序，不是另一套元数据 API。
+store 不会自动进入对话模型的上下文。这条路径只服务记忆提取，写回 store 后，正在聊天的 agent 并不会因此看见新记忆；对话要用，还得让模型调 search_memory，或者你自己 search 后拼进 system prompt。每条存的是 `{"kind": ..., "content": ...}` 这份正文，created_at / score 只用于检索排序，不是另一套元数据 API。
 
 谁来触发这些读写，取决于使用方式，LangGraph 不会在对话开始时自己扫一遍 store。三种用法：
 1. 把 manage_memory / search_memory 塞进 create_agent 的 tools，对话模型自己决定何时 put、何时 search，开发者不用再碰 store 接口，但模型不调工具就既不记也不查；
 2. 把 manager 交给 ReflectionExecutor.submit，或在节点里手动 manager.invoke，这一次 invoke 内部会自动完成 search 和写回，开发者不用自己调 put/search，但必须有人发起这次 invoke——executor 只是延时代劳，不是对话结束的钩子；
-3. 需要每次回复前都带上记忆，就得自己在节点里 store.search 再拼进 prompt，这条路径没有任何自动注入。create_agent(store=...) 和 create_memory_store_manager(store=...) 只是把 store 配置上，不调用就不会发生读写。
+3. 需要每次回复前都带上记忆，就得自己在节点里 store.search 再拼进 prompt，这条路径没有任何自动注入。
 
 #### 历史记忆
 
@@ -210,7 +210,7 @@ create_memory_store_manager 处理历史记忆分三步，而且只处理检索�
 2. **合并与冲突**：检索结果和当前对话一起放进同一次 LLM 调用。langmem 没有独立的冲突检测模块，新旧记忆是否矛盾、该更新还是该删除，全部由模型在这次调用里决定。`phases` 配置的去重轮次也只作用于这批检索结果。
 3. **写回**：新增或内容变化的条目才会 put，被标记删除的才会 delete。
 
-这套机制有一个直接后果：没有被检索到的记忆永远不会被模型看到，过时或重复的条目可能长期留在 store 里。在没有 `index` 的配置下，检索并不看对话内容，只是按插入顺序或最近更新时间取前 N 条，较早写入的记忆可能永远排不进结果。常见的应对方式有两种：给 store 配置 TTL（langmem 只是透传，是否生效取决于 store 实现），或者定期用单独脚本遍历 namespace 做清理。另外，`create_memory_store_manager` 的 `enable_deletes` 默认为 `False`，过时记忆只能被更新、不能被删除。它的 docstring 写的是 `True`，与签名不一致，使用时应显式指定。
+这套机制的边界很明确：自动流程只维护本轮选中的记忆。即使 `enable_deletes=True`，也不会扫描清理未被选中的条目。如果某条过时或重复的记忆持续未被检索到，它就会一直留在 store 里。这类残留需要其他手段处理：给 store 配置 TTL（langmem 只是透传，是否生效取决于 store 实现），或者定期用脚本遍历 namespace 清理。`create_memory_manager` 的范围由调用方传入的 `existing` 决定；手动删除工具则可以按已知 ID 删除未被检索的条目。
 
 ### Prompt 优化
 
@@ -265,7 +265,7 @@ async with AsyncPostgresStore.from_conn_string(
 
 分两个进程验证：第一个进程写入，第二个进程（全新启动）直接语义检索，能拿到那条 "prefers dark mode in all apps" 的记忆（score=0.2041）——进程重启后数据还在。
 
-最后是两个 embeddings 相关的坑（本文示例的应对方式见 [features/common.py](https://github.com/loveRhythm1990/loveRhythm1990.github.io/blob/master/code-examples/langmem/features/common.py)）。一是不配 index 就没有真正的检索：InMemoryStore 不传 index 不报错，但 search 只是原样返回该 namespace 下全部条目，score 全是 None，条目一多就退化成全量塞给模型。二是 embed 用的是独立凭证："openai:text-embedding-3-small" 这类配置走 OPENAI_API_KEY，跟主模型的 key 无关；DeepSeek 这类对话服务根本没有 embeddings 接口（实测 404）。本文示例用了一个本地词袋哈希 embedding 演示完整链路（只表达词面重叠），生产环境必须换真实 embedding 模型。
+最后是两个 embeddings 相关的坑（本文示例的应对方式见 [features/common.py](https://github.com/loveRhythm1990/loveRhythm1990.github.io/blob/master/code-examples/langmem/features/common.py)）。一是不配 index 就没有真正的检索：InMemoryStore 不传 index 不报错，但 `query` 被忽略，返回的是候选集中的前 N 条，score 全为 None（PostgresStore 则按 `updated_at` 倒序返回，细节见“历史记忆”一节）。这意味着记忆变多后，召回的未必是与当前对话相关的条目。二是 embed 用的是独立凭证："openai:text-embedding-3-small" 这类配置走 OPENAI_API_KEY，跟主模型的 key 无关；DeepSeek 这类对话服务根本没有 embeddings 接口（实测 404）。本文示例用了一个本地词袋哈希 embedding 演示完整链路（只表达词面重叠），生产环境必须换真实 embedding 模型。
 
 ### 附录
 
