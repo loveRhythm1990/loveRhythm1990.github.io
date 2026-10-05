@@ -200,10 +200,13 @@ store 不会自动进入对话模型的上下文。manager 调用时固定走 se
 
 create_memory_store_manager 处理历史记忆分三步，而且只处理检索到的那一小部分，不是整段历史：
 
-1. **检索**：每次 invoke 先在 store 里取记忆，最多 `query_limit`（默认 5）条。这一步属于哪种检索，取决于 store 是否配置了 `index`：
-   - **向量检索**：配置了 `index` 时，查询文本经 embedding 模型转成向量，按余弦相似度排序。InMemoryStore 和 PostgresStore（基于 pgvector）都是这样。这是唯一的语义检索路径。
-   - **无索引**：查询文本被忽略。InMemoryStore 按候选顺序返回前 N 条；PostgresStore 按 `updated_at` 倒序返回最近更新的 N 条，`score` 为空。两者都不做关键字或全文匹配，langgraph 的 store 里没有相应实现，`LIKE` 只用于 namespace 前缀。
+1. **检索**：每次 invoke 先在 store 里取记忆，最多 `query_limit`（默认 5）条。LangGraph store 的 `search` 有两个独立参数，分别对应两种能力：
+   - **结构化过滤（`filter`）**：按 `value` 字段做条件筛选，支持 `$eq`、`$ne`、`$gt`、`$gte`、`$lt`、`$lte`。它只看字段值，不看文本内容。InMemoryStore 和 PostgresStore 都支持。
+   - **向量检索（`query`）**：只有配置了 `index` 才生效。查询文本经 embedding 模型转成向量，按余弦相似度排序。InMemoryStore 和 PostgresStore（基于 pgvector）都是这样。这是唯一的语义检索路径。
+   - **不支持关键字检索和全文检索**：没有子串匹配，也没有分词、倒排索引或 BM25 这类相关性排序。`LIKE` 只用于 namespace 前缀匹配。
+   - **无索引时**：`query` 被忽略。InMemoryStore 按候选顺序返回前 N 条；PostgresStore 按 `updated_at` 倒序返回最近更新的 N 条，`score` 为空。
    - **查询词来源**：有 `query_model` 时由小模型生成搜索词；没有时用 `utils.get_dialated_windows` 生成，而 `query_limit // 4` 在默认值下等于 1，只取最后一条消息。这个设置只有在配置了向量索引时才有语义意义。
+   - 注意：`MemoryStoreManager` 内部调用 `store.asearch(namespace, query=...)` 时不传 `filter`。只有 `query_model` 路径下，LLM 生成的搜索参数里带了 `filter`，它才会生效。
 2. **合并与冲突**：检索结果和当前对话一起放进同一次 LLM 调用。langmem 没有独立的冲突检测模块，新旧记忆是否矛盾、该更新还是该删除，全部由模型在这次调用里决定。`phases` 配置的去重轮次也只作用于这批检索结果。
 3. **写回**：新增或内容变化的条目才会 put，被标记删除的才会 delete。
 
