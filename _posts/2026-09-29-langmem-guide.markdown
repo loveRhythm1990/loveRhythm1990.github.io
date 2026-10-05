@@ -200,11 +200,14 @@ store 不会自动进入对话模型的上下文。manager 调用时固定走 se
 
 create_memory_store_manager 处理历史记忆分三步，而且只处理检索到的那一小部分，不是整段历史：
 
-1. **检索**：每次 invoke 先在 store 里搜索，最多返回 `query_limit`（默认 5）条。有 `query_model` 时由小模型生成搜索词；没有时用 `utils.get_dialated_windows` 生成查询，而 `query_limit // 4` 在默认值下等于 1，实际只用最后一条消息做语义检索。
+1. **检索**：每次 invoke 先在 store 里取记忆，最多 `query_limit`（默认 5）条。这一步属于哪种检索，取决于 store 是否配置了 `index`：
+   - **向量检索**：配置了 `index` 时，查询文本经 embedding 模型转成向量，按余弦相似度排序。InMemoryStore 和 PostgresStore（基于 pgvector）都是这样。这是唯一的语义检索路径。
+   - **无索引**：查询文本被忽略。InMemoryStore 按候选顺序返回前 N 条；PostgresStore 按 `updated_at` 倒序返回最近更新的 N 条，`score` 为空。两者都不做关键字或全文匹配，langgraph 的 store 里没有相应实现，`LIKE` 只用于 namespace 前缀。
+   - **查询词来源**：有 `query_model` 时由小模型生成搜索词；没有时用 `utils.get_dialated_windows` 生成，而 `query_limit // 4` 在默认值下等于 1，只取最后一条消息。这个设置只有在配置了向量索引时才有语义意义。
 2. **合并与冲突**：检索结果和当前对话一起放进同一次 LLM 调用。langmem 没有独立的冲突检测模块，新旧记忆是否矛盾、该更新还是该删除，全部由模型在这次调用里决定。`phases` 配置的去重轮次也只作用于这批检索结果。
 3. **写回**：新增或内容变化的条目才会 put，被标记删除的才会 delete。
 
-这套机制有一个直接后果：没有被检索到的记忆永远不会被模型看到，过时或重复的条目可能长期留在 store 里。常见的应对方式有两种：给 store 配置 TTL（langmem 只是透传，是否生效取决于 store 实现），或者定期用单独脚本遍历 namespace 做清理。另外，`create_memory_store_manager` 的 `enable_deletes` 默认为 `False`，过时记忆只能被更新、不能被删除。它的 docstring 写的是 `True`，与签名不一致，使用时应显式指定。
+这套机制有一个直接后果：没有被检索到的记忆永远不会被模型看到，过时或重复的条目可能长期留在 store 里。在没有 `index` 的配置下，检索并不看对话内容，只是按插入顺序或最近更新时间取前 N 条，较早写入的记忆可能永远排不进结果。常见的应对方式有两种：给 store 配置 TTL（langmem 只是透传，是否生效取决于 store 实现），或者定期用单独脚本遍历 namespace 做清理。另外，`create_memory_store_manager` 的 `enable_deletes` 默认为 `False`，过时记忆只能被更新、不能被删除。它的 docstring 写的是 `True`，与签名不一致，使用时应显式指定。
 
 ### Prompt 优化
 
