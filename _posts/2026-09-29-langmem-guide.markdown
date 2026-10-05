@@ -196,6 +196,16 @@ store 不会自动进入对话模型的上下文。manager 调用时固定走 se
 2. 把 manager 交给 ReflectionExecutor.submit，或在节点里手动 manager.invoke，这一次 invoke 内部会自动完成 search 和写回，开发者不用自己调 put/search，但必须有人发起这次 invoke——executor 只是延时代劳，不是对话结束的钩子；
 3. 需要每次回复前都带上记忆，就得自己在节点里 store.search 再拼进 prompt，这条路径没有任何自动注入。create_agent(store=...) 和 create_memory_store_manager(store=...) 只是把 store 配置上，不调用就不会发生读写。
 
+#### 历史记忆
+
+create_memory_store_manager 处理历史记忆分三步，而且只处理检索到的那一小部分，不是整段历史：
+
+1. **检索**：每次 invoke 先在 store 里搜索，最多返回 `query_limit`（默认 5）条。有 `query_model` 时由小模型生成搜索词；没有时用 `utils.get_dialated_windows` 生成查询，而 `query_limit // 4` 在默认值下等于 1，实际只用最后一条消息做语义检索。
+2. **合并与冲突**：检索结果和当前对话一起放进同一次 LLM 调用。langmem 没有独立的冲突检测模块，新旧记忆是否矛盾、该更新还是该删除，全部由模型在这次调用里决定。`phases` 配置的去重轮次也只作用于这批检索结果。
+3. **写回**：新增或内容变化的条目才会 put，被标记删除的才会 delete。
+
+这套机制有一个直接后果：没有被检索到的记忆永远不会被模型看到，过时或重复的条目可能长期留在 store 里。常见的应对方式有两种：给 store 配置 TTL（langmem 只是透传，是否生效取决于 store 实现），或者定期用单独脚本遍历 namespace 做清理。另外，`create_memory_store_manager` 的 `enable_deletes` 默认为 `False`，过时记忆只能被更新、不能被删除。它的 docstring 写的是 `True`，与签名不一致，使用时应显式指定。
+
 ### Prompt 优化
 
 程序记忆的落地 API 是 `create_prompt_optimizer(model, kind=...)`：输入"对话轨迹 + 可选反馈 + 当前 prompt"，输出改写后的 prompt。三种策略（langmem/prompts/ 目录）：
