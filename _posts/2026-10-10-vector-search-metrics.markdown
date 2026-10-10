@@ -1,16 +1,13 @@
 ---
 layout: post
 title: "深入理解向量检索：L2 Distance、Cosine Similarity 与 Inner Product"
-subtitle: "从空间距离、夹角和投影，到 RAG 的召回、融合与重排"
 date: 2026-10-10 12:00:00 +0800
 author: "weak old dog"
 header-img-credit: false
 title-wrap: true
 mathjax: true
 tags:
-    - RAG
-    - 向量检索
-    - 数据结构/算法
+    - 数据处理
 ---
 
 向量检索里经常会遇到三个名字：**L2 Distance（欧氏距离）**、**Cosine Similarity（余弦相似度）**、**Inner Product（内积）**。它们都能用来排列候选文档，但回答的问题不同：两个点有多远，两个方向有多像，一个向量在另一个方向上的投影有多大。
@@ -53,7 +50,7 @@ $$
 d_2(q,x)=\sqrt{(1-4)^2+(2-6)^2}=5.
 $$
 
-![欧氏距离示意图：q=(1,2) 与 x=(4,6) 的终点构成一条长为 5 的线段，横向差 3、纵向差 4。]({{ '/pics/vector-search-metrics/l2-distance.svg' | relative_url }})
+![欧氏距离示意图：q=(1,2) 与 x=(4,6) 的终点构成一条长为 5 的线段，横向差 3、纵向差 4。]({{ '/pics/vector-search-metrics/l2-distance.svg' | relative_url }}){:height="40%" width="40%"}
 
 *图 1：向量从原点出发，L2 比较的是两个终点之间的距离。图中的坐标轴使用相同刻度。*
 
@@ -148,7 +145,7 @@ $$
 q^\top x=\lVert q\rVert_2\,(x^\top\hat q).
 $$
 
-![余弦与内积示意图：q=(4,0)，x=(3,4)，x 在 q 方向的投影长度为 3，夹角约 53.13 度，cosine=0.6，内积=12。]({{ '/pics/vector-search-metrics/cosine-inner-product.svg' | relative_url }})
+![余弦与内积示意图：q=(4,0)，x=(3,4)，x 在 q 方向的投影长度为 3，夹角约 53.13 度，cosine=0.6，内积=12。]({{ '/pics/vector-search-metrics/cosine-inner-product.svg' | relative_url }}){:height="40%" width="40%"}
 
 *图 2：cosine 看夹角；inner product 还保留长度。投影落在反方向时，内积可以为负。*
 
@@ -268,7 +265,7 @@ d_2(\hat q,\hat x)=\sqrt{2-2\cos\theta}
 =2\sin\frac{\theta}{2},\qquad 0\le\theta\le\pi.
 $$
 
-![单位圆上的等价关系：q̂=(1,0)，x̂=(0.6,0.8)，夹角约 53.13 度，内积与余弦均为 0.6，弦长平方为 0.8。]({{ '/pics/vector-search-metrics/unit-circle-equivalence.svg' | relative_url }})
+![单位圆上的等价关系：q̂=(1,0)，x̂=(0.6,0.8)，夹角约 53.13 度，内积与余弦均为 0.6，弦长平方为 0.8。]({{ '/pics/vector-search-metrics/unit-circle-equivalence.svg' | relative_url }}){:height="40%" width="40%"}
 
 *图 4：夹角越小，余弦越大，弦越短。相同的几何关系可以用三种分数描述。*
 
