@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="920" viewBox="0 0 900 920" role="img" aria-labelledby="title desc">
+<title id="title">RAG · 召回、融合与重排</title><desc id="desc">查询进入两路召回：BM25关键词检索与embedding加ANN向量检索，后者使用L2 cosine或IP。两路排名经RRF融合去重截取候选，cross-encoder reranker联合读取查询与文本，选取最终上下文送入LLM。示例为两路各100、融合取50、最终5到10。</desc>
+<defs>
+<marker id="blue" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="12" markerHeight="12" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M 1 1 L 11 6 L 1 11 Z" fill="#2563eb"/></marker>
+<marker id="teal" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="12" markerHeight="12" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M 1 1 L 11 6 L 1 11 Z" fill="#087f8c"/></marker>
+<marker id="pink" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="12" markerHeight="12" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M 1 1 L 11 6 L 1 11 Z" fill="#b43d6a"/></marker>
+<marker id="ink" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="12" markerHeight="12" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M 1 1 L 11 6 L 1 11 Z" fill="#172b45"/></marker>
+<marker id="gold" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="12" markerHeight="12" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M 1 1 L 11 6 L 1 11 Z" fill="#b7790a"/></marker>
+</defs>
+<g font-family="-apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, Hiragino Sans GB, Microsoft YaHei, sans-serif">
+<rect x="1" y="1" width="898" height="918" rx="24" fill="#f6f9fd" stroke="#dce5ef"/>
+<rect x="28" y="28" width="6" height="56" rx="3" fill="#2563eb" stroke="#2563eb"/>
+<text x="52" y="56" font-size="29" fill="#172b45" font-weight="700" text-anchor="start">RAG · 召回、融合与重排</text>
+<text x="52" y="89" font-size="21" fill="#50647d" font-weight="400" text-anchor="start">每一层处理的问题不同：距离度量不是融合，融合也不是语义重排。</text>
+<rect x="240" y="118" width="420" height="64" rx="16" fill="#eaf1fe" stroke="#d6e3ff"/>
+<text x="450" y="158" font-size="25" fill="#2563eb" font-weight="700" text-anchor="middle">查询 q · 文本问题</text>
+<line x1="450" y1="184" x2="450" y2="208" stroke="#172b45" stroke-width="2" stroke-linecap="round"/>
+<line x1="226" y1="208" x2="674" y2="208" stroke="#172b45" stroke-width="2" stroke-linecap="round"/>
+<line x1="226" y1="208" x2="226" y2="235" stroke="#172b45" stroke-width="2" stroke-linecap="round" marker-end="url(#ink)"/>
+<line x1="674" y1="208" x2="674" y2="235" stroke="#172b45" stroke-width="2" stroke-linecap="round" marker-end="url(#ink)"/>
+<rect x="28" y="244" width="398" height="158" rx="16" fill="#fff" stroke="#dce5ef"/>
+<text x="52" y="281" font-size="24" fill="#172b45" font-weight="700" text-anchor="start">① BM25 · 关键词召回</text>
+<text x="52" y="321" font-size="21" fill="#50647d" font-weight="400" text-anchor="start">擅长词项、术语、错误码匹配</text>
+<text x="52" y="363" font-size="21" fill="#2563eb" font-weight="600" text-anchor="start">示例：Top-100 候选与名次</text>
+<rect x="474" y="244" width="398" height="158" rx="16" fill="#fff" stroke="#dce5ef"/>
+<text x="498" y="281" font-size="24" fill="#172b45" font-weight="700" text-anchor="start">① Embedding + ANN</text>
+<text x="498" y="321" font-size="21" fill="#087f8c" font-weight="600" text-anchor="start">度量：L2 / cosine / IP</text>
+<text x="498" y="363" font-size="21" fill="#2563eb" font-weight="600" text-anchor="start">示例：Top-100 候选与名次</text>
+<line x1="226" y1="404" x2="226" y2="427" stroke="#172b45" stroke-width="2" stroke-linecap="round"/>
+<line x1="674" y1="404" x2="674" y2="427" stroke="#172b45" stroke-width="2" stroke-linecap="round"/>
+<line x1="226" y1="427" x2="674" y2="427" stroke="#172b45" stroke-width="2" stroke-linecap="round"/>
+<line x1="450" y1="427" x2="450" y2="453" stroke="#172b45" stroke-width="2" stroke-linecap="round" marker-end="url(#ink)"/>
+<rect x="110" y="464" width="680" height="115" rx="16" fill="#e9f7f6" stroke="#cceae6"/>
+<text x="136" y="501" font-size="25" fill="#087f8c" font-weight="700" text-anchor="start">② RRF · 按排名融合</text>
+<text x="136" y="537" font-size="22" fill="#172b45" font-weight="400" text-anchor="start">合并稳定候选 ID、去重、截取候选（示例：50 个）</text>
+<text x="136" y="565" font-size="20" fill="#50647d" font-weight="400" text-anchor="start">不读取文本；不依赖原始分数尺度</text>
+<line x1="450" y1="581" x2="450" y2="610" stroke="#172b45" stroke-width="2" stroke-linecap="round" marker-end="url(#ink)"/>
+<rect x="110" y="621" width="680" height="115" rx="16" fill="#fff5f8" stroke="#f2d5e0"/>
+<text x="136" y="658" font-size="25" fill="#b43d6a" font-weight="700" text-anchor="start">③ Reranker · 重新判断相关性</text>
+<text x="136" y="695" font-size="22" fill="#172b45" font-weight="400" text-anchor="start">典型 cross-encoder：联合读取查询和候选文本</text>
+<text x="136" y="723" font-size="20" fill="#50647d" font-weight="400" text-anchor="start">输出新的排序；只能评估已经进入候选集的内容</text>
+<line x1="450" y1="738" x2="450" y2="769" stroke="#172b45" stroke-width="2" stroke-linecap="round" marker-end="url(#ink)"/>
+<rect x="110" y="780" width="680" height="65" rx="16" fill="#eaf1fe" stroke="#d6e3ff"/>
+<text x="450" y="821" font-size="23" fill="#2563eb" font-weight="600" text-anchor="middle">④ 选取上下文（示例：5–10 个）→ LLM 生成</text>
+<text x="450" y="881" font-size="20" fill="#50647d" font-weight="400" text-anchor="middle">候选预算按质量、延迟、文本长度与成本评估；图中数字只是示例。</text>
+</g>
+</svg>

@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="780" viewBox="0 0 900 780" role="img" aria-labelledby="title desc">
+<title id="title">归一化 · 去掉长度，保留方向</title><desc id="desc">左侧等比例原始坐标中q=(1,0)，A=(0.8,0.1)，B=(10,0)，C=(20,5)。右侧为单位圆第一象限及等比例局部放大图，B与q重合，A与C保持原方向。</desc>
+<defs>
+<marker id="blue" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="12" markerHeight="12" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M 1 1 L 11 6 L 1 11 Z" fill="#2563eb"/></marker>
+<marker id="teal" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="12" markerHeight="12" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M 1 1 L 11 6 L 1 11 Z" fill="#087f8c"/></marker>
+<marker id="pink" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="12" markerHeight="12" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M 1 1 L 11 6 L 1 11 Z" fill="#b43d6a"/></marker>
+<marker id="ink" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="12" markerHeight="12" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M 1 1 L 11 6 L 1 11 Z" fill="#172b45"/></marker>
+<marker id="gold" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="12" markerHeight="12" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M 1 1 L 11 6 L 1 11 Z" fill="#b7790a"/></marker>
+</defs>
+<g font-family="-apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, Hiragino Sans GB, Microsoft YaHei, sans-serif">
+<rect x="1" y="1" width="898" height="778" rx="24" fill="#f6f9fd" stroke="#dce5ef"/>
+<rect x="28" y="28" width="6" height="56" rx="3" fill="#2563eb" stroke="#2563eb"/>
+<text x="52" y="56" font-size="29" fill="#172b45" font-weight="700" text-anchor="start">归一化 · 去掉长度，保留方向</text>
+<text x="52" y="89" font-size="21" fill="#50647d" font-weight="400" text-anchor="start">原始向量有三种排序；单位化后，三种度量共享同一排序。</text>
+<rect x="28" y="118" width="411" height="451" rx="16" fill="#fff" stroke="#dce5ef"/>
+<rect x="461" y="118" width="411" height="451" rx="16" fill="#fff" stroke="#dce5ef"/>
+<text x="50" y="153" font-size="24" fill="#172b45" font-weight="700" text-anchor="start">原始空间</text>
+<text x="483" y="153" font-size="24" fill="#172b45" font-weight="700" text-anchor="start">单位圆（局部放大）</text>
+<line x1="70" y1="446" x2="422" y2="446" stroke="#50647d" stroke-width="2" stroke-linecap="round"/>
+<line x1="70" y1="446" x2="70" y2="214" stroke="#50647d" stroke-width="2" stroke-linecap="round"/>
+<text x="50" y="471" font-size="18" fill="#50647d" font-weight="400" text-anchor="start">O</text>
+<line x1="150" y1="446" x2="150" y2="334" stroke="#edf2f7" stroke-width="2" stroke-linecap="round"/>
+<text x="150" y="473" font-size="17" fill="#50647d" font-weight="400" text-anchor="middle">5</text>
+<line x1="230" y1="446" x2="230" y2="334" stroke="#edf2f7" stroke-width="2" stroke-linecap="round"/>
+<text x="230" y="473" font-size="17" fill="#50647d" font-weight="400" text-anchor="middle">10</text>
+<line x1="310" y1="446" x2="310" y2="334" stroke="#edf2f7" stroke-width="2" stroke-linecap="round"/>
+<text x="310" y="473" font-size="17" fill="#50647d" font-weight="400" text-anchor="middle">15</text>
+<line x1="390" y1="446" x2="390" y2="334" stroke="#edf2f7" stroke-width="2" stroke-linecap="round"/>
+<text x="390" y="473" font-size="17" fill="#50647d" font-weight="400" text-anchor="middle">20</text>
+<line x1="70" y1="366" x2="421" y2="366" stroke="#edf2f7" stroke-width="2" stroke-linecap="round"/>
+<text x="58" y="372" font-size="17" fill="#50647d" font-weight="400" text-anchor="end">5</text>
+<line x1="70" y1="286" x2="421" y2="286" stroke="#edf2f7" stroke-width="2" stroke-linecap="round"/>
+<text x="58" y="292" font-size="17" fill="#50647d" font-weight="400" text-anchor="end">10</text>
+<line x1="70" y1="446" x2="390" y2="366" stroke="#b43d6a" stroke-width="4" stroke-linecap="round" marker-end="url(#pink)"/>
+<line x1="70" y1="446" x2="230" y2="446" stroke="#087f8c" stroke-width="4" stroke-linecap="round" marker-end="url(#teal)"/>
+<circle cx="82.8" cy="444.4" r="4" fill="#2563eb" stroke="#2563eb" stroke-width="2"/>
+<circle cx="86" cy="446" r="6" fill="none" stroke="#b7790a" stroke-width="2"/>
+<text x="230" y="428" font-size="21" fill="#087f8c" font-weight="600" text-anchor="middle">B (10, 0)</text>
+<text x="390" y="349" font-size="21" fill="#b43d6a" font-weight="600" text-anchor="end">C (20, 5)</text>
+<line x1="85" y1="434" x2="124" y2="308" stroke="#b7790a" stroke-width="2" stroke-linecap="round"/>
+<rect x="91" y="217" width="264" height="86" rx="16" fill="#fffaf0" stroke="#efdfb8"/>
+<text x="108" y="249" font-size="20" fill="#b7790a" font-weight="600" text-anchor="start">q = (1, 0)</text>
+<text x="108" y="281" font-size="20" fill="#2563eb" font-weight="600" text-anchor="start">A = (0.8, 0.1)</text>
+<text x="50" y="521" font-size="20" fill="#50647d" font-weight="400" text-anchor="start">A 最近 · B 同向 · C 投影最大</text>
+<path d="M 504 296 A 170 170 0 0 1 674 466" fill="none" stroke="#b8cce8" stroke-width="2"/>
+<line x1="504" y1="466" x2="694" y2="466" stroke="#50647d" stroke-width="2" stroke-linecap="round"/>
+<line x1="504" y1="466" x2="504" y2="284" stroke="#50647d" stroke-width="2" stroke-linecap="round"/>
+<text x="484" y="490" font-size="18" fill="#50647d" font-weight="400" text-anchor="start">O</text>
+<line x1="504" y1="466" x2="674" y2="466" stroke="#087f8c" stroke-width="3" stroke-linecap="round" marker-end="url(#teal)"/>
+<line x1="504" y1="466" x2="672.6872390413234" y2="444.91409511983454" stroke="#2563eb" stroke-width="3" stroke-linecap="round" marker-end="url(#blue)"/>
+<line x1="504" y1="466" x2="668.9242250247064" y2="424.7689437438234" stroke="#b43d6a" stroke-width="3" stroke-linecap="round" marker-end="url(#pink)"/>
+<rect x="655" y="402" width="39" height="77" rx="4" fill="none" stroke="#b7790a"/>
+<text x="526" y="499" font-size="19" fill="#50647d" font-weight="400" text-anchor="start">半径 = 1</text>
+<line x1="680" y1="402" x2="753" y2="358" stroke="#b7790a" stroke-width="2" stroke-linecap="round" stroke-dasharray="5 4"/>
+<rect x="729" y="192" width="117" height="186" rx="16" fill="#fffaf0" stroke="#efdfb8"/>
+<path d="M 770.80 362.00 L 770.79 359.60 L 770.78 357.20 L 770.75 354.80 L 770.70 352.40 L 770.65 350.00 L 770.58 347.60 L 770.51 345.20 L 770.42 342.80 L 770.31 340.40 L 770.20 338.00 L 770.07 335.60 L 769.94 333.20 L 769.78 330.80 L 769.62 328.40 L 769.45 326.00 L 769.26 323.60 L 769.06 321.20 L 768.85 318.80 L 768.63 316.40 L 768.39 314.00 L 768.15 311.60 L 767.89 309.20 L 767.62 306.80 L 767.33 304.40 L 767.04 302.00 L 766.73 299.60 L 766.41 297.20 L 766.07 294.80 L 765.73 292.40 L 765.37 290.00 L 765.00 287.60 L 764.62 285.20 L 764.22 282.80 L 763.81 280.40 L 763.39 278.00 L 762.96 275.60 L 762.51 273.20 L 762.06 270.80 L 761.59 268.40 L 761.10 266.00 L 760.61 263.60 L 760.10 261.20 L 759.57 258.80 L 759.04 256.40 L 758.49 254.00 L 757.93 251.60 L 757.36 249.20 L 756.77 246.80 L 756.17 244.40 L 755.56 242.00 L 754.93 239.60 L 754.29 237.20 L 753.64 234.80 L 752.97 232.40" fill="none" stroke="#b8cce8" stroke-width="2"/>
+<circle cx="770.8000000000001" cy="362" r="4" fill="#087f8c" stroke="#087f8c" stroke-width="2"/>
+<text x="780.8000000000001" y="368" font-size="18" fill="#087f8c" font-weight="600" text-anchor="start">q̂ = B̂</text>
+<circle cx="767.0933808225604" cy="302.46332739717997" r="4" fill="#2563eb" stroke="#2563eb" stroke-width="2"/>
+<text x="777.0933808225604" y="308.46332739717997" font-size="18" fill="#2563eb" font-weight="600" text-anchor="start">Â</text>
+<circle cx="756.4684000697594" cy="245.58289998256018" r="4" fill="#b43d6a" stroke="#b43d6a" stroke-width="2"/>
+<text x="766.4684000697594" y="251.58289998256018" font-size="18" fill="#b43d6a" font-weight="600" text-anchor="start">Ĉ</text>
+<text x="483" y="211" font-size="21" fill="#2563eb" font-weight="600" text-anchor="start">方向不变</text>
+<text x="483" y="245" font-size="21" fill="#087f8c" font-weight="600" text-anchor="start">长度都变成 1</text>
+<text x="483" y="532" font-size="20" fill="#50647d" font-weight="400" text-anchor="start">B 与 q 重合；A 比 C 更同向</text>
+<rect x="28" y="589" width="411" height="163" rx="16" fill="#fff" stroke="#d6e3ff"/>
+<text x="50" y="621" font-size="22" fill="#172b45" font-weight="700" text-anchor="start">归一化前</text>
+<text x="50" y="654" font-size="21" fill="#50647d" font-weight="400" text-anchor="start">L2 升序</text>
+<text x="169" y="654" font-size="23" fill="#172b45" font-weight="600" text-anchor="start">A → B → C</text>
+<text x="50" y="686" font-size="21" fill="#50647d" font-weight="400" text-anchor="start">Cos 降序</text>
+<text x="169" y="686" font-size="23" fill="#172b45" font-weight="600" text-anchor="start">B → A → C</text>
+<text x="50" y="718" font-size="21" fill="#50647d" font-weight="400" text-anchor="start">IP 降序</text>
+<text x="169" y="718" font-size="23" fill="#172b45" font-weight="600" text-anchor="start">C → B → A</text>
+<rect x="461" y="589" width="411" height="163" rx="16" fill="#eaf1fe" stroke="#d6e3ff"/>
+<text x="483" y="621" font-size="22" fill="#172b45" font-weight="700" text-anchor="start">归一化后</text>
+<text x="483" y="654" font-size="21" fill="#50647d" font-weight="400" text-anchor="start">L2 升序</text>
+<text x="602" y="654" font-size="23" fill="#2563eb" font-weight="600" text-anchor="start">B → A → C</text>
+<text x="483" y="686" font-size="21" fill="#50647d" font-weight="400" text-anchor="start">Cos 降序</text>
+<text x="602" y="686" font-size="23" fill="#2563eb" font-weight="600" text-anchor="start">B → A → C</text>
+<text x="483" y="718" font-size="21" fill="#50647d" font-weight="400" text-anchor="start">IP 降序</text>
+<text x="602" y="718" font-size="23" fill="#2563eb" font-weight="600" text-anchor="start">B → A → C</text>
+</g>
+</svg>

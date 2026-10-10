@@ -57,7 +57,7 @@
             <div class="col-lg-2 col-lg-offset-0 visible-lg-block post-toc-side"></div>
             <div class="col-lg-9 col-lg-offset-0 col-md-10 col-md-offset-1 hero-col">
                 <div class="post-heading">
-                    <h1>{{ page.title }}</h1>
+                    <h1{% if page.title-wrap %} style="white-space: normal;"{% endif %}>{{ page.title }}</h1>
                     {% if page.tags and page.tags.size > 0 %}
                     <div class="hero-tags">
                         {% for tag in page.tags %}

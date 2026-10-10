@@ -10,7 +10,8 @@
     },
     tex2jax: {
       inlineMath: [ ['$','$'] ],
-      displayMath: [ ['$$','$$'] ],
+      // kramdown renders Markdown $$ blocks as \[ ... \].
+      displayMath: [ ['$$','$$'], ['\\[','\\]'] ],
       processEscapes: true,
     }
   });

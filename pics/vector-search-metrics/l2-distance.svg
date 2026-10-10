@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="670" viewBox="0 0 900 670" role="img" aria-labelledby="title desc">
+<title id="title">L2 Distance · 终点之间的距离</title><desc id="desc">等比例坐标系中，q=(1,2)，x=(4,6)。两终点的差为(3,4)，欧氏距离为5。</desc>
+<defs>
+<marker id="blue" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="12" markerHeight="12" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M 1 1 L 11 6 L 1 11 Z" fill="#2563eb"/></marker>
+<marker id="teal" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="12" markerHeight="12" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M 1 1 L 11 6 L 1 11 Z" fill="#087f8c"/></marker>
+<marker id="pink" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="12" markerHeight="12" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M 1 1 L 11 6 L 1 11 Z" fill="#b43d6a"/></marker>
+<marker id="ink" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="12" markerHeight="12" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M 1 1 L 11 6 L 1 11 Z" fill="#172b45"/></marker>
+<marker id="gold" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="12" markerHeight="12" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M 1 1 L 11 6 L 1 11 Z" fill="#b7790a"/></marker>
+</defs>
+<g font-family="-apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, Hiragino Sans GB, Microsoft YaHei, sans-serif">
+<rect x="1" y="1" width="898" height="668" rx="24" fill="#f6f9fd" stroke="#dce5ef"/>
+<rect x="28" y="28" width="6" height="56" rx="3" fill="#2563eb" stroke="#2563eb"/>
+<text x="52" y="56" font-size="29" fill="#172b45" font-weight="700" text-anchor="start">L2 Distance · 终点之间的距离</text>
+<text x="52" y="89" font-size="21" fill="#50647d" font-weight="400" text-anchor="start">横向差 3，纵向差 4，直线距离就是 5。</text>
+<rect x="28" y="116" width="844" height="415" rx="16" fill="#fff" stroke="#dce5ef"/>
+<line x1="161" y1="485" x2="161" y2="158.59999999999997" stroke="#edf2f7" stroke-width="2" stroke-linecap="round"/>
+<line x1="110" y1="434" x2="441.5" y2="434" stroke="#edf2f7" stroke-width="2" stroke-linecap="round"/>
+<text x="161" y="512" font-size="17" fill="#50647d" font-weight="400" text-anchor="middle">1</text>
+<text x="92" y="440" font-size="17" fill="#50647d" font-weight="400" text-anchor="end">1</text>
+<line x1="212" y1="485" x2="212" y2="158.59999999999997" stroke="#edf2f7" stroke-width="2" stroke-linecap="round"/>
+<line x1="110" y1="383" x2="441.5" y2="383" stroke="#edf2f7" stroke-width="2" stroke-linecap="round"/>
+<text x="212" y="512" font-size="17" fill="#50647d" font-weight="400" text-anchor="middle">2</text>
+<text x="92" y="389" font-size="17" fill="#50647d" font-weight="400" text-anchor="end">2</text>
+<line x1="263" y1="485" x2="263" y2="158.59999999999997" stroke="#edf2f7" stroke-width="2" stroke-linecap="round"/>
+<line x1="110" y1="332" x2="441.5" y2="332" stroke="#edf2f7" stroke-width="2" stroke-linecap="round"/>
+<text x="263" y="512" font-size="17" fill="#50647d" font-weight="400" text-anchor="middle">3</text>
+<text x="92" y="338" font-size="17" fill="#50647d" font-weight="400" text-anchor="end">3</text>
+<line x1="314" y1="485" x2="314" y2="158.59999999999997" stroke="#edf2f7" stroke-width="2" stroke-linecap="round"/>
+<line x1="110" y1="281" x2="441.5" y2="281" stroke="#edf2f7" stroke-width="2" stroke-linecap="round"/>
+<text x="314" y="512" font-size="17" fill="#50647d" font-weight="400" text-anchor="middle">4</text>
+<text x="92" y="287" font-size="17" fill="#50647d" font-weight="400" text-anchor="end">4</text>
+<line x1="365" y1="485" x2="365" y2="158.59999999999997" stroke="#edf2f7" stroke-width="2" stroke-linecap="round"/>
+<line x1="110" y1="230" x2="441.5" y2="230" stroke="#edf2f7" stroke-width="2" stroke-linecap="round"/>
+<text x="365" y="512" font-size="17" fill="#50647d" font-weight="400" text-anchor="middle">5</text>
+<text x="92" y="236" font-size="17" fill="#50647d" font-weight="400" text-anchor="end">5</text>
+<line x1="416" y1="485" x2="416" y2="158.59999999999997" stroke="#edf2f7" stroke-width="2" stroke-linecap="round"/>
+<line x1="110" y1="179" x2="441.5" y2="179" stroke="#edf2f7" stroke-width="2" stroke-linecap="round"/>
+<text x="416" y="512" font-size="17" fill="#50647d" font-weight="400" text-anchor="middle">6</text>
+<text x="92" y="185" font-size="17" fill="#50647d" font-weight="400" text-anchor="end">6</text>
+<line x1="110" y1="485" x2="446.59999999999997" y2="485" stroke="#50647d" stroke-width="2" stroke-linecap="round"/>
+<line x1="110" y1="485" x2="110" y2="143.3" stroke="#50647d" stroke-width="2" stroke-linecap="round"/>
+<text x="89" y="511" font-size="18" fill="#50647d" font-weight="400" text-anchor="start">O</text>
+<text x="455" y="508" font-size="20" fill="#50647d" font-weight="400" text-anchor="start">x₁</text>
+<text x="84" y="139" font-size="20" fill="#50647d" font-weight="400" text-anchor="start">x₂</text>
+<line x1="110" y1="485" x2="161" y2="383" stroke="#2563eb" stroke-width="4" stroke-linecap="round" marker-end="url(#blue)"/>
+<line x1="110" y1="485" x2="314" y2="179" stroke="#087f8c" stroke-width="4" stroke-linecap="round" marker-end="url(#teal)"/>
+<line x1="161" y1="383" x2="314" y2="383" stroke="#b43d6a" stroke-width="2" stroke-linecap="round" stroke-dasharray="7 6"/>
+<line x1="314" y1="383" x2="314" y2="179" stroke="#b43d6a" stroke-width="2" stroke-linecap="round" stroke-dasharray="7 6"/>
+<path d="M 301 383 L 301 370 L 314 370" fill="none" stroke="#b43d6a" stroke-width="2"/>
+<line x1="161" y1="383" x2="314" y2="179" stroke="#b43d6a" stroke-width="5" stroke-linecap="round"/>
+<circle cx="161" cy="383" r="5" fill="#2563eb" stroke="#2563eb" stroke-width="2"/>
+<circle cx="314" cy="179" r="5" fill="#087f8c" stroke="#087f8c" stroke-width="2"/>
+<text x="144" y="369" font-size="22" fill="#2563eb" font-weight="600" text-anchor="end">q = (1, 2)</text>
+<text x="330" y="186" font-size="22" fill="#087f8c" font-weight="600" text-anchor="start">x = (4, 6)</text>
+<text x="237.5" y="413" font-size="20" fill="#b43d6a" font-weight="400" text-anchor="middle">Δx₁ = 3</text>
+<text x="332" y="291.0" font-size="20" fill="#b43d6a" font-weight="400" text-anchor="start">Δx₂ = 4</text>
+<rect x="540" y="284" width="293" height="134" rx="16" fill="#fff5f8" stroke="#f2d5e0"/>
+<text x="562" y="319" font-size="22" fill="#b43d6a" font-weight="700" text-anchor="start">距离看终点的位置</text>
+<text x="562" y="355" font-size="22" fill="#172b45" font-weight="400" text-anchor="start">L2 = √(3² + 4²) = 5</text>
+<text x="562" y="389" font-size="22" fill="#172b45" font-weight="400" text-anchor="start">L2² = 25</text>
+<rect x="28" y="550" width="844" height="88" rx="16" fill="#eaf1fe" stroke="#d6e3ff"/>
+<text x="50" y="586" font-size="27" fill="#2563eb" font-weight="600" text-anchor="start">d₂(q, x) = ‖q − x‖₂</text>
+<text x="50" y="618" font-size="21" fill="#50647d" font-weight="400" text-anchor="start">L2 与 L2² 的升序排名相同，返回数值与阈值不同。</text>
+</g>
+</svg>
