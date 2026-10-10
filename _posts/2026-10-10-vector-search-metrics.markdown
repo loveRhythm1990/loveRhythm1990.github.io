@@ -50,7 +50,7 @@ $$
 d_2(q,x)=\sqrt{(1-4)^2+(2-6)^2}=5.
 $$
 
-![欧氏距离示意图：q=(1,2) 与 x=(4,6) 的终点构成一条长为 5 的线段，横向差 3、纵向差 4。]({{ '/pics/vector-search-metrics/l2-distance.svg' | relative_url }}){:height="40%" width="40%"}
+![欧氏距离示意图：q=(1,2) 与 x=(4,6) 的终点构成一条长为 5 的线段，横向差 3、纵向差 4。]({{ '/pics/vector-search-metrics/l2-distance.svg' | relative_url }}){:height="60%" width="60%"}
 
 *图 1：向量从原点出发，L2 比较的是两个终点之间的距离。图中的坐标轴使用相同刻度。*
 
@@ -145,7 +145,7 @@ $$
 q^\top x=\lVert q\rVert_2\,(x^\top\hat q).
 $$
 
-![余弦与内积示意图：q=(4,0)，x=(3,4)，x 在 q 方向的投影长度为 3，夹角约 53.13 度，cosine=0.6，内积=12。]({{ '/pics/vector-search-metrics/cosine-inner-product.svg' | relative_url }}){:height="40%" width="40%"}
+![余弦与内积示意图：q=(4,0)，x=(3,4)，x 在 q 方向的投影长度为 3，夹角约 53.13 度，cosine=0.6，内积=12。]({{ '/pics/vector-search-metrics/cosine-inner-product.svg' | relative_url }}){:height="60%" width="60%"}
 
 *图 2：cosine 看夹角；inner product 还保留长度。投影落在反方向时，内积可以为负。*
 
@@ -188,7 +188,7 @@ $$
 - **Cosine：B → A → C**。B 与查询完全同向。
 - **IP：C → B → A**。C 在查询方向上的投影最大。
 
-![归一化前后的候选排序：原始向量的 L2、cosine、IP 第一名分别是 A、B、C；单位化后，三种度量都按 B、A、C 排序。]({{ '/pics/vector-search-metrics/normalization-ranking.svg' | relative_url }})
+![归一化前后的候选排序：原始向量的 L2、cosine、IP 第一名分别是 A、B、C；单位化后，三种度量都按 B、A、C 排序。]({{ '/pics/vector-search-metrics/normalization-ranking.svg' | relative_url }}){:height="60%" width="60%"}
 
 *图 3：左图保留长度，右图把所有非零向量投到单位圆上。左右两图分别使用等比例坐标，但缩放比例不同；右图局部放大展示三个候选的方向。*
 
@@ -265,7 +265,7 @@ d_2(\hat q,\hat x)=\sqrt{2-2\cos\theta}
 =2\sin\frac{\theta}{2},\qquad 0\le\theta\le\pi.
 $$
 
-![单位圆上的等价关系：q̂=(1,0)，x̂=(0.6,0.8)，夹角约 53.13 度，内积与余弦均为 0.6，弦长平方为 0.8。]({{ '/pics/vector-search-metrics/unit-circle-equivalence.svg' | relative_url }}){:height="40%" width="40%"}
+![单位圆上的等价关系：q̂=(1,0)，x̂=(0.6,0.8)，夹角约 53.13 度，内积与余弦均为 0.6，弦长平方为 0.8。]({{ '/pics/vector-search-metrics/unit-circle-equivalence.svg' | relative_url }}){:height="60%" width="60%"}
 
 *图 4：夹角越小，余弦越大，弦越短。相同的几何关系可以用三种分数描述。*
 
@@ -412,7 +412,7 @@ $$
 
 一个常见的混合检索流程是：
 
-![RAG 检索链路：查询并行进入 BM25 和 embedding 向量 ANN 检索，两路排名经 RRF 融合去重后，候选文本进入 reranker，最终选取上下文供 LLM 生成。]({{ '/pics/vector-search-metrics/rag-retrieval-pipeline.svg' | relative_url }})
+![RAG 检索链路：查询并行进入 BM25 和 embedding 向量 ANN 检索，两路排名经 RRF 融合去重后，候选文本进入 reranker，最终选取上下文供 LLM 生成。]({{ '/pics/vector-search-metrics/rag-retrieval-pipeline.svg' | relative_url }}){:height="60%" width="60%"}
 
 *图 5：向量度量、ANN、RRF 和 reranker 位于不同环节。图中候选数量仅用于说明，不是推荐固定值。*
 
