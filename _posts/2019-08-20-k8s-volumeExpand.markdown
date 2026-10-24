@@ -1,7 +1,6 @@
 ---
 layout:     post
 title:      "K8s volume expand 控制器介绍"
-subtitle:   " \"由点到线熟悉 K8s Controller Manager\""
 date:       2019-08-20 16:36:00
 author:     "weak old dog"
 header-img-credit: false

@@ -1,7 +1,6 @@
 ---
 layout:     post
 title:      "gRPC Protobuf 语法介绍"
-subtitle:   ""
 date:       2019-12-17 15:25:00
 author:     "decent"
 header-img-credit: false

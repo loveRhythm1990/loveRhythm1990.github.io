@@ -1,7 +1,6 @@
 ---
 layout: post
 title: "以 pi 为例：如何设计一个 Harness 系统"
-subtitle: "循环、工具、状态、扩展与验收"
 date: 2026-10-19 16:00:00 +0800
 author: "weak old dog"
 header-img-credit: false

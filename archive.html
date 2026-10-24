@@ -87,9 +87,6 @@ https://github.com/kitian616/jekyll-TeXt-theme
 						<time class="archive-date" datetime="{{ _article.date | date_to_xmlschema }}">{{ _article.date | date: '%m-%d' }}</time>
 						<span class="archive-body">
 							<span class="archive-title">{{ _article.title }}</span>
-							{%- if _article.subtitle -%}
-							<span class="archive-subtitle">{{ _article.subtitle }}</span>
-							{%- endif -%}
 						</span>
 						{%- if _primary_tag -%}
 						<span class="archive-tag">{{ _primary_tag }}</span>

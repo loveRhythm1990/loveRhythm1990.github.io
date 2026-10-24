@@ -1,7 +1,6 @@
 ---
 layout:     post
 title:      "扩展 IPAM host-local 插件实现 IP 预留"
-subtitle:   "\"Openkruise 中实现 IP 预留的方式\""
 date:       2022-8-20 10:10:00
 author:     "decent"
 header-img-credit: false

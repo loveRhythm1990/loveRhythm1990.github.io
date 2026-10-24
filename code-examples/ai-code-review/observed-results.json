@@ -1,0 +1,570 @@
+{
+  "scope": "Synthetic graph and SQLite experiment; no model review or end-to-end token measurement",
+  "source_sha": "343ab7cea29d47a3e805381e09f8243a43d43d88",
+  "python": "3.13.13",
+  "graph_version": "2.3.9",
+  "grammar_pack_version": "0.13.0",
+  "fixture_source_files": [
+    "handlers.py",
+    "health.py",
+    "jobs.py",
+    "store.py",
+    "test_orders.py"
+  ],
+  "full_build": {
+    "status": "ok",
+    "files_parsed": 5,
+    "total_nodes": 11,
+    "total_edges": 28,
+    "errors": []
+  },
+  "incremental_update": {
+    "status": "ok",
+    "files_updated": 1,
+    "changed_files": [
+      "store.py"
+    ],
+    "dependent_files": [
+      "handlers.py",
+      "jobs.py",
+      "test_orders.py"
+    ],
+    "errors": []
+  },
+  "caller_names_before": [
+    "get_order_handler"
+  ],
+  "caller_names_after": [
+    "get_order_handler"
+  ],
+  "bare_name_query_status": "ambiguous",
+  "caller_query": {
+    "status": "ok",
+    "pattern": "callers_of",
+    "target": "<demo>/store.py::get_order",
+    "description": "Find all functions that call a given function",
+    "summary": "Found 1 call site(s) across 1 node(s) for callers_of('<demo>/store.py::get_order')",
+    "result_count": 1,
+    "results_omitted": 0,
+    "results": [
+      {
+        "id": 2,
+        "kind": "Function",
+        "name": "get_order_handler",
+        "qualified_name": "<demo>/handlers.py::get_order_handler",
+        "file_path": "<demo>/handlers.py",
+        "line_start": 3,
+        "line_end": 4,
+        "language": "python",
+        "parent_name": null,
+        "is_test": false,
+        "call_site": {
+          "line": 4
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": 3,
+        "kind": "CALLS",
+        "source": "<demo>/handlers.py::get_order_handler",
+        "target": "<demo>/store.py::get_order",
+        "file_path": "<demo>/handlers.py",
+        "line": 4,
+        "confidence": 1.0,
+        "confidence_tier": "EXTRACTED"
+      }
+    ],
+    "distinct_nodes": 1,
+    "resolution_split": {
+      "direct": 1,
+      "unresolved": 0
+    }
+  },
+  "reference_query": {
+    "status": "ok",
+    "pattern": "references_to",
+    "target": "<demo>/store.py::get_order",
+    "description": "Find all nodes that reference a given symbol",
+    "summary": "Found 1 call site(s) across 1 node(s) for references_to('<demo>/store.py::get_order')",
+    "result_count": 1,
+    "results_omitted": 0,
+    "results": [
+      {
+        "id": 5,
+        "kind": "File",
+        "name": "<demo>/jobs.py",
+        "qualified_name": "<demo>/jobs.py",
+        "file_path": "<demo>/jobs.py",
+        "line_start": 1,
+        "line_end": 7,
+        "language": "python",
+        "parent_name": null,
+        "is_test": false,
+        "call_site": {
+          "line": 3
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": 6,
+        "kind": "REFERENCES",
+        "source": "<demo>/jobs.py",
+        "target": "<demo>/store.py::get_order",
+        "file_path": "<demo>/jobs.py",
+        "line": 3,
+        "confidence": 1.0,
+        "confidence_tier": "EXTRACTED"
+      }
+    ],
+    "distinct_nodes": 1,
+    "resolution_split": {
+      "direct": 1,
+      "unresolved": 0
+    }
+  },
+  "impact": {
+    "status": "ok",
+    "summary": "Blast radius for 1 changed file(s):\n  - 2 nodes directly changed\n  - 5 nodes impacted (within 2 hops)\n  - 3 additional files affected",
+    "changed_files": [
+      "store.py"
+    ],
+    "changed_nodes": [
+      {
+        "id": 12,
+        "kind": "File",
+        "name": "<demo>/store.py",
+        "qualified_name": "<demo>/store.py",
+        "file_path": "<demo>/store.py",
+        "line_start": 1,
+        "line_end": 6,
+        "language": "python",
+        "parent_name": null,
+        "is_test": false
+      },
+      {
+        "id": 13,
+        "kind": "Function",
+        "name": "get_order",
+        "qualified_name": "<demo>/store.py::get_order",
+        "file_path": "<demo>/store.py",
+        "line_start": 1,
+        "line_end": 5,
+        "language": "python",
+        "parent_name": null,
+        "is_test": false
+      }
+    ],
+    "changed_nodes_omitted": 0,
+    "impacted_nodes": [
+      {
+        "id": 2,
+        "kind": "Function",
+        "name": "get_order_handler",
+        "qualified_name": "<demo>/handlers.py::get_order_handler",
+        "file_path": "<demo>/handlers.py",
+        "line_start": 3,
+        "line_end": 4,
+        "language": "python",
+        "parent_name": null,
+        "is_test": false,
+        "impact_score": 0.6,
+        "call_site": {
+          "line": 4
+        }
+      },
+      {
+        "id": 5,
+        "kind": "File",
+        "name": "<demo>/jobs.py",
+        "qualified_name": "<demo>/jobs.py",
+        "file_path": "<demo>/jobs.py",
+        "line_start": 1,
+        "line_end": 7,
+        "language": "python",
+        "parent_name": null,
+        "is_test": false,
+        "impact_score": 0.36,
+        "call_site": {
+          "line": 3
+        }
+      },
+      {
+        "id": 11,
+        "kind": "Test",
+        "name": "test_own_order",
+        "qualified_name": "<demo>/test_orders.py::OrderTests.test_own_order",
+        "file_path": "<demo>/test_orders.py",
+        "line_start": 6,
+        "line_end": 11,
+        "language": "python",
+        "parent_name": "OrderTests",
+        "is_test": true,
+        "impact_score": 0.36
+      },
+      {
+        "id": 1,
+        "kind": "File",
+        "name": "<demo>/handlers.py",
+        "qualified_name": "<demo>/handlers.py",
+        "file_path": "<demo>/handlers.py",
+        "line_start": 1,
+        "line_end": 5,
+        "language": "python",
+        "parent_name": null,
+        "is_test": false,
+        "impact_score": 0.3
+      },
+      {
+        "id": 9,
+        "kind": "File",
+        "name": "<demo>/test_orders.py",
+        "qualified_name": "<demo>/test_orders.py",
+        "file_path": "<demo>/test_orders.py",
+        "line_start": 1,
+        "line_end": 12,
+        "language": "python",
+        "parent_name": null,
+        "is_test": true,
+        "impact_score": 0.09
+      }
+    ],
+    "impacted_files": [
+      "<demo>/jobs.py",
+      "<demo>/handlers.py",
+      "<demo>/test_orders.py"
+    ],
+    "impacted_files_omitted": 0,
+    "edges": [
+      {
+        "id": 1,
+        "kind": "IMPORTS_FROM",
+        "source": "<demo>/handlers.py",
+        "target": "<demo>/store.py",
+        "file_path": "<demo>/handlers.py",
+        "line": 1,
+        "confidence": 1.0,
+        "confidence_tier": "EXTRACTED"
+      },
+      {
+        "id": 3,
+        "kind": "CALLS",
+        "source": "<demo>/handlers.py::get_order_handler",
+        "target": "<demo>/store.py::get_order",
+        "file_path": "<demo>/handlers.py",
+        "line": 4,
+        "confidence": 1.0,
+        "confidence_tier": "EXTRACTED"
+      },
+      {
+        "id": 5,
+        "kind": "IMPORTS_FROM",
+        "source": "<demo>/jobs.py",
+        "target": "<demo>/store.py",
+        "file_path": "<demo>/jobs.py",
+        "line": 1,
+        "confidence": 1.0,
+        "confidence_tier": "EXTRACTED"
+      },
+      {
+        "id": 6,
+        "kind": "REFERENCES",
+        "source": "<demo>/jobs.py",
+        "target": "<demo>/store.py::get_order",
+        "file_path": "<demo>/jobs.py",
+        "line": 3,
+        "confidence": 1.0,
+        "confidence_tier": "EXTRACTED"
+      },
+      {
+        "id": 29,
+        "kind": "CONTAINS",
+        "source": "<demo>/store.py",
+        "target": "<demo>/store.py::get_order",
+        "file_path": "<demo>/store.py",
+        "line": 1,
+        "confidence": 1.0,
+        "confidence_tier": "EXTRACTED"
+      },
+      {
+        "id": 2,
+        "kind": "CONTAINS",
+        "source": "<demo>/handlers.py",
+        "target": "<demo>/handlers.py::get_order_handler",
+        "file_path": "<demo>/handlers.py",
+        "line": 3,
+        "confidence": 1.0,
+        "confidence_tier": "EXTRACTED"
+      },
+      {
+        "id": 27,
+        "kind": "TESTED_BY",
+        "source": "<demo>/handlers.py::get_order_handler",
+        "target": "<demo>/test_orders.py::OrderTests.test_own_order",
+        "file_path": "<demo>/test_orders.py",
+        "line": 10,
+        "confidence": 1.0,
+        "confidence_tier": "EXTRACTED"
+      },
+      {
+        "id": 13,
+        "kind": "IMPORTS_FROM",
+        "source": "<demo>/test_orders.py",
+        "target": "<demo>/handlers.py",
+        "file_path": "<demo>/test_orders.py",
+        "line": 3,
+        "confidence": 1.0,
+        "confidence_tier": "EXTRACTED"
+      },
+      {
+        "id": 21,
+        "kind": "CALLS",
+        "source": "<demo>/test_orders.py::OrderTests.test_own_order",
+        "target": "<demo>/handlers.py::get_order_handler",
+        "file_path": "<demo>/test_orders.py",
+        "line": 10,
+        "confidence": 1.0,
+        "confidence_tier": "EXTRACTED"
+      }
+    ],
+    "edges_omitted": 0,
+    "truncated": false,
+    "total_impacted": 5,
+    "nodes_omitted": 0,
+    "resolution": "all",
+    "unresolved_call_sites": 0,
+    "context_savings": {
+      "estimated": true,
+      "saved_tokens": 0,
+      "saved_percent": 0
+    }
+  },
+  "review_context": {
+    "status": "ok",
+    "summary": "Review context for 1 changed file(s):\n  - 2 directly changed nodes\n  - 5 impacted nodes in 3 files\n\nReview guidance:\n- 1 changed function(s) have no direct test: get_order\n  - of those, 1 are reached only through a caller (a call path, not a record of execution): get_order\n  - 0 have no tested caller found: ",
+    "context": {
+      "changed_files": [
+        "store.py"
+      ],
+      "changed_files_total": 1,
+      "file_risk": {
+        "store.py": 0.35
+      },
+      "impacted_files": [
+        "<demo>/jobs.py",
+        "<demo>/handlers.py",
+        "<demo>/test_orders.py"
+      ],
+      "impacted_files_total": 3,
+      "graph": {
+        "changed_nodes": [
+          {
+            "id": 12,
+            "kind": "File",
+            "name": "<demo>/store.py",
+            "qualified_name": "<demo>/store.py",
+            "file_path": "<demo>/store.py",
+            "line_start": 1,
+            "line_end": 6,
+            "language": "python",
+            "parent_name": null,
+            "is_test": false
+          },
+          {
+            "id": 13,
+            "kind": "Function",
+            "name": "get_order",
+            "qualified_name": "<demo>/store.py::get_order",
+            "file_path": "<demo>/store.py",
+            "line_start": 1,
+            "line_end": 5,
+            "language": "python",
+            "parent_name": null,
+            "is_test": false
+          }
+        ],
+        "changed_nodes_total": 2,
+        "impacted_nodes": [
+          {
+            "id": 2,
+            "kind": "Function",
+            "name": "get_order_handler",
+            "qualified_name": "<demo>/handlers.py::get_order_handler",
+            "file_path": "<demo>/handlers.py",
+            "line_start": 3,
+            "line_end": 4,
+            "language": "python",
+            "parent_name": null,
+            "is_test": false
+          },
+          {
+            "id": 5,
+            "kind": "File",
+            "name": "<demo>/jobs.py",
+            "qualified_name": "<demo>/jobs.py",
+            "file_path": "<demo>/jobs.py",
+            "line_start": 1,
+            "line_end": 7,
+            "language": "python",
+            "parent_name": null,
+            "is_test": false
+          },
+          {
+            "id": 11,
+            "kind": "Test",
+            "name": "test_own_order",
+            "qualified_name": "<demo>/test_orders.py::OrderTests.test_own_order",
+            "file_path": "<demo>/test_orders.py",
+            "line_start": 6,
+            "line_end": 11,
+            "language": "python",
+            "parent_name": "OrderTests",
+            "is_test": true
+          },
+          {
+            "id": 1,
+            "kind": "File",
+            "name": "<demo>/handlers.py",
+            "qualified_name": "<demo>/handlers.py",
+            "file_path": "<demo>/handlers.py",
+            "line_start": 1,
+            "line_end": 5,
+            "language": "python",
+            "parent_name": null,
+            "is_test": false
+          },
+          {
+            "id": 9,
+            "kind": "File",
+            "name": "<demo>/test_orders.py",
+            "qualified_name": "<demo>/test_orders.py",
+            "file_path": "<demo>/test_orders.py",
+            "line_start": 1,
+            "line_end": 12,
+            "language": "python",
+            "parent_name": null,
+            "is_test": true
+          }
+        ],
+        "impacted_nodes_total": 5,
+        "edges": [
+          {
+            "id": 1,
+            "kind": "IMPORTS_FROM",
+            "source": "<demo>/handlers.py",
+            "target": "<demo>/store.py",
+            "file_path": "<demo>/handlers.py",
+            "line": 1,
+            "confidence": 1.0,
+            "confidence_tier": "EXTRACTED"
+          },
+          {
+            "id": 2,
+            "kind": "CONTAINS",
+            "source": "<demo>/handlers.py",
+            "target": "<demo>/handlers.py::get_order_handler",
+            "file_path": "<demo>/handlers.py",
+            "line": 3,
+            "confidence": 1.0,
+            "confidence_tier": "EXTRACTED"
+          },
+          {
+            "id": 3,
+            "kind": "CALLS",
+            "source": "<demo>/handlers.py::get_order_handler",
+            "target": "<demo>/store.py::get_order",
+            "file_path": "<demo>/handlers.py",
+            "line": 4,
+            "confidence": 1.0,
+            "confidence_tier": "EXTRACTED"
+          },
+          {
+            "id": 27,
+            "kind": "TESTED_BY",
+            "source": "<demo>/handlers.py::get_order_handler",
+            "target": "<demo>/test_orders.py::OrderTests.test_own_order",
+            "file_path": "<demo>/test_orders.py",
+            "line": 10,
+            "confidence": 1.0,
+            "confidence_tier": "EXTRACTED"
+          },
+          {
+            "id": 5,
+            "kind": "IMPORTS_FROM",
+            "source": "<demo>/jobs.py",
+            "target": "<demo>/store.py",
+            "file_path": "<demo>/jobs.py",
+            "line": 1,
+            "confidence": 1.0,
+            "confidence_tier": "EXTRACTED"
+          },
+          {
+            "id": 6,
+            "kind": "REFERENCES",
+            "source": "<demo>/jobs.py",
+            "target": "<demo>/store.py::get_order",
+            "file_path": "<demo>/jobs.py",
+            "line": 3,
+            "confidence": 1.0,
+            "confidence_tier": "EXTRACTED"
+          },
+          {
+            "id": 29,
+            "kind": "CONTAINS",
+            "source": "<demo>/store.py",
+            "target": "<demo>/store.py::get_order",
+            "file_path": "<demo>/store.py",
+            "line": 1,
+            "confidence": 1.0,
+            "confidence_tier": "EXTRACTED"
+          },
+          {
+            "id": 13,
+            "kind": "IMPORTS_FROM",
+            "source": "<demo>/test_orders.py",
+            "target": "<demo>/handlers.py",
+            "file_path": "<demo>/test_orders.py",
+            "line": 3,
+            "confidence": 1.0,
+            "confidence_tier": "EXTRACTED"
+          },
+          {
+            "id": 21,
+            "kind": "CALLS",
+            "source": "<demo>/test_orders.py::OrderTests.test_own_order",
+            "target": "<demo>/handlers.py::get_order_handler",
+            "file_path": "<demo>/test_orders.py",
+            "line": 10,
+            "confidence": 1.0,
+            "confidence_tier": "EXTRACTED"
+          }
+        ],
+        "edges_total": 9
+      },
+      "truncated": false,
+      "source_snippets": {
+        "store.py": "1: def get_order(db, tenant_id, order_id):\n2:     return db.execute(\n3:         \"SELECT id, tenant_id FROM orders WHERE id = ?\",\n4:         (order_id,),\n5:     ).fetchone()"
+      },
+      "source_regions": {
+        "shown": 1,
+        "total": 1,
+        "incomplete": {}
+      },
+      "review_guidance": "- 1 changed function(s) have no direct test: get_order\n  - of those, 1 are reached only through a caller (a call path, not a record of execution): get_order\n  - 0 have no tested caller found: "
+    },
+    "context_savings": {
+      "estimated": true,
+      "saved_tokens": 0,
+      "saved_percent": 0
+    }
+  },
+  "behavior": {
+    "safe_existing_own_order_test_passes": true,
+    "safe_cross_tenant_denied": true,
+    "unsafe_existing_own_order_test_passes": true,
+    "unsafe_cross_tenant_denied": false,
+    "repaired_cross_tenant_denied": true,
+    "repaired_existing_own_order_test_passes": true
+  }
+}

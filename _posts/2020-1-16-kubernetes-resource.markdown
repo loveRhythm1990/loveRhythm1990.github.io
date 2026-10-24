@@ -1,7 +1,6 @@
 ---
 layout:     post
 title:      "K8s 资源控制概述"
-subtitle:   " \"cpu与mem的request与limit\""
 date:       2020-1-16 10:06:00
 author:     "weak old dog"
 header-img-credit: false

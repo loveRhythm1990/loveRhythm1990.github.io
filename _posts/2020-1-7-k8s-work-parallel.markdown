@@ -1,7 +1,6 @@
 ---
 layout:     post
 title:      "K8s 中的 worker queue 并发控制模型"
-subtitle:   " \"K8s 中的设计模式\""
 date:       2020-1-6 12:13:00
 author:     "weak old dog"
 header-img-credit: false

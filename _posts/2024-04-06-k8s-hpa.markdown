@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "K8s hpa 自动扩缩容概览与使用（一）"
+title:      "K8s HPA 1：自动扩缩容概览与使用"
 date:       2024-04-06 10:10:00
 author:     "decent"
 header-img-credit: false

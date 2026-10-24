@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="352" viewBox="0 0 1000 352">
+<title>评测中的变量控制</title>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2563b8"/></marker></defs>
+<rect width="1000" height="352" fill="#ffffff"/>
+<g font-family="Heiti SC, Noto Sans CJK SC, sans-serif">
+<path d="M244 149 H284 M284 63 V255 M724 63 V255 M724 149 H756" fill="none" stroke="#2563b8" stroke-width="3"/>
+<path d="M284 63 L316 63" fill="none" stroke="#2563b8" stroke-width="3" marker-end="url(#arrow)"/>
+<path d="M684 63 H724" fill="none" stroke="#2563b8" stroke-width="3"/>
+<rect x="324" y="24" width="360" height="78" rx="16" fill="#f8faff" stroke="#d7e1ee" stroke-width="2"/>
+<text x="344" y="55" font-size="23" fill="#172b46" font-weight="600" text-anchor="start">规则对照</text>
+<text x="344" y="84" font-size="19" fill="#52647b" font-weight="400" text-anchor="start">不提供规则 / 提供项目规则</text>
+<path d="M284 159 L316 159" fill="none" stroke="#2563b8" stroke-width="3" marker-end="url(#arrow)"/>
+<path d="M684 159 H724" fill="none" stroke="#2563b8" stroke-width="3"/>
+<rect x="324" y="120" width="360" height="78" rx="16" fill="#f8faff" stroke="#d7e1ee" stroke-width="2"/>
+<text x="344" y="151" font-size="23" fill="#172b46" font-weight="600" text-anchor="start">图检索对照</text>
+<text x="344" y="180" font-size="19" fill="#52647b" font-weight="400" text-anchor="start">普通搜索 / 增加代码图查询</text>
+<path d="M284 255 L316 255" fill="none" stroke="#2563b8" stroke-width="3" marker-end="url(#arrow)"/>
+<path d="M684 255 H724" fill="none" stroke="#2563b8" stroke-width="3"/>
+<rect x="324" y="216" width="360" height="78" rx="16" fill="#f8faff" stroke="#d7e1ee" stroke-width="2"/>
+<text x="344" y="247" font-size="23" fill="#172b46" font-weight="600" text-anchor="start">复核对照</text>
+<text x="344" y="276" font-size="19" fill="#52647b" font-weight="400" text-anchor="start">关闭复核 / 开启复核</text>
+<path d="M724 149 L756 149" fill="none" stroke="#2563b8" stroke-width="3" marker-end="url(#arrow)"/>
+<rect x="24" y="82" width="220" height="134" rx="16" fill="#ffffff" stroke="#d7e1ee" stroke-width="2"/>
+<text x="134" y="122" font-size="24" fill="#172b46" font-weight="600" text-anchor="middle">固定审查输入</text>
+<text x="134" y="159" font-size="20" fill="#52647b" font-weight="400" text-anchor="middle">代码、背景、模型</text>
+<text x="134" y="191" font-size="20" fill="#52647b" font-weight="400" text-anchor="middle">预算与验证条件</text>
+<rect x="764" y="82" width="212" height="134" rx="16" fill="#ffffff" stroke="#d7e1ee" stroke-width="2"/>
+<text x="870" y="122" font-size="24" fill="#172b46" font-weight="600" text-anchor="middle">记录结果</text>
+<text x="870" y="159" font-size="20" fill="#52647b" font-weight="400" text-anchor="middle">召回与误报</text>
+<text x="870" y="191" font-size="20" fill="#52647b" font-weight="400" text-anchor="middle">执行范围与总成本</text>
+<text x="500" y="332" font-size="19" fill="#52647b" font-weight="400" text-anchor="middle">每组只改变一个因素，单独运行并核对结果</text>
+</g></svg>

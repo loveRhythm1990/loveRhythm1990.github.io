@@ -1,7 +1,6 @@
 ---
 layout:     post
 title:      "K8s 调度器中 findNodesThatFit 实现"
-subtitle:   " \"scheduler中的细节\""
 date:       2019-09-17 19:48:00
 author:     "weak old dog"
 header-img-credit: false

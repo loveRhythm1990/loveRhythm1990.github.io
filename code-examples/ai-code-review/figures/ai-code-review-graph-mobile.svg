@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="464" viewBox="0 0 480 464">
+<title>代码图与行为验证</title>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2563b8"/></marker></defs>
+<rect width="480" height="464" fill="#ffffff"/>
+<g font-family="Heiti SC, Noto Sans CJK SC, sans-serif">
+<rect x="16" y="12" width="448" height="82" rx="16" fill="#f8faff" stroke="#d7e1ee" stroke-width="2"/>
+<text x="240.0" y="46" font-size="23" fill="#172b46" font-weight="600" text-anchor="middle">test_own_order</text>
+<text x="240.0" y="77" font-size="20" fill="#52647b" font-weight="400" text-anchor="middle">只验证自己的订单</text>
+<path d="M240 101 L240 117" fill="none" stroke="#2563b8" stroke-width="3" marker-end="url(#arrow)"/>
+<rect x="16" y="124" width="448" height="82" rx="16" fill="#f8faff" stroke="#d7e1ee" stroke-width="2"/>
+<text x="240.0" y="158" font-size="23" fill="#172b46" font-weight="600" text-anchor="middle">get_order_handler</text>
+<text x="240.0" y="189" font-size="20" fill="#52647b" font-weight="400" text-anchor="middle">返回前无归属校验</text>
+<path d="M240 213 L240 229" fill="none" stroke="#2563b8" stroke-width="3" marker-end="url(#arrow)"/>
+<rect x="16" y="236" width="448" height="82" rx="16" fill="#f8faff" stroke="#d7e1ee" stroke-width="2"/>
+<text x="240.0" y="270" font-size="23" fill="#172b46" font-weight="600" text-anchor="middle">get_order</text>
+<text x="240.0" y="301" font-size="20" fill="#52647b" font-weight="400" text-anchor="middle">租户过滤发生变化</text>
+<text x="24" y="360" font-size="22" fill="#172b46" font-weight="600" text-anchor="start">直接调用方相同，SQL 行为不同</text>
+<text x="24" y="402" font-size="20" fill="#116850" font-weight="400" text-anchor="start">正常 / 修复：A 请求 B → 未找到</text>
+<text x="24" y="440" font-size="20" fill="#a33a32" font-weight="400" text-anchor="start">删除过滤：A 请求 B → 返回 B 的订单</text>
+</g></svg>

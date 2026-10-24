@@ -33,7 +33,6 @@ Required front matter:
 ---
 layout:     post
 title:      "Post Title"
-subtitle:   "Optional subtitle"
 date:       YYYY-MM-DD HH:MM:SS
 author:     "weak old dog"
 header-img-credit: false
@@ -41,6 +40,19 @@ tags:
     - TagName
 ---
 ```
+
+### Writing Style
+
+- Do not add subtitles to blog posts.
+- Use at most two tags per blog post.
+- Keep article titles free of parentheses.
+- For a series, use a shared title prefix and a plain sequence number, such as `AI Code Review 1: ...`.
+- Use concise section headings that name the main topic rather than full sentences.
+- Use tables sparingly, only when readers need to compare the same attributes across items. Prefer prose or short lists for explanations, and PNG diagrams with editable sources for workflows and relationships.
+- Keep diagrams compact in the article. Prefer horizontal layouts for short workflows and call chains, omit repeated headings and decorative padding, and provide a narrow-screen version when horizontal labels would become too small.
+- Focus explanatory articles on ideas and design. Do not show commit hashes or upstream branch details in article prose; keep detailed reproducibility metadata in linked examples.
+- Do not add research-check dates, experiment dates, or freshness claims to article prose. Keep normal publication dates in front matter and describe evidence limits without implying guaranteed currency.
+- Edit for substance: every section must answer the article's core question with a mechanism, example, evidence, or actionable decision. Remove repeated summaries, generic introductions and conclusions, product-catalog filler, rhetorical transitions, and boilerplate cautions. Do not add chapters or length for their own sake.
 
 ### Table of Contents
 

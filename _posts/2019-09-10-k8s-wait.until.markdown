@@ -1,7 +1,6 @@
 ---
 layout:     post
 title:      "K8s 中的 wait.Until"
-subtitle:   " \"K8s中一些设计模式\""
 date:       2019-09-10 19:48:00
 author:     "weak old dog"
 header-img-credit: false

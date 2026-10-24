@@ -1,7 +1,6 @@
 ---
 layout:     post
 title:      "Scheduler 调度 Pod 过程"
-subtitle:   " \"Scheduler 调度 Pod 的主线流程，及队列管理\""
 date:       2019-08-20 16:36:00
 author:     "weak old dog"
 header-img-credit: false

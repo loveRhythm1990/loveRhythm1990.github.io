@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "K8s hpa 控制器中的代码实现（二）"
+title:      "K8s HPA 2：控制器中的代码实现"
 date:       2024-04-07 10:10:00
 author:     "decent"
 header-img-credit: false

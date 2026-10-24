@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="424" viewBox="0 0 480 424">
+<title>从变更到缺陷验证</title>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2563b8"/></marker></defs>
+<rect width="480" height="424" fill="#ffffff"/>
+<g font-family="Heiti SC, Noto Sans CJK SC, sans-serif">
+<rect x="16" y="12" width="448" height="64" rx="16" fill="#ffffff" stroke="#d7e1ee" stroke-width="2"/>
+<text x="34" y="39" font-size="20" fill="#2563b8" font-weight="600" text-anchor="start">1</text>
+<text x="68" y="39" font-size="23" fill="#172b46" font-weight="600" text-anchor="start">版本与约束</text>
+<text x="68" y="64" font-size="18" fill="#52647b" font-weight="400" text-anchor="start">代码快照 · 业务约束</text>
+<path d="M240 81 L240 91" fill="none" stroke="#2563b8" stroke-width="3" marker-end="url(#arrow)"/>
+<rect x="16" y="96" width="448" height="64" rx="16" fill="#ffffff" stroke="#d7e1ee" stroke-width="2"/>
+<text x="34" y="123" font-size="20" fill="#2563b8" font-weight="600" text-anchor="start">2</text>
+<text x="68" y="123" font-size="23" fill="#172b46" font-weight="600" text-anchor="start">行为反例</text>
+<text x="68" y="148" font-size="18" fill="#52647b" font-weight="400" text-anchor="start">输入与预期 · 可达场景</text>
+<path d="M240 165 L240 175" fill="none" stroke="#2563b8" stroke-width="3" marker-end="url(#arrow)"/>
+<rect x="16" y="180" width="448" height="64" rx="16" fill="#ffffff" stroke="#d7e1ee" stroke-width="2"/>
+<text x="34" y="207" font-size="20" fill="#2563b8" font-weight="600" text-anchor="start">3</text>
+<text x="68" y="207" font-size="23" fill="#172b46" font-weight="600" text-anchor="start">调用链取证</text>
+<text x="68" y="232" font-size="18" fill="#52647b" font-weight="400" text-anchor="start">调用方与数据层 · 检查正确例外</text>
+<path d="M240 249 L240 259" fill="none" stroke="#2563b8" stroke-width="3" marker-end="url(#arrow)"/>
+<rect x="16" y="264" width="448" height="64" rx="16" fill="#ffffff" stroke="#d7e1ee" stroke-width="2"/>
+<text x="34" y="291" font-size="20" fill="#2563b8" font-weight="600" text-anchor="start">4</text>
+<text x="68" y="291" font-size="23" fill="#172b46" font-weight="600" text-anchor="start">缺陷评论</text>
+<text x="68" y="316" font-size="18" fill="#52647b" font-weight="400" text-anchor="start">位置与触发条件 · 影响与证据</text>
+<path d="M240 333 L240 343" fill="none" stroke="#2563b8" stroke-width="3" marker-end="url(#arrow)"/>
+<rect x="16" y="348" width="448" height="64" rx="16" fill="#ffffff" stroke="#d7e1ee" stroke-width="2"/>
+<text x="34" y="375" font-size="20" fill="#2563b8" font-weight="600" text-anchor="start">5</text>
+<text x="68" y="375" font-size="23" fill="#172b46" font-weight="600" text-anchor="start">回归验证</text>
+<text x="68" y="400" font-size="18" fill="#52647b" font-weight="400" text-anchor="start">缺陷版本失败 · 修复版本通过</text>
+</g></svg>
