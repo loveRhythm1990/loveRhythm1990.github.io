@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "AI Code Review：从缺陷取证到效果评估"
+title: "AI Code Review：审查流程、覆盖与边界"
 date: 2026-10-19 18:00:00 +0800
 author: "weak old dog"
 header-img-credit: false
@@ -9,297 +9,196 @@ tags:
     - Code Review
 ---
 
-一句“可能存在越权”会把调查工作留给开发者。审查者还得查明请求从哪里进入、授权在哪一层执行、什么输入会导致数据泄露。AI 应该把这些证据找齐，再提交评论。
+几千、几万行代码已经写完，测试也通过了，但对质量仍然没有把握。给 AI 发一句“帮我 review”，它会检查哪些文件？会沿调用链继续读吗？如果 diff 涉及上千个文件，会不会只看一部分就结束？
 
-代码和测试都由 AI 编写时，两者可能沿用同一个错误前提：以为别处已经做了授权，只测试合法用户读取自己的数据。审查需要重新核对这个前提。
+AI 找到的缺陷，可以交给另一个 agent 复核，也可以继续生成复现和测试；更难确认的是，那些没有被报告的问题，究竟不存在，还是根本没有被查到。
 
-## 越权线索
+## 审查过程
 
-下面是一个合成例子。订单服务用共享表保存多个租户的数据，租户身份来自登录上下文。一次查询重构删掉了租户条件：
+### 范围与输入
 
-```diff
- func (s *Store) GetOrder(ctx context.Context, tenantID, orderID string) (*Order, error) {
-     var order Order
-     err := s.db.GetContext(ctx, &order,
--        "SELECT id, tenant_id, total FROM orders WHERE tenant_id = ? AND id = ?",
--        tenantID, orderID,
-+        "SELECT id, tenant_id, total FROM orders WHERE id = ?",
-+        orderID,
-     )
-     return &order, err
- }
-```
+审查改动，首先要确定比较对象：未提交的工作区、某次提交，或两个分支之间的变化。程序通过 Git 获取文件清单、变更状态和 diff；工作区模式还需要明确是否包含暂存区、未暂存改动和未跟踪文件。
 
-原来的查询要求租户和订单 ID 同时匹配，新查询只看订单 ID。现有测试只验证 A 读取 A 的订单，因此仍可能通过。
+审查整个现有项目则是另一种任务。已提交的旧文件可能不在本次 diff 中，即使 agent 为了理解改动打开了它们，也不代表旧代码都接受了审计。对一个已经由 AI 写完的系统，必须先明确要找本次改动引入的问题，还是检查整个实现。
 
-这段 diff 提供了越权线索。能否报告缺陷，还取决于其他层是否校验了订单归属。若数据库本身隔离租户，或者 handler 在返回前可靠地检查归属，SQL 缺少这个条件也可能是正确实现。
-
-## 审查流程
+接着，审查工具可能过滤生成文件、依赖目录和不支持的文件类型，按上下文预算拆分任务，再装入审查提示词和项目背景。模型最初拿到的可能只是局部 diff，并非所有文件的完整源码。
 
 <picture>
   <source media="(max-width: 600px)" srcset="{{ site.baseurl }}/pics/ai-code-review-workflow-mobile.png">
-  <img src="{{ site.baseurl }}/pics/ai-code-review-workflow.png" alt="AI 审查流程：固定版本和约束、提出行为反例、沿调用链取证、给出缺陷评论、执行回归验证" width="920" loading="lazy">
+  <img src="{{ site.baseurl }}/pics/ai-code-review-workflow.png" alt="审查执行过程：确定范围、准备输入、模型调查、处理发现、报告覆盖；模型通过工具反复搜索和读取代码" width="920" loading="lazy">
 </picture>
 
-### 约束与反例
+### 调查循环
 
-先明确本次改动允许改变什么，以及必须保留什么：
+带工具调用的 review 通常按下面的方式继续：
 
-```text
-范围：本次 PR 的变更。
-意图：重构订单查询，不改变访问权限。
-约束：租户只能读取自己的订单。
-架构前提：共享订单表，数据库不提供额外的租户隔离。
+1. LLM 阅读 diff 和审查要求，寻找新旧行为的差异，形成候选问题。
+2. LLM 请求搜索符号、读取函数、查找调用方或测试；程序执行工具，把结果追加到上下文。
+3. LLM 根据新证据继续调查、撤回假设，或输出发现。这个循环可能进行多次。
+4. 达到完成条件或触发预算、超时等停止条件后，程序汇总评论及执行状态。
+
+这里没有天然的“每个文件从头到尾读一遍”。文件可能被直接装入，也可能只返回片段；读取什么、是否继续追踪，取决于工具实现、任务指令和模型的选择。存在搜索工具，只能说明有调查能力，不能证明这次调查充分。
+
+运行测试也不是所有 review 的默认步骤。模型可能有执行权限，也可能只有搜索和读取工具。报告中的代码推断、其他 agent 的复核、实际执行的复现，需要分别说明。
+
+### 订单案例
+
+用一个合成例子观察这个过程：不同用户的数据共用一张订单表，`tenant_id` 标记归属。重构把查询从“归属和订单 ID 同时匹配”改成了只匹配订单 ID：
+
+```diff
+-SELECT id, tenant_id, total FROM orders WHERE tenant_id = ? AND id = ?
++SELECT id, tenant_id, total FROM orders WHERE id = ?
 ```
 
-约束来自需求，架构前提需要从代码或配置确认。模型缺少这些信息时，只能猜测什么算错误。例如，同一个字段改名，对内部变量可能没有影响，对已有客户端依赖的响应字段则可能构成破坏。
+这是一条线索。模型还需要找到调用查询的 handler，检查用户能否提交别人的订单 ID、返回前是否校验归属，以及数据层是否另有隔离。
 
-长期约束可以保存在项目指导文件中，一次改动的特殊意图随审查任务提供。[Codex 的项目规则说明](https://developers.openai.com/blog/custom-code-review-rules-for-codex)也采用这种方式传递兼容要求和数据边界。
+若 handler 直接返回查询结果，数据库也没有额外隔离，A 请求 B 的有效订单 ID 就会得到 B 的数据。若上层已有可靠校验，则应撤回原来的越权假设。只看 SQL，无法区分这两种实现。
 
-对这次改动，最有用的问题是：
+原有“读取自己订单”的测试，在正确和错误版本上都可能通过。继续构造跨用户请求，才有机会区分它们。这说明审查需要把局部变化连到实际行为；代码读取、推理和验证各有作用。
 
-> A 使用自己的登录身份，请求 B 的一个有效订单 ID，会得到什么？
+## 原生审查与 OCR
 
-这个场景明确了请求者、输入和错误结果，能指引后续搜索。类似地，增加重试后可以检查“服务端已成功但响应丢失，再次执行是否重复写入”；缩小锁范围后可以检查“两个请求是否同时通过检查并重复创建资源”。
+### 已有能力
 
-反例还必须可达。一个永远不会由调用方传入的值，或者需求允许的行为变化，都不足以支持缺陷评论。
+原生审查已经提供了不少能力。Codex 的 `/review` 可以针对未提交改动、一次提交或基准分支开展审查；Claude Code 的 `/code-review` 则提供专用的审查任务，并支持不同目标和 effort。它们运行在能够访问代码和工具的 agent 环境中，不能把它们简化成只给模型贴一段 diff。[Codex 文档](https://learn.chatgpt.com/docs/codex/cli)、[Claude Code 文档](https://code.claude.com/docs/en/code-review-local)
 
-### 调用链取证
+原生入口、本地 skill 与托管 PR 服务也可能采用不同的任务拆分和复核流程。公开文档没有承诺逐文件穷尽检查的地方，就不能自行补上这项保证。是否需要第三方工具，应比较具体流程和实际记录。
 
-沿着这个请求检查三处代码：
+### 任务组织
 
-1. **入口**：handler 从登录上下文取得租户 ID，从请求参数取得订单 ID。A 可以提交 B 的订单 ID。
-2. **返回路径**：handler 查询成功后直接返回，没有检查订单归属。
-3. **数据层**：使用共享连接，没有额外注入租户过滤，也没有数据库隔离策略。
+阿里开源的 [OpenCodeReview](https://github.com/alibaba/open-code-review)把审查拆成文件选择、规则匹配、分组、调度、工具调查和评论处理。它的价值要沿这些步骤判断，不能只归结为一份更长的提示词。
 
-如果合成案例中这三个条件都成立，触发路径就完整了：A 的请求按 B 的订单 ID 命中记录，结果未经归属检查就被返回。
+OCR 的常规模式使用自己配置的模型运行调查；委托模式则把文件选择和规则解析交给 OCR，由宿主 agent 负责审查。两种模式不能混作同一个评测对象。[执行模式](https://github.com/alibaba/open-code-review#how-to-use)
 
-如果找到可靠的授权检查，应撤回原假设；如果关键代码无法读取，就列出缺失的证据。搜索没有命中，不能直接写成“系统没有校验”。
+对 diff 之外的旧代码，OCR 模型可以通过搜索和文件读取补充上下文，但默认主任务要求评论针对分配给它的变更文件。顺着调用链发现了旧代码，不等于顺便完成了全库审计。没有合适 diff 时，项目也提供独立的 `ocr scan` 全文件扫描入口；扫描范围扩大后，仍要检查过滤和任务完成情况。[主任务提示词](https://github.com/alibaba/open-code-review/blob/main/internal/config/template/prompts/main_task_system.md)、[扫描入口](https://github.com/alibaba/open-code-review#quick-start)
 
-### 缺陷验证
+### 提示词与规则
 
-调查结果应直接写进评论：
+OCR 不要求用户先编写规则。它内置了按文件类型匹配的审查提示词，例如 Rust 源码使用 `rust.md`，关注错误传播、unsafe、锁、异步取消和资源生命周期。这是指导 LLM 调查的自然语言清单，不是逐项执行的静态检查器。[Rust 提示词](https://github.com/alibaba/open-code-review/blob/main/internal/config/rules/rule_docs/rust.md)
 
-> 查询只匹配订单 ID，handler 查询后直接返回，数据库也没有额外隔离。租户 A 请求租户 B 的有效订单 ID 时，会收到 B 的订单。请恢复租户限制，并补充跨租户访问测试。
+规则文档中的 `rule.json` 同时提供两类配置：`include`、`exclude` 调整文件筛选；`rules` 按路径选择额外的审查要求。前者由程序执行，后者装入模型提示词。不创建这个文件，也会使用默认配置。[规则机制](https://github.com/alibaba/open-code-review/blob/main/pages/src/content/docs/en/review-rules.md)
 
-实际报告附上变更位置和相关调用路径。开发者可以据此核查前提、构造请求和修复问题，无需从“建议加强权限校验”重新开始调查。
+自定义要求可以覆盖整个仓库或某个目录，无需逐文件维护。例如，项目确实承诺“关闭接口返回后不再建立新连接”，才值得把它加入相关模块的要求。若没有这项契约，模型不能把所有后台重连都判成错误。
 
-| 请求 | 正确行为 | 缺陷版本的行为 |
-|---|---|---|
-| A 读取 A 的订单 | 返回 A 的订单 | 返回 A 的订单 |
-| A 读取 B 的订单 | 不返回 B 的订单 | 返回 B 的订单 |
-| A 读取不存在的订单 | 返回未找到 | 返回未找到 |
+配置时要注意：自定义条目默认会替换对应的内置提示词，`merge_system_rule: true` 才保留两者；用户条目取第一个匹配项，不会自动叠加所有匹配内容。`include` 也不是白名单，而是绕过部分默认排除条件。[匹配与合并](https://github.com/alibaba/open-code-review/blob/main/pages/src/content/docs/en/review-rules.md)
 
-第二行才区分了错误实现和正确实现。拒绝访问或返回未找到都可以，具体按接口约定，关键是不泄露 B 的订单。
+几百万行代码不可能靠人先写出完整正确性规则，再让 AI 审查。内置能力应该先工作，少量自定义要求只补充已知的重要契约。它们影响调查重点，解决不了文件漏分、任务中断和跨组上下文丢失。
 
-让同一份跨租户测试在缺陷版本上失败、在修复后通过，再运行相关回归测试。测试应经过应用授权和真实查询路径，直接 mock 查询结果可能绕过被审查的逻辑。
+### 评论处理
 
-断言必须来自需求。如果模型按错误实现生成预期，再证明实现符合预期，测试也会通过。
+OCR 会把发现定位到代码行，再对候选评论做过滤。过滤提示词主要依据 diff 排除局部可直接推翻的意见，并保护并发、内存安全、行为变化等类别；它并不会重新追踪完整调用链。过滤后保留一条评论，不代表问题已通过复现。[处理流程](https://github.com/alibaba/open-code-review/blob/main/pages/src/content/docs/en/architecture.md)、[过滤提示词](https://github.com/alibaba/open-code-review/blob/main/internal/config/template/prompts/review_filter_task_user.md)
 
-### 复核任务
+因此，OCR 的工程流程有助于组织和追踪任务；其分组、调查与复核仍包含模型判断。“流程更明确”和“缺陷找得更多”需要分别验证。已有原生审查若能满足任务组织和记录要求，就不必为了规则可配置再换工具；缺少的若是关系检索，则应单独评估代码图的收益。
 
-第二轮审查可以专门检查第一轮的前提，而不是继续要求增加问题数量：
+## 千文件改动
 
-```text
-复核这条越权发现：
-查找上层授权、数据库隔离和不可达路径。
-找到反证就撤回发现；仍缺证据就说明缺什么。
-```
+### 分组与调度
 
-换会话或换模型可以改变调查路径，但不同审查者仍可能共享盲点。最终依据是代码与行为证据。
+假设一次 diff 修改了 1,000 个文件。OCR 不会把它们的完整内容一次性交给一个模型会话，而是先筛选，再组织多个审查任务。
 
-大 PR 则应按调用链组织调查，让 handler、service、store 和测试能互相参照。拆分后还要检查跨组接口，否则授权逻辑和查询被分开，双方都可能以为对方已经检查。
+在分组阶段，模型看到的是文件路径、变更状态和增删行数等元数据，不是全部 diff。它据此组织相关文件，每组最多 10 个；组内 diff 超出预算时继续拆成单文件任务。分组返回没有包含的文件会补成单独任务，分组失败也会退回逐文件调度。[分组实现](https://github.com/alibaba/open-code-review/blob/main/internal/agent/grouping.go)
 
-### 任务模板
+这个兜底能避免文件因为“分组模型没提到”就消失，却无法保证分组识别出真实调用关系。两个强相关文件可能分到不同会话；组内共享上下文，组间则需要主动搜索和补读。并行只改变执行方式，不会自动产生全局理解。
 
-```text
-请审查本次 PR，先给报告。
-变更意图：<本次有意改变的行为>
-项目约束：<必须保持的行为及其来源>
+### 未审内容
 
-1. 确认范围，记录跳过或无法读取的文件。
-2. 找出新旧行为不同的具体场景，检查调用链和正确例外。
-3. 每条发现给出位置、触发条件、错误结果和代码依据。
-4. 区分已确认发现与待确认项，不凑数量。
-5. 列出实际执行的验证及结果，没执行的不要写成通过。
-```
+文件数量不是唯一限制。一千个小改名和十个大重写，输入量与调查成本可能完全不同。OCR 至少有以下几种留下未审内容的路径：
 
-格式、类型和已有静态规则交给 CI。AI 的工作重点是调查跨文件行为、检查项目约束，并把候选缺陷推进到可验证的程度。
+- **筛选排除**：二进制、受保护路径、不支持的类型和默认排除项不会直接派发审查，其中也包含一些测试文件。
+- **单文件过大**：原始 diff 超出单次提示词预算时，文件被标记为 `too_large`。
+- **文件删除**：整文件删除保留在变更清单中，但不作为独立文件任务派发；这不等于删除不会破坏其他调用方。
+- **任务或运行未完成**：提示词过大、工具循环受限、调用失败或超时，会影响本组；若设置的全程 token 预算不足，后续组可能停止派发。
 
-
-## 代码图
-
-审查订单查询，往往要读没有修改过的 handler、数据库封装和测试。文本搜索会返回定义、导入、调用和同名符号，agent 还得逐项辨认。[Code Review Graph](https://github.com/tirth8205/code-review-graph)把一部分结构分析提前完成，供后续任务查询。
-
-### 构建与查询
-
-项目用 Tree-sitter 等机制解析源码，以 SQLite 保存节点与边。函数、类和文件是节点，调用、导入、引用等关系是边。例如：
-
-```text
-handlers.py ──导入──→ store.py
-get_order_handler ──调用──→ get_order
-```
-
-提取调用语法之后，还要解析目标定义。别名、继承、类型和同名符号都会影响结果，项目通过语言相关的解析逻辑补充这些信息。[构建实现](https://github.com/tirth8205/code-review-graph/blob/343ab7cea29d47a3e805381e09f8243a43d43d88/code_review_graph/incremental.py)
-
-审查时，从变更文件中的节点出发，沿关系查找调用方和测试。查询深度、返回数量与源码片段都有预算限制；`truncated` 和省略计数表示结果没有完整返回，需要继续查询。[查询接口](https://github.com/tirth8205/code-review-graph/blob/343ab7cea29d47a3e805381e09f8243a43d43d88/docs/COMMANDS.md)
-
-索引通过文件哈希和依赖关系增量维护，减少重复解析。不过，内容核对和派生关系更新仍有成本。切换代码、构建中断或部分文件解析失败后，要检查索引状态，不能直接信任旧结果。[更新入口](https://github.com/tirth8205/code-review-graph/blob/343ab7cea29d47a3e805381e09f8243a43d43d88/code_review_graph/tools/build.py)
-
-### 订单实验
-
-用 Python 和 SQLite 重现上面的订单问题，观察代码图能提供哪些证据。示例包含五个源码文件：
-
-```text
-store.py        查询订单
-handlers.py     取得登录租户，调用查询并返回结果
-test_orders.py  只测试 A 读取 A
-jobs.py         用字典注册、分发查询函数
-health.py       无关的健康检查
-```
-
-正常查询同时过滤租户和订单 ID，缺陷查询只过滤订单 ID。实验先建图，再删除租户条件、增量更新，最后恢复查询。它只检查结构查询和 SQL 行为，没有调用大模型。
-
-[示例目录](https://github.com/loveRhythm1990/loveRhythm1990.github.io/tree/master/code-examples/ai-code-review)保留脚本和观测结果。在安装 Git、uv 后运行，首次需要下载依赖：
-
-```bash
-uv run code-examples/ai-code-review/graph_demo.py \
-  --output /tmp/graph-demo-result.json
-```
-
-查询 `get_order` 的直接调用方，得到了 `get_order_handler`。两跳影响范围还包含 `jobs.py` 和 `test_orders.py`，没有包含无关的 `health.py`。
-
-裸名称 `get_order` 同时匹配了 `get_order_handler`，工具先返回 `ambiguous`。使用限定名重新查询后才得到上述调用方。歧义没有解决，就不能把结果当成空集。
-
-`get_review_context` 在本例只返回了 `store.py` 的源码片段。虽然 handler 已列入影响范围，agent 仍需打开它，检查返回前的授权逻辑。
-
-动态分发则暴露了另一种边界：
-
-```python
-JOBS = {"export": get_order}
-
-def run_job(db, name, tenant_id, order_id):
-    return JOBS[name](db, tenant_id, order_id)
-```
-
-图没有给出 `run_job → get_order` 的直接调用边，`jobs.py` 仍通过导入和引用关系被选中。引用能留下调查线索，具体调用目标还要读注册表和分发代码。
-
-<picture>
-  <source media="(max-width: 600px)" srcset="{{ site.baseurl }}/pics/ai-code-review-graph-mobile.png">
-  <img src="{{ site.baseurl }}/pics/ai-code-review-graph.png" alt="订单实验：测试调用 handler，handler 调用查询函数；直接调用方相同，删除租户过滤后跨租户请求的结果发生变化" width="920" loading="lazy">
-</picture>
-
-删除租户过滤前后，工具识别到的直接调用方相同，返回行为却变了：A 请求 B 的订单，从未找到变为返回 B 的订单；恢复过滤后，又回到未找到。
-
-三个版本的“读取自己订单”测试全部通过。图中的测试关联只能帮助找到这份测试，是否覆盖了跨租户场景，取决于断言。模型必须读 SQL、读断言，再设计能区分这两个版本的请求。
-
-图在本例中找到了 handler 和相关测试，排除了一个无关文件；越权判断所需的 SQL 和断言仍需继续阅读。
-
-### Token 成本
-
-项目提供了几种不同的评测口径。整库文本与图查询的比较，可以得到很大的缩减倍率；但已有 agent 通常会搜索后再读取部分文件，不会每次都输入整个仓库。项目也提供模拟搜索基线，以及变更文件与审查上下文的比较。[评测说明](https://github.com/tirth8205/code-review-graph/blob/343ab7cea29d47a3e805381e09f8243a43d43d88/docs/REPRODUCING.md)
-
-要知道实际节省多少，比较对象应是同一个 agent 完成同一项调查的全过程：
-
-- 普通搜索：搜索结果、打开的源码和后续对话。
-- 增加代码图：图查询结果、随后补读的源码和后续对话。
-
-再分别统计输入输出、缓存费用和等待时间。图本身的构建、更新成本另计。一次紧凑查询返回，并不代表后续不需要读文件。
-
-本次小实验的 `context_savings` 只给出估算，`saved_tokens` 为零。对几行就能读完的查询，关系元数据可能比源码还长；它不能用来支持“每次审查都会节省 token”。
-
-评估时，让人工列出关键调用方，核对图有没有遗漏，再比较完整调查的成本。反复追踪跨文件关系时，索引可能减少重复探索；一次搜索就能读清的小改动，则可能不值得建图。
-
-
-## 工具选择
-
-同一个越权问题，可能在不同环节漏掉：相关测试被排除，删除的授权检查没有进入模型输入，或者模型没有读到上层 handler。选择工具，先检查它怎样处理这些环节。
-
-### 原生审查
-
-已经使用 Codex 或 Claude Code 的团队，可以先用原生专用审查入口。Codex 的 GitHub 审查读取适用的 `AGENTS.md`，Claude Code 的本地 `/code-review` 遵循 `CLAUDE.md`。[Codex 审查规则](https://learn.chatgpt.com/docs/third-party/github)、[Claude 本地审查](https://code.claude.com/docs/en/code-review-local)
-
-比较时，双方应得到同一份代码和业务背景。把“共享表没有额外租户隔离”告诉 OCR，却不给原生 agent，测到的首先是信息差。普通对话、本地专用命令与托管审查也要分开，不能用一句泛泛的“帮我看看”代表原生工具的全部能力。
-
-### OCR 任务编排
-
-阿里开源的 [OpenCodeReview](https://github.com/alibaba/open-code-review)把文件选择、规则匹配、任务组织和评论处理做成独立流程。可以在调用模型前检查本次究竟会审哪些文件、装入哪些规则：
+这些行为可以从[文件选择](https://github.com/alibaba/open-code-review/blob/main/internal/agent/selection.go)和[调度实现](https://github.com/alibaba/open-code-review/blob/main/internal/agent/agent.go)核对。需要把预览和实际执行结果一起看：
 
 ```bash
 ocr review --preview
-ocr rules check internal/store/orders.go
+ocr review --format json --output review-result.json
 ```
 
-例如，订单模块希望把实现和测试一起审查，可以配置：
+预览只能说明计划选中哪些文件。它无法预知后面的预算消耗、模型调用失败或调查中断。源码中的运行清单记录已选任务及完成、复用、失败等执行状态，但分母是筛选后的任务，不能拿它代替原始变更清单。部分完成也可能仍返回已有评论和成功退出码，不能仅凭命令退出成功认定审查完整。[执行状态](https://github.com/alibaba/open-code-review/blob/main/internal/agent/agent.go)
 
-```json
-{
-  "include": ["internal/**/*_test.go"],
-  "rules": [{
-    "path": "internal/store/**/*.go",
-    "rule": "租户只能读取自己的订单；沿调用链确认是否有等效授权，已有可靠隔离时不要误报。",
-    "merge_system_rule": true
-  }]
-}
+### 覆盖对账
+
+一次大审查至少应该交付三份能互相核对的清单：原始变更、被排除的文件及理由、进入任务后的执行结果。以下数字只是说明口径的例子：
+
+```text
+变更：1,000 个文件
+排除：150 个，逐项保留理由
+进入任务：850 个
+正常完成：790 个；失败：20 个；预算不足未完成：40 个
 ```
 
-`include` 让这些测试文件绕过默认排除，不是只审这些文件的白名单。`merge_system_rule` 则保留内置规则，再加入业务要求。[规则说明](https://github.com/alibaba/open-code-review/blob/27def8684b3f5c5f235871fac2957be58262f43d/pages/src/content/docs/en/review-rules.md)
+这只能支持“790 个文件所在的任务正常结束”。不能写成“全部审完”，也不能把排除的 150 个文件直接视为没有风险。对于必要内容，要调整筛选、补充预算或单独组织审查。
 
-这些机制使输入可检查：测试为什么没进入任务，文件匹配到了什么要求，可以从程序结果核对。模型是否充分理解、能否发现越权，仍要检查实际输出。
+即使所有已选文件对应的任务都完成，也仍可能漏掉 bug。OCR 的主任务提示词要求每个文件单独检查后再调用 `task_done`，但指令和完成标记不能证明模型逐行分析了所有分支。订单查询被看过，模型仍可能没想到跨用户请求；查询和授权分别被看过，模型也可能没把它们联系起来。[逐文件要求](https://github.com/alibaba/open-code-review/blob/main/internal/config/template/prompts/main_task_system.md)
 
-正式审查时，模型拿到分组的 diff 和规则，按需要调用代码搜索、文件读取等工具，再提交评论。程序执行工具，把结果追加到上下文，让模型继续调查，最后定位评论。这种循环允许模型在读到 handler 后修正对 SQL 的判断。[工具接口](https://github.com/alibaba/open-code-review/blob/27def8684b3f5c5f235871fac2957be58262f43d/internal/config/toolsconfig/tools.json)
+实际使用中，可以按相关模块分批检查，随后另设一次跨模块调查，关注接口、共享状态和失败恢复。第二轮应有明确目标和补充证据，反复发送同一句“再检查一下”无法提供独立覆盖的保证。
 
-OCR 的评论过滤阶段主要看到 diff 和候选评论，删除部分能被 diff 直接推翻的意见，并优先保留行为变化、并发等主题。它可以清理局部矛盾，但这些输入不足以重新调查整个授权链。[过滤提示词](https://github.com/alibaba/open-code-review/blob/27def8684b3f5c5f235871fac2957be58262f43d/internal/config/template/prompts/review_filter_task_user.md)
+## 代码图的作用
 
-OCR 的委托模式更窄：只提供文件选择和规则解析，调查由宿主 agent 完成。比较效果时，要注明使用哪种模式。[委托模式](https://github.com/alibaba/open-code-review/blob/27def8684b3f5c5f235871fac2957be58262f43d/pages/src/content/docs/en/integrations/delegate.md)
+[Code Review Graph](https://github.com/tirth8205/code-review-graph)主要改进上下文检索。它用 Tree-sitter 等机制解析代码，以 SQLite 保存函数、文件及调用、导入、引用等关系，再通过工具接口供 agent 查询。图构建时解析了文件，不代表 LLM 已经审查了这些文件。
 
-### PR-Agent 输入裁剪
+普通 agent 可以搜索 `GetOrder` 再辨认调用方；有图时，可以先查询调用关系，再读取关键源码。图补充的是结构信息，订单归属、错误恢复等行为仍需模型判断。它可以配合原生 agent 使用，不能默认 OCR 已经集成了这个项目。
 
-[PR-Agent](https://github.com/The-PR-Agent/pr-agent/tree/ab90e6e8545ea4d983a35ad0bfdc295c49727e24)取得 PR 变更后，扩展局部上下文，并按预算压缩或分块。社区项目与 Qodo 商业产品已经分开，这里讨论公开仓库中的实现。
+### 实验观察
 
-补入周边函数有助于理解 diff，但超出预算时，裁掉什么会直接影响漏检。它的一种压缩路径会保留含新增内容的 hunk，省略同一文件中的纯删除 hunk。[输入处理](https://github.com/The-PR-Agent/pr-agent/blob/ab90e6e8545ea4d983a35ad0bfdc295c49727e24/pr_agent/algo/pr_processing.py)、[删除处理](https://github.com/The-PR-Agent/pr-agent/blob/ab90e6e8545ea4d983a35ad0bfdc295c49727e24/pr_agent/algo/git_patch_processing.py)
+配套的 Python/SQLite 小实验重现前面的订单问题，保留查询、handler、测试、动态任务分发和无关健康检查五个源码文件。它实际运行了代码图查询与 SQL 行为验证，没有调用 LLM。脚本和观测结果见[示例目录](https://github.com/loveRhythm1990/loveRhythm1990.github.io/tree/master/code-examples/ai-code-review)。
 
-设想一个文件有两处相距较远的改动：一处删除归属检查，另一处新增无关日志。进入上述压缩路径后，模型可能只看到新增日志，丢失判断越权的关键删除。这个问题应检查最终模型输入，光核对原始 Git diff 不够。
+<picture>
+  <source media="(max-width: 600px)" srcset="{{ site.baseurl }}/pics/ai-code-review-graph-mobile.png">
+  <img src="{{ site.baseurl }}/pics/ai-code-review-graph.png" alt="订单实验：测试通过 handler 调用查询；调用方不变，删除归属过滤却改变了跨用户访问结果" width="920" loading="lazy">
+</picture>
 
-这个条件不能扩大成“删除都会消失”：若压缩结果为空，处理函数会保留原 patch；没有触发压缩的路径也应另看。前面的 SQL 替换同时有新增和删除行，不属于这个纯删除例子。这是源码分析得到的风险，本文没有运行模型漏检实验。
+实验查到了 handler，影响范围还包含相关测试和动态任务文件，没有包含无关的健康检查。不过，`get_review_context` 只返回查询文件的源码，agent 仍需继续打开 handler。动态字典分发没有直接调用边，任务文件通过导入和引用关系进入结果，具体调用目标仍需读代码。
 
-大 PR 还支持可选的 `enable_large_pr_chunking`，拆分后分别审查、合并结果。分块能增加装入的内容，却也要检查跨块的调用关系是否被遗漏。[审查实现](https://github.com/The-PR-Agent/pr-agent/blob/ab90e6e8545ea4d983a35ad0bfdc295c49727e24/pr_agent/tools/pr_reviewer.py)
+修改前后，识别到的直接调用方相同；删除归属过滤后，A 请求 B 的订单却从未找到变成返回数据。只读取自己订单的测试在三个版本上都通过。调用图能够提供线索，却不能代替 SQL、断言和行为验证。
 
-### 商业工具
+### 检索成本
 
-商业产品也提供了几种可研究的设计：
+图可能减少反复搜索的消耗，但要比较同一个 agent 完成同一调查的总成本：图查询结果、补读源码、后续对话，以及索引构建和更新。用图返回大小与整库文本比较，无法代表相对原生 agent 的真实收益；原生 agent 通常也会先搜索、再按需读取。[项目评测口径](https://github.com/tirth8205/code-review-graph/blob/343ab7cea29d47a3e805381e09f8243a43d43d88/docs/REPRODUCING.md)
 
-- [CodeRabbit](https://docs.coderabbit.ai/overview/architecture)组合静态分析、agent 探索和候选发现验证，可以检查这些步骤是否增加真实发现、减少误报。
-- [Greptile](https://www.greptile.com/docs/how-greptile-works/graph-based-codebase-context)索引代码关系，适合检查它是否找到未修改的关键调用方和跨文件影响。
-- [Cursor Bugbot](https://cursor.com/docs/bugbot)利用增量审查和已有 PR 评论，适合检查补审、去重和修复状态的处理。
+本次小实验没有测量完整审查 token；工具的 `context_savings` 是估算，`saved_tokens` 为零。仓库变大也不自动意味着更划算，还取决于任务是否反复追踪跨文件关系。动态调用、索引过期和查询截断则可能损失上下文，需要核对解析状态与返回范围。
 
-这些描述来自官方文档，实际效果要放到相同样本中检验。
+## 有效性的证据
 
-## 效果评估
+这些项目尝试改进的环节不同：提示词影响注意力，任务编排影响工作分配，检索影响可见证据，复核影响误报，预算管理影响成本。改进其中一项，不代表其他几项也提高了。
 
-用订单问题可以准备五类样本：
+例如，PR-Agent 提供输入压缩策略；CodeRabbit 的公开架构组合静态分析、agent 探索与验证；Greptile 强调代码关系检索。这些是设计方法，不构成缺陷检出能力排名。[PR-Agent](https://github.com/The-PR-Agent/pr-agent)、[CodeRabbit](https://docs.coderabbit.ai/overview/architecture)、[Greptile](https://www.greptile.com/docs/how-greptile-works/graph-based-codebase-context)
 
-1. **真实缺陷**：删除租户过滤，其他层也没有隔离，应报告越权并给出触发路径。
-2. **正确例外**：SQL 不带租户，但返回前有可靠授权，应避免误报。
-3. **正常改动**：权限不变，只改命名和位置，用于检查噪声。
-4. **复杂输入**：在大量无关修改中放入真实缺陷，并加入前述两个独立 hunk 的例子，检查筛选和裁剪是否遗漏证据。
-5. **后续修复**：修复后再提交修改，检查是否补审，并正确更新旧发现。
-
-还可以恢复历史缺陷进入时的 PR，向审查者提供当时可获得的需求和约束，隐藏后续修复信息。不要在任务里提前告诉它“这里有越权”。
+OCR 官方报告在其评测中，相同底层模型下，已报告问题的成立比例更高、耗时与 token 更低，但已知缺陷的检出比例更低。这支持它在这组条件下的取舍，不能推出换成自己的仓库、原生审查入口和预算后仍然更优。尤其对担心漏检的人，召回率下降不能被“评论更准”掩盖。[官方评测](https://github.com/alibaba/open-code-review#benchmark)
 
 <picture>
   <source media="(max-width: 600px)" srcset="{{ site.baseurl }}/pics/ai-code-review-evaluation-mobile.png">
-  <img src="{{ site.baseurl }}/pics/ai-code-review-evaluation.png" alt="对照评测：固定代码、背景和验证条件，分别比较有无项目规则、有无代码图、开启或关闭复核，并记录发现质量和总成本" width="920" loading="lazy">
+  <img src="{{ site.baseurl }}/pics/ai-code-review-evaluation.png" alt="审查覆盖的三层：文件是否进入并完成任务，关键路径是否得到调查，真实缺陷是否被发现；每层需要不同证据" width="920" loading="lazy">
 </picture>
 
-规则、图检索和复核分别开关，其他条件尽量相同，才容易解释收益来源。如果连模型、预算和工具权限都一起换了，结果只能归属于整个产品组合。
+评估时要把三层覆盖分开：文件覆盖可以通过清单对账；调查覆盖只能从读取、搜索和验证记录中检查关键路径；缺陷覆盖需要已知问题作为参照，真实系统中通常没有完整答案。
 
-每次运行记录三组结果：
+可以恢复历史缺陷进入时的代码，隐藏后续修复信息，再加入没有缺陷的改动和正确例外。在相同背景、模型与预算下比较原生审查、OCR，或者同一个 agent 有无图检索。记录已知缺陷的漏检、额外发现的有效性、未完成任务及总成本。对已报告问题交叉复核，能增加可信度；它无法证明第一轮没有漏掉其他问题。
 
-- **发现质量**：已知缺陷找到了多少，已核对的独立发现有多少成立。工具额外找到的问题也要核对，不能因为不在预设清单中就算误报。
-- **完成范围**：哪些内容被排除、跳过或执行失败。失败而没有评论，不能作为正常的“未发现问题”计入。
-- **处理成本**：总 token、费用、等待时间，以及人工确认、复现和排除误报的时间。重复评论合并计算发现数量，处理它们的成本仍要保留。
+本文没有做完整的模型或产品对照实验。现有实验只支持前面列出的结构查询和行为观察，不能据此宣布 OCR 或某个模型找到了越权缺陷。
 
-同一配置运行多次，观察稳定性；调规则用的样本与验收样本分开，避免只对几个已知案例有效。
+## 审查边界
 
-采用工具的依据是它稳定补充了原流程遗漏的真实问题，或者在保持发现质量的同时降低了处理成本。本文没有做完整的产品对照实验，因此不提供质量排名。
+有些不确定性不能通过增加文件覆盖解决：
+
+- **契约不明确**：代码能表明如何实现，未必能表明应该如何实现。同步持久化还是允许异步落盘，需要已有协议、设计或明确决策。
+- **运行条件缺失**：真实数据分布、流量、外部服务和部署配置不完整，性能、故障恢复与资源竞争的结论就受限，需要压测、故障注入或运行观测。
+- **实现共同遗漏**：代码、测试和文档都由 AI 按同一错误前提生成时，重新读一遍仍可能接受这个前提。还需要从用户场景、协议和失效条件独立提出验证任务。
+
+这些补充工作仍可以让 AI 执行，但需要单独的目标、工具和验收依据。完整文件清单和多个 agent 一致同意，都不能替代这些证据。
+
+实际发起审查时，可以从下面的任务开始，不必先为仓库写一套完备规则：
+
+```text
+请审查 <明确的改动范围或目录>，先报告结果。
+
+先列出范围和文件清单；规模过大时分批执行，保留每批状态。
+记录排除、读取失败、预算不足和未完成内容，不要把部分完成写成全部完成。
+对候选问题按需检查调用方、相关实现、配置和测试，核对正确例外。
+每条发现给出位置、触发路径、影响及依据；区分推断、交叉复核和实际验证。
+结束时说明尚缺哪些证据，以及下一步应单独开展的检查。
+```
+
+这段要求能引导审查和报告，不能替代程序化的任务清单。对于大批 AI 生成代码，首先需要拿到可核对的执行范围，再补查关键行为；“没有发现问题”只是在这次输入、工具与预算下的结果。

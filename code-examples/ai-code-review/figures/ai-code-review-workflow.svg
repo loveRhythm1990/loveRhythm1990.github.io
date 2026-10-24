@@ -1,36 +1,41 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="214" viewBox="0 0 1000 214">
-<title>从变更到缺陷验证</title>
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="300" viewBox="0 0 1000 300">
+<title>从 diff 到审查结果</title>
 <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2563b8"/></marker></defs>
-<rect width="1000" height="214" fill="#ffffff"/>
+<rect width="1000" height="300" fill="#ffffff"/>
 <g font-family="Heiti SC, Noto Sans CJK SC, sans-serif">
-<rect x="24" y="20" width="168" height="140" rx="16" fill="#f8faff" stroke="#d7e1ee" stroke-width="2"/>
-<text x="108" y="49" font-size="19" fill="#2563b8" font-weight="600" text-anchor="middle">1</text>
-<text x="108" y="82" font-size="23" fill="#172b46" font-weight="600" text-anchor="middle">版本与约束</text>
-<text x="108" y="112" font-size="19" fill="#52647b" font-weight="400" text-anchor="middle">代码快照</text>
-<text x="108" y="139" font-size="19" fill="#52647b" font-weight="400" text-anchor="middle">业务约束</text>
-<path d="M200 90 L212 90" fill="none" stroke="#2563b8" stroke-width="3" marker-end="url(#arrow)"/>
-<rect x="220" y="20" width="168" height="140" rx="16" fill="#f8faff" stroke="#d7e1ee" stroke-width="2"/>
-<text x="304" y="49" font-size="19" fill="#2563b8" font-weight="600" text-anchor="middle">2</text>
-<text x="304" y="82" font-size="23" fill="#172b46" font-weight="600" text-anchor="middle">行为反例</text>
-<text x="304" y="112" font-size="19" fill="#52647b" font-weight="400" text-anchor="middle">输入与预期</text>
-<text x="304" y="139" font-size="19" fill="#52647b" font-weight="400" text-anchor="middle">可达场景</text>
-<path d="M396 90 L408 90" fill="none" stroke="#2563b8" stroke-width="3" marker-end="url(#arrow)"/>
-<rect x="416" y="20" width="168" height="140" rx="16" fill="#f8faff" stroke="#d7e1ee" stroke-width="2"/>
-<text x="500" y="49" font-size="19" fill="#2563b8" font-weight="600" text-anchor="middle">3</text>
-<text x="500" y="82" font-size="23" fill="#172b46" font-weight="600" text-anchor="middle">调用链取证</text>
-<text x="500" y="112" font-size="19" fill="#52647b" font-weight="400" text-anchor="middle">调用方与数据层</text>
-<text x="500" y="139" font-size="19" fill="#52647b" font-weight="400" text-anchor="middle">检查正确例外</text>
-<path d="M592 90 L604 90" fill="none" stroke="#2563b8" stroke-width="3" marker-end="url(#arrow)"/>
-<rect x="612" y="20" width="168" height="140" rx="16" fill="#f8faff" stroke="#d7e1ee" stroke-width="2"/>
-<text x="696" y="49" font-size="19" fill="#2563b8" font-weight="600" text-anchor="middle">4</text>
-<text x="696" y="82" font-size="23" fill="#172b46" font-weight="600" text-anchor="middle">缺陷评论</text>
-<text x="696" y="112" font-size="19" fill="#52647b" font-weight="400" text-anchor="middle">位置与触发条件</text>
-<text x="696" y="139" font-size="19" fill="#52647b" font-weight="400" text-anchor="middle">影响与证据</text>
-<path d="M788 90 L800 90" fill="none" stroke="#2563b8" stroke-width="3" marker-end="url(#arrow)"/>
-<rect x="808" y="20" width="168" height="140" rx="16" fill="#f8faff" stroke="#d7e1ee" stroke-width="2"/>
-<text x="892" y="49" font-size="19" fill="#2563b8" font-weight="600" text-anchor="middle">5</text>
-<text x="892" y="82" font-size="23" fill="#172b46" font-weight="600" text-anchor="middle">回归验证</text>
-<text x="892" y="112" font-size="19" fill="#52647b" font-weight="400" text-anchor="middle">缺陷版本失败</text>
-<text x="892" y="139" font-size="19" fill="#52647b" font-weight="400" text-anchor="middle">修复版本通过</text>
-<text x="500" y="197" font-size="19" fill="#52647b" font-weight="400" text-anchor="middle">每一步保留证据，结论绑定具体版本</text>
+<rect x="24" y="16" width="168" height="132" rx="16" fill="#f8faff" stroke="#d7e1ee" stroke-width="2"/>
+<text x="108" y="43" font-size="19" fill="#2563b8" font-weight="600" text-anchor="middle">1</text>
+<text x="108" y="74" font-size="23" fill="#172b46" font-weight="600" text-anchor="middle">确定范围</text>
+<text x="108" y="104" font-size="18" fill="#52647b" font-weight="400" text-anchor="middle">基准与目标</text>
+<text x="108" y="131" font-size="18" fill="#52647b" font-weight="400" text-anchor="middle">原始变更清单</text>
+<path d="M200 82 L212 82" fill="none" stroke="#2563b8" stroke-width="3" marker-end="url(#arrow)"/>
+<rect x="220" y="16" width="168" height="132" rx="16" fill="#f8faff" stroke="#d7e1ee" stroke-width="2"/>
+<text x="304" y="43" font-size="19" fill="#2563b8" font-weight="600" text-anchor="middle">2</text>
+<text x="304" y="74" font-size="23" fill="#172b46" font-weight="600" text-anchor="middle">准备输入</text>
+<text x="304" y="104" font-size="18" fill="#52647b" font-weight="400" text-anchor="middle">筛选与分组</text>
+<text x="304" y="131" font-size="18" fill="#52647b" font-weight="400" text-anchor="middle">预算与提示词</text>
+<path d="M396 82 L408 82" fill="none" stroke="#2563b8" stroke-width="3" marker-end="url(#arrow)"/>
+<rect x="416" y="16" width="168" height="132" rx="16" fill="#f8faff" stroke="#d7e1ee" stroke-width="2"/>
+<text x="500" y="43" font-size="19" fill="#2563b8" font-weight="600" text-anchor="middle">3</text>
+<text x="500" y="74" font-size="23" fill="#172b46" font-weight="600" text-anchor="middle">模型调查</text>
+<text x="500" y="104" font-size="18" fill="#52647b" font-weight="400" text-anchor="middle">提出候选问题</text>
+<text x="500" y="131" font-size="18" fill="#52647b" font-weight="400" text-anchor="middle">按需搜索和读文件</text>
+<path d="M592 82 L604 82" fill="none" stroke="#2563b8" stroke-width="3" marker-end="url(#arrow)"/>
+<rect x="612" y="16" width="168" height="132" rx="16" fill="#f8faff" stroke="#d7e1ee" stroke-width="2"/>
+<text x="696" y="43" font-size="19" fill="#2563b8" font-weight="600" text-anchor="middle">4</text>
+<text x="696" y="74" font-size="23" fill="#172b46" font-weight="600" text-anchor="middle">处理发现</text>
+<text x="696" y="104" font-size="18" fill="#52647b" font-weight="400" text-anchor="middle">定位与复核</text>
+<text x="696" y="131" font-size="18" fill="#52647b" font-weight="400" text-anchor="middle">可选行为验证</text>
+<path d="M788 82 L800 82" fill="none" stroke="#2563b8" stroke-width="3" marker-end="url(#arrow)"/>
+<rect x="808" y="16" width="168" height="132" rx="16" fill="#f8faff" stroke="#d7e1ee" stroke-width="2"/>
+<text x="892" y="43" font-size="19" fill="#2563b8" font-weight="600" text-anchor="middle">5</text>
+<text x="892" y="74" font-size="23" fill="#172b46" font-weight="600" text-anchor="middle">报告结果</text>
+<text x="892" y="104" font-size="18" fill="#52647b" font-weight="400" text-anchor="middle">评论与执行状态</text>
+<text x="892" y="131" font-size="18" fill="#52647b" font-weight="400" text-anchor="middle">未审内容及原因</text>
+<path d="M500 154 L500 178" fill="none" stroke="#2563b8" stroke-width="3" marker-end="url(#arrow)"/>
+<rect x="404" y="186" width="192" height="64" rx="16" fill="#f3f7fe" stroke="#d7e1ee" stroke-width="2"/>
+<text x="500" y="212" font-size="22" fill="#2563b8" font-weight="600" text-anchor="middle">搜索 / 读文件</text>
+<text x="500" y="237" font-size="18" fill="#52647b" font-weight="400" text-anchor="middle">工具结果返回模型</text>
+<path d="M596 218 H600 V124 H590" fill="none" stroke="#2563b8" stroke-width="3" marker-end="url(#arrow)"/>
+<text x="500" y="282" font-size="18" fill="#52647b" font-weight="400" text-anchor="middle">调查循环可能重复，也可能因预算、超时或工具失败而停止</text>
 </g></svg>

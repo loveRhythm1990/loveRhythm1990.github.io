@@ -48,35 +48,41 @@ def canvas(title, body, width=1000, height=214):
 
 def workflow(mobile=False):
     steps = [
-        ("版本与约束", "代码快照", "业务约束"),
-        ("行为反例", "输入与预期", "可达场景"),
-        ("调用链取证", "调用方与数据层", "检查正确例外"),
-        ("缺陷评论", "位置与触发条件", "影响与证据"),
-        ("回归验证", "缺陷版本失败", "修复版本通过"),
+        ("确定范围", "基准与目标", "原始变更清单"),
+        ("准备输入", "筛选与分组", "预算与提示词"),
+        ("模型调查", "提出候选问题", "按需搜索和读文件"),
+        ("处理发现", "定位与复核", "可选行为验证"),
+        ("报告结果", "评论与执行状态", "未审内容及原因"),
     ]
     body = []
     for index, (title, detail1, detail2) in enumerate(steps):
         if mobile:
-            x, y, width, height = 16, 12 + index * 84, 448, 64
+            x, y, width, height = 16, 12 + index * 76, 448, 60
             body += [rect(x, y, width, height)]
-            body += [text(34, y + 27, str(index + 1), 20, BLUE, "600")]
-            body += [text(68, y + 27, title, 23, weight="600")]
-            body += [text(68, y + 52, f"{detail1} · {detail2}", 18, MUTED)]
+            body += [text(34, y + 25, str(index + 1), 20, BLUE, "600")]
+            body += [text(68, y + 25, title, 23, weight="600")]
+            body += [text(68, y + 49, f"{detail1} · {detail2}", 18, MUTED)]
             if index < 4:
-                body += [arrow(240, y + 69, 240, y + 79)]
+                body += [arrow(240, y + 64, 240, y + 72)]
         else:
-            x, y = 24 + index * 196, 20
-            body += [rect(x, y, 168, 140, "#f8faff")]
-            body += [text(x + 84, 49, str(index + 1), 19, BLUE, "600", "middle")]
-            body += [text(x + 84, 82, title, 23, weight="600", anchor="middle")]
-            body += [text(x + 84, 112, detail1, 19, MUTED, anchor="middle")]
-            body += [text(x + 84, 139, detail2, 19, MUTED, anchor="middle")]
+            x, y = 24 + index * 196, 16
+            body += [rect(x, y, 168, 132, "#f8faff")]
+            body += [text(x + 84, 43, str(index + 1), 19, BLUE, "600", "middle")]
+            body += [text(x + 84, 74, title, 23, weight="600", anchor="middle")]
+            body += [text(x + 84, 104, detail1, 18, MUTED, anchor="middle")]
+            body += [text(x + 84, 131, detail2, 18, MUTED, anchor="middle")]
             if index < 4:
-                body += [arrow(x + 176, 90, x + 188, 90)]
+                body += [arrow(x + 176, 82, x + 188, 82)]
     if mobile:
-        return canvas("从变更到缺陷验证", "\n".join(body), 480, 424)
-    body += [text(500, 197, "每一步保留证据，结论绑定具体版本", 19, MUTED, anchor="middle")]
-    return canvas("从变更到缺陷验证", "\n".join(body))
+        body += [text(240, 412, "调查可多次调用工具，再继续判断", 19, MUTED, anchor="middle")]
+        return canvas("从 diff 到审查结果", "\n".join(body), 480, 428)
+    body += [arrow(500, 154, 500, 178)]
+    body += [rect(404, 186, 192, 64, "#f3f7fe")]
+    body += [text(500, 212, "搜索 / 读文件", 22, BLUE, "600", "middle")]
+    body += [text(500, 237, "工具结果返回模型", 18, MUTED, anchor="middle")]
+    body += [f'<path d="M596 218 H600 V124 H590" fill="none" stroke="{BLUE}" stroke-width="3" marker-end="url(#arrow)"/>']
+    body += [text(500, 282, "调查循环可能重复，也可能因预算、超时或工具失败而停止", 18, MUTED, anchor="middle")]
+    return canvas("从 diff 到审查结果", "\n".join(body), height=300)
 
 
 def graph(mobile=False):
@@ -114,40 +120,31 @@ def graph(mobile=False):
 
 
 def evaluation(mobile=False):
-    pairs = [
-        ("规则对照", "不提供规则 / 提供项目规则"),
-        ("图检索对照", "普通搜索 / 增加代码图查询"),
-        ("复核对照", "关闭复核 / 开启复核"),
+    layers = [
+        ("文件覆盖", "文件有没有进入并完成任务", "证据：清单与执行状态", "可以对账"),
+        ("调查覆盖", "关键路径有没有继续追查", "证据：读取、搜索与验证记录", "只能核对已记录的调查"),
+        ("缺陷覆盖", "真实问题到底发现了多少", "证据：已知缺陷与独立样本", "真实系统通常没有完整答案"),
     ]
+    body = []
+    for index, (title, question, evidence, limit) in enumerate(layers):
+        if mobile:
+            x, y, width, height = 16, 12 + index * 112, 448, 98
+            body += [rect(x, y, width, height, "#f8faff")]
+            body += [text(34, y + 29, title, 23, weight="600")]
+            body += [text(34, y + 57, question, 20, MUTED)]
+            body += [text(34, y + 83, limit, 19, BLUE)]
+        else:
+            x, y, width, height = 20 + index * 332, 16, 296, 192
+            body += [rect(x, y, width, height, "#f8faff")]
+            body += [text(x + width / 2, y + 40, title, 25, weight="600", anchor="middle")]
+            body += [text(x + width / 2, y + 81, question, 19, MUTED, anchor="middle")]
+            body += [text(x + width / 2, y + 117, evidence, 18, MUTED, anchor="middle")]
+            body += [text(x + width / 2, y + 161, limit, 19, BLUE, anchor="middle")]
     if mobile:
-        body = [text(24, 32, "固定代码、背景、模型、预算与验证条件", 21, weight="600")]
-        for index, (title, detail) in enumerate(pairs):
-            y = 56 + index * 94
-            body += [rect(16, y, 448, 78, "#f8faff")]
-            body += [text(36, y + 30, title, 23, weight="600")]
-            body += [text(36, y + 59, detail, 20, MUTED)]
-        body += [text(24, 368, "记录召回、误报、执行范围与总成本", 21, BLUE)]
-        body += [text(24, 408, "每组单独运行，只改变一个因素", 20, MUTED)]
-        return canvas("评测中的变量控制", "\n".join(body), 480, 432)
-    body = [f'<path d="M244 149 H284 M284 63 V255 M724 63 V255 M724 149 H756" fill="none" stroke="{BLUE}" stroke-width="3"/>']
-    for index, (title, detail) in enumerate(pairs):
-        y = 24 + index * 96
-        body += [arrow(284, y + 39, 316, y + 39)]
-        body += [f'<path d="M684 {y + 39} H724" fill="none" stroke="{BLUE}" stroke-width="3"/>']
-        body += [rect(324, y, 360, 78, "#f8faff")]
-        body += [text(344, y + 31, title, 23, weight="600")]
-        body += [text(344, y + 60, detail, 19, MUTED)]
-    body += [arrow(724, 149, 756, 149)]
-    body += [rect(24, 82, 220, 134)]
-    body += [text(134, 122, "固定审查输入", 24, weight="600", anchor="middle")]
-    body += [text(134, 159, "代码、背景、模型", 20, MUTED, anchor="middle")]
-    body += [text(134, 191, "预算与验证条件", 20, MUTED, anchor="middle")]
-    body += [rect(764, 82, 212, 134)]
-    body += [text(870, 122, "记录结果", 24, weight="600", anchor="middle")]
-    body += [text(870, 159, "召回与误报", 20, MUTED, anchor="middle")]
-    body += [text(870, 191, "执行范围与总成本", 20, MUTED, anchor="middle")]
-    body += [text(500, 332, "每组只改变一个因素，单独运行并核对结果", 19, MUTED, anchor="middle")]
-    return canvas("评测中的变量控制", "\n".join(body), height=352)
+        body += [text(240, 376, "任务完成不代表关键路径和缺陷已查全", 20, MUTED, anchor="middle")]
+        return canvas("审查覆盖的三层", "\n".join(body), 480, 396)
+    body += [text(500, 247, "文件任务全部完成，仍然可能漏掉关键路径和缺陷", 20, MUTED, anchor="middle")]
+    return canvas("审查覆盖的三层", "\n".join(body), height=270)
 
 
 def main():
