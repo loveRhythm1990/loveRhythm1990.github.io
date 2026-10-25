@@ -1,0 +1,91 @@
+{
+  "repository": "alibaba/open-code-review",
+  "revision": "375f64cd6f67a48a135da83cfcf59c52669a09cb",
+  "license": "Apache-2.0",
+  "files": [
+    {
+      "local": "prompts/main_task_system.md",
+      "upstream": "internal/config/template/prompts/main_task_system.md",
+      "blob": "24fc86f2238866bac12b2495e3443f3972d4d510"
+    },
+    {
+      "local": "prompts/main_task_user.md",
+      "upstream": "internal/config/template/prompts/main_task_user.md",
+      "blob": "8592f4a8492a7f865f4fb7665d95a2b85250b0f0"
+    },
+    {
+      "local": "prompts/plan_task_system.md",
+      "upstream": "internal/config/template/prompts/plan_task_system.md",
+      "blob": "d2c1630dc3abeb040bcfac85773590932174e127"
+    },
+    {
+      "local": "prompts/plan_task_user.md",
+      "upstream": "internal/config/template/prompts/plan_task_user.md",
+      "blob": "3f36027d8657a344fa9abd16b5016cfa84a28a7b"
+    },
+    {
+      "local": "prompts/memory_compression_task_system.md",
+      "upstream": "internal/config/template/prompts/memory_compression_task_system.md",
+      "blob": "6e649e095cca1587a9e90e19f49d3fd5e57e7ada"
+    },
+    {
+      "local": "prompts/memory_compression_task_user.md",
+      "upstream": "internal/config/template/prompts/memory_compression_task_user.md",
+      "blob": "c9a696825060d60e14f2b68fb5b6e76a1189bf98"
+    },
+    {
+      "local": "prompts/review_filter_task_system.md",
+      "upstream": "internal/config/template/prompts/review_filter_task_system.md",
+      "blob": "3de2e867c0734c76d341bf6c12ee824633a3e3cb"
+    },
+    {
+      "local": "prompts/review_filter_task_user.md",
+      "upstream": "internal/config/template/prompts/review_filter_task_user.md",
+      "blob": "fa85b9813de16752059b03891c52bc01750505e3"
+    },
+    {
+      "local": "prompts/re_location_task_system.md",
+      "upstream": "internal/config/template/prompts/re_location_task_system.md",
+      "blob": "1da1e3ee0ac782c39ad85141e655091d4ad548c7"
+    },
+    {
+      "local": "prompts/re_location_task_user.md",
+      "upstream": "internal/config/template/prompts/re_location_task_user.md",
+      "blob": "a32e7fa499bd51bfc6ce634b250d74760267b9e9"
+    },
+    {
+      "local": "prompts/grouping_task_system.md",
+      "upstream": "internal/config/template/prompts/grouping_task_system.md",
+      "blob": "57d36e251ac6256fd36f5481a12ec412f745d5b5"
+    },
+    {
+      "local": "prompts/grouping_task_user.md",
+      "upstream": "internal/config/template/prompts/grouping_task_user.md",
+      "blob": "ec8d174b61290136cced65a19a8cf15148f068f0"
+    },
+    {
+      "local": "task_template.json",
+      "upstream": "internal/config/template/task_template.json",
+      "blob": "e1c4c79a0f8d7406c05cb5955d844e89fe508619"
+    },
+    {
+      "local": "tools.json",
+      "upstream": "internal/config/toolsconfig/tools.json",
+      "blob": "1b3275f278ff708ffafa194a90f4302dc045875e"
+    },
+    {
+      "local": "rust.md",
+      "upstream": "internal/config/rules/rule_docs/rust.md",
+      "blob": "022b9b60defe187317a592b4c826928668fea7e1"
+    },
+    {
+      "local": "LICENSE",
+      "upstream": "LICENSE",
+      "blob": "5db038258492ce47a5f3d27d78562c90d3f78331"
+    }
+  ],
+  "runtime_messages": {
+    "upstream": "internal/llmloop/loop.go",
+    "extraction": "Verbatim string literals joined into their runtime messages; see runtime_messages.json."
+  }
+}

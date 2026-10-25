@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="268" viewBox="0 0 1200 268">
+<title>OCR 的六步执行过程</title>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2563b8"/></marker></defs>
+<rect width="1200" height="268" fill="#ffffff"/>
+<g font-family="Heiti SC, Noto Sans CJK SC, sans-serif">
+<rect x="24" y="16" width="168" height="152" rx="16" fill="#f8faff" stroke="#d7e1ee" stroke-width="2"/>
+<text x="108" y="44" font-size="18" fill="#2563b8" font-weight="600" text-anchor="middle">1  程序</text>
+<text x="108" y="82" font-size="25" fill="#172b46" font-weight="600" text-anchor="middle">文件选择</text>
+<text x="108" y="119" font-size="18" fill="#52647b" font-weight="400" text-anchor="middle">Git 差异与路径筛选</text>
+<text x="108" y="148" font-size="18" fill="#52647b" font-weight="400" text-anchor="middle">清单和排除理由</text>
+<path d="M200 92 L212 92" fill="none" stroke="#2563b8" stroke-width="3" marker-end="url(#arrow)"/>
+<rect x="220" y="16" width="168" height="152" rx="16" fill="#f8faff" stroke="#d7e1ee" stroke-width="2"/>
+<text x="304" y="44" font-size="18" fill="#2563b8" font-weight="600" text-anchor="middle">2  程序</text>
+<text x="304" y="82" font-size="25" fill="#172b46" font-weight="600" text-anchor="middle">规则匹配</text>
+<text x="304" y="119" font-size="18" fill="#52647b" font-weight="400" text-anchor="middle">按文件路径选要求</text>
+<text x="304" y="148" font-size="18" fill="#52647b" font-weight="400" text-anchor="middle">装入审查提示词</text>
+<path d="M396 92 L408 92" fill="none" stroke="#2563b8" stroke-width="3" marker-end="url(#arrow)"/>
+<rect x="416" y="16" width="168" height="152" rx="16" fill="#f8faff" stroke="#d7e1ee" stroke-width="2"/>
+<text x="500" y="44" font-size="18" fill="#2563b8" font-weight="600" text-anchor="middle">3  模型 + 程序</text>
+<text x="500" y="82" font-size="25" fill="#172b46" font-weight="600" text-anchor="middle">文件分组</text>
+<text x="500" y="119" font-size="18" fill="#52647b" font-weight="400" text-anchor="middle">模型只看文件元数据</text>
+<text x="500" y="148" font-size="18" fill="#52647b" font-weight="400" text-anchor="middle">程序校验与补齐</text>
+<path d="M592 92 L604 92" fill="none" stroke="#2563b8" stroke-width="3" marker-end="url(#arrow)"/>
+<rect x="612" y="16" width="168" height="152" rx="16" fill="#f8faff" stroke="#d7e1ee" stroke-width="2"/>
+<text x="696" y="44" font-size="18" fill="#2563b8" font-weight="600" text-anchor="middle">4  程序</text>
+<text x="696" y="82" font-size="25" fill="#172b46" font-weight="600" text-anchor="middle">任务调度</text>
+<text x="696" y="119" font-size="18" fill="#52647b" font-weight="400" text-anchor="middle">并发、预算和超时</text>
+<text x="696" y="148" font-size="18" fill="#52647b" font-weight="400" text-anchor="middle">各组独立上下文</text>
+<path d="M788 92 L800 92" fill="none" stroke="#2563b8" stroke-width="3" marker-end="url(#arrow)"/>
+<rect x="808" y="16" width="168" height="152" rx="16" fill="#f8faff" stroke="#d7e1ee" stroke-width="2"/>
+<text x="892" y="44" font-size="18" fill="#2563b8" font-weight="600" text-anchor="middle">5  模型 + 程序</text>
+<text x="892" y="82" font-size="25" fill="#172b46" font-weight="600" text-anchor="middle">工具调查</text>
+<text x="892" y="119" font-size="18" fill="#52647b" font-weight="400" text-anchor="middle">模型选择搜索和读取</text>
+<text x="892" y="148" font-size="18" fill="#52647b" font-weight="400" text-anchor="middle">工具结果回到模型</text>
+<path d="M984 92 L996 92" fill="none" stroke="#2563b8" stroke-width="3" marker-end="url(#arrow)"/>
+<rect x="1004" y="16" width="168" height="152" rx="16" fill="#f8faff" stroke="#d7e1ee" stroke-width="2"/>
+<text x="1088" y="44" font-size="18" fill="#2563b8" font-weight="600" text-anchor="middle">6  模型 + 程序</text>
+<text x="1088" y="82" font-size="25" fill="#172b46" font-weight="600" text-anchor="middle">评论处理</text>
+<text x="1088" y="119" font-size="18" fill="#52647b" font-weight="400" text-anchor="middle">定位、重定位与过滤</text>
+<text x="1088" y="148" font-size="18" fill="#52647b" font-weight="400" text-anchor="middle">评论和执行状态</text>
+<text x="600" y="207" font-size="21" fill="#2563b8" font-weight="400" text-anchor="middle">每组内部：可选计划 → 工具调用循环 → 候选评论</text>
+<text x="600" y="245" font-size="18" fill="#52647b" font-weight="400" text-anchor="middle">计划、记忆压缩和重定位按条件触发；文件筛选、规则匹配与调度没有独立提示词</text>
+</g></svg>

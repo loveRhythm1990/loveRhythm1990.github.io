@@ -1,0 +1,4 @@
+{
+  "no_tool_calls": "You did not successfully call any tools. Please try again or use task_done if finished.",
+  "budget_exhausted": "Your review budget is exhausted. This is your FINAL round. You may ONLY:\n- Call code_comment to submit any findings you have identified but not yet reported.\n- Call task_done if you have nothing more to report.\nNo other tools are available. Do not attempt further analysis."
+}

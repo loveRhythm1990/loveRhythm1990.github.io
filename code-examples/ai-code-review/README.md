@@ -42,7 +42,7 @@ token 消耗，也不能用于比较任何模型或审查产品的缺陷检出�
 ## 文章配图
 
 `figures/` 保留可编辑的 SVG 源文件，文章引用 `pics/` 中的两倍分辨率 PNG。
-配图分别说明审查执行与工具调查循环、实验中的调用链与行为变化、三层审查覆盖。桌面版使用
+配图说明通用审查循环、OCR 的六步执行流程、实验中的调用链与行为变化，以及三层审查覆盖。桌面版使用
 紧凑的横向布局；`-mobile` 版本用于不超过 600px 的窄屏，由文章的 `picture`
 元素切换，避免直接缩小横向图导致文字难以辨认。
 
@@ -54,3 +54,14 @@ python3 code-examples/ai-code-review/render_figures.py
 
 可以直接编辑 SVG，或修改 `render_figures.py` 后批量生成。重新运行脚本会覆盖
 对应的 SVG 与 PNG；编辑 SVG 后，可用 `rsvg-convert --zoom 2` 单独导出 PNG。
+
+## OCR 提示词附录
+
+`ocr-prompts/` 保存来源明确的任务提示词、Rust 规则与调用配置，文章末尾以折叠块
+展示。原文归属和许可证见该目录的 `README.md` 与 `LICENSE`。
+
+修改本地副本后，重新生成文章附录：
+
+```bash
+python3 code-examples/ai-code-review/render_ocr_appendix.py
+```

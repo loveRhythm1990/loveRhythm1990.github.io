@@ -85,6 +85,40 @@ def workflow(mobile=False):
     return canvas("从 diff 到审查结果", "\n".join(body), height=300)
 
 
+def ocr_pipeline(mobile=False):
+    steps = [
+        ("文件选择", "程序", "Git 差异与路径筛选", "清单和排除理由"),
+        ("规则匹配", "程序", "按文件路径选要求", "装入审查提示词"),
+        ("文件分组", "模型 + 程序", "模型只看文件元数据", "程序校验与补齐"),
+        ("任务调度", "程序", "并发、预算和超时", "各组独立上下文"),
+        ("工具调查", "模型 + 程序", "模型选择搜索和读取", "工具结果回到模型"),
+        ("评论处理", "模型 + 程序", "定位、重定位与过滤", "评论和执行状态"),
+    ]
+    body = []
+    for index, (title, owner, detail1, detail2) in enumerate(steps):
+        if mobile:
+            x, y, width, height = 16, 12 + index * 66, 448, 56
+            body += [rect(x, y, width, height, "#f8faff")]
+            body += [text(32, y + 24, f"{index + 1}  {title}", 22, weight="600")]
+            body += [text(448, y + 23, owner, 17, BLUE, anchor="end")]
+            body += [text(32, y + 47, f"{detail1} · {detail2}", 17, MUTED)]
+        else:
+            x, y = 24 + index * 196, 16
+            body += [rect(x, y, 168, 152, "#f8faff")]
+            body += [text(x + 84, y + 28, f"{index + 1}  {owner}", 18, BLUE, "600", "middle")]
+            body += [text(x + 84, y + 66, title, 25, weight="600", anchor="middle")]
+            body += [text(x + 84, y + 103, detail1, 18, MUTED, anchor="middle")]
+            body += [text(x + 84, y + 132, detail2, 18, MUTED, anchor="middle")]
+            if index < 5:
+                body += [arrow(x + 176, 92, x + 188, 92)]
+    if mobile:
+        body += [text(240, 429, "辅助调用：计划、记忆压缩、评论重定位", 19, MUTED, anchor="middle")]
+        return canvas("OCR 的六步执行过程", "\n".join(body), 480, 446)
+    body += [text(600, 207, "每组内部：可选计划 → 工具调用循环 → 候选评论", 21, BLUE, anchor="middle")]
+    body += [text(600, 245, "计划、记忆压缩和重定位按条件触发；文件筛选、规则匹配与调度没有独立提示词", 18, MUTED, anchor="middle")]
+    return canvas("OCR 的六步执行过程", "\n".join(body), width=1200, height=268)
+
+
 def graph(mobile=False):
     nodes = [
         ("test_own_order", "只验证自己的订单"),
@@ -155,6 +189,7 @@ def main():
     OUTPUT.mkdir(parents=True, exist_ok=True)
     for name, draw in {
         "ai-code-review-workflow": workflow,
+        "ai-code-review-ocr-pipeline": ocr_pipeline,
         "ai-code-review-graph": graph,
         "ai-code-review-evaluation": evaluation,
     }.items():
