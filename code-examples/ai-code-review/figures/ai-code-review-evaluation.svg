@@ -1,22 +1,22 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1000" height="270" viewBox="0 0 1000 270">
-<title>审查覆盖的三层</title>
+<title>文件覆盖度、调查覆盖度与 bug 检出率</title>
 <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2563b8"/></marker></defs>
 <rect width="1000" height="270" fill="#ffffff"/>
 <g font-family="Heiti SC, Noto Sans CJK SC, sans-serif">
 <rect x="20" y="16" width="296" height="192" rx="16" fill="#f8faff" stroke="#d7e1ee" stroke-width="2"/>
-<text x="168.0" y="56" font-size="25" fill="#172b46" font-weight="600" text-anchor="middle">文件覆盖</text>
+<text x="168.0" y="56" font-size="25" fill="#172b46" font-weight="600" text-anchor="middle">文件覆盖度</text>
 <text x="168.0" y="97" font-size="19" fill="#52647b" font-weight="400" text-anchor="middle">文件有没有进入并完成任务</text>
 <text x="168.0" y="133" font-size="18" fill="#52647b" font-weight="400" text-anchor="middle">证据：清单与执行状态</text>
 <text x="168.0" y="177" font-size="19" fill="#2563b8" font-weight="400" text-anchor="middle">可以对账</text>
 <rect x="352" y="16" width="296" height="192" rx="16" fill="#f8faff" stroke="#d7e1ee" stroke-width="2"/>
-<text x="500.0" y="56" font-size="25" fill="#172b46" font-weight="600" text-anchor="middle">调查覆盖</text>
+<text x="500.0" y="56" font-size="25" fill="#172b46" font-weight="600" text-anchor="middle">调查覆盖度</text>
 <text x="500.0" y="97" font-size="19" fill="#52647b" font-weight="400" text-anchor="middle">关键路径有没有继续追查</text>
 <text x="500.0" y="133" font-size="18" fill="#52647b" font-weight="400" text-anchor="middle">证据：读取、搜索与验证记录</text>
 <text x="500.0" y="177" font-size="19" fill="#2563b8" font-weight="400" text-anchor="middle">只能核对已记录的调查</text>
 <rect x="684" y="16" width="296" height="192" rx="16" fill="#f8faff" stroke="#d7e1ee" stroke-width="2"/>
-<text x="832.0" y="56" font-size="25" fill="#172b46" font-weight="600" text-anchor="middle">缺陷覆盖</text>
+<text x="832.0" y="56" font-size="25" fill="#172b46" font-weight="600" text-anchor="middle">bug 检出率</text>
 <text x="832.0" y="97" font-size="19" fill="#52647b" font-weight="400" text-anchor="middle">真实问题到底发现了多少</text>
-<text x="832.0" y="133" font-size="18" fill="#52647b" font-weight="400" text-anchor="middle">证据：已知缺陷与独立样本</text>
+<text x="832.0" y="133" font-size="18" fill="#52647b" font-weight="400" text-anchor="middle">证据：已知 bug 与独立样本</text>
 <text x="832.0" y="177" font-size="19" fill="#2563b8" font-weight="400" text-anchor="middle">真实系统通常没有完整答案</text>
-<text x="500" y="247" font-size="20" fill="#52647b" font-weight="400" text-anchor="middle">文件任务全部完成，仍然可能漏掉关键路径和缺陷</text>
+<text x="500" y="247" font-size="20" fill="#52647b" font-weight="400" text-anchor="middle">文件任务全部完成，仍然可能漏掉关键路径和 bug</text>
 </g></svg>

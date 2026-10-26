@@ -228,7 +228,7 @@ def graph_pipeline(mobile=False):
     body += [arrow(258, 266, 322, 266), arrow(588, 266, 652, 266), arrow(918, 266, 982, 266)]
     body += [routed_arrow("M1085 314 V390 H455 V320")]
     body += [text(770, 381, "证据不足：再次查询 / 补读", 20, BLUE, anchor="middle")]
-    body += [text(600, 436, "图关系帮助找代码，向量相似度帮助找入口；缺陷判断仍需源码和行为证据", 19, MUTED, anchor="middle")]
+    body += [text(600, 436, "图关系帮助找代码，向量相似度帮助找入口；确认 bug 仍需源码和行为证据", 19, MUTED, anchor="middle")]
     return canvas("代码图的索引维护与审查查询", "\n".join(body), 1200, 458)
 
 
@@ -268,9 +268,9 @@ def graph(mobile=False):
 
 def evaluation(mobile=False):
     layers = [
-        ("文件覆盖", "文件有没有进入并完成任务", "证据：清单与执行状态", "可以对账"),
-        ("调查覆盖", "关键路径有没有继续追查", "证据：读取、搜索与验证记录", "只能核对已记录的调查"),
-        ("缺陷覆盖", "真实问题到底发现了多少", "证据：已知缺陷与独立样本", "真实系统通常没有完整答案"),
+        ("文件覆盖度", "文件有没有进入并完成任务", "证据：清单与执行状态", "可以对账"),
+        ("调查覆盖度", "关键路径有没有继续追查", "证据：读取、搜索与验证记录", "只能核对已记录的调查"),
+        ("bug 检出率", "真实问题到底发现了多少", "证据：已知 bug 与独立样本", "真实系统通常没有完整答案"),
     ]
     body = []
     for index, (title, question, evidence, limit) in enumerate(layers):
@@ -288,10 +288,10 @@ def evaluation(mobile=False):
             body += [text(x + width / 2, y + 117, evidence, 18, MUTED, anchor="middle")]
             body += [text(x + width / 2, y + 161, limit, 19, BLUE, anchor="middle")]
     if mobile:
-        body += [text(240, 376, "任务完成不代表关键路径和缺陷已查全", 20, MUTED, anchor="middle")]
-        return canvas("审查覆盖的三层", "\n".join(body), 480, 396)
-    body += [text(500, 247, "文件任务全部完成，仍然可能漏掉关键路径和缺陷", 20, MUTED, anchor="middle")]
-    return canvas("审查覆盖的三层", "\n".join(body), height=270)
+        body += [text(240, 376, "任务完成不代表关键路径和 bug 已查全", 20, MUTED, anchor="middle")]
+        return canvas("文件覆盖度、调查覆盖度与 bug 检出率", "\n".join(body), 480, 396)
+    body += [text(500, 247, "文件任务全部完成，仍然可能漏掉关键路径和 bug", 20, MUTED, anchor="middle")]
+    return canvas("文件覆盖度、调查覆盖度与 bug 检出率", "\n".join(body), height=270)
 
 
 def main():

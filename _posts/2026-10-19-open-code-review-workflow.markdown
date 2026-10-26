@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "AI Code Review：审查流程、覆盖与边界"
+title: "AI Code Review：审查流程、覆盖度与边界"
 date: 2026-10-19 18:00:00 +0800
 author: "weak old dog"
 header-img-credit: false
@@ -11,7 +11,7 @@ tags:
 
 几千、几万行代码已经写完，测试也通过了，但对质量仍然没有把握。给 AI 发一句“帮我 review”，它会检查哪些文件？会沿调用链继续读吗？如果 diff 涉及上千个文件，会不会只看一部分就结束？
 
-AI 找到的缺陷，可以交给另一个 agent 复核，也可以继续生成复现和测试；更难确认的是，那些没有被报告的问题，究竟不存在，还是根本没有被查到。
+AI 报告的风险点，可以交给另一个 agent 复核，也可以继续生成复现和测试；更难确认的是，那些没有被报告的问题，究竟不存在，还是根本没有被查到。
 
 ## 审查过程
 
@@ -94,7 +94,9 @@ OCR 的“规则”包含两件事：**文件筛选配置**决定哪些文件进
 }
 ```
 
-`path` 匹配所有适用文件，`rule` 要求关注硬编码凭据、未校验重定向和缺失授权，`merge_system_rule: true` 保留相应语言的内置要求。Rust 文件仍有 Rust 清单，Java 文件仍有 Java 清单，再叠加这段安全要求，不需要逐文件或逐语言重复配置。[官方例子](https://github.com/alibaba/open-code-review/blob/main/pages/src/content/docs/en/review-rules.md)
+`rule` 是给 LLM 的自然语言审查要求，`rules[].path` 指定它适用的文件；这里的 `**/*` 覆盖所有通过筛选的文件。它与 `include` 不同：后者只调整文件筛选，不决定某条 `rule` 用在哪些文件上。
+
+**开启 `merge_system_rule: true` 后，可以把 `rule` 理解为内置提示词之外的“额外注意事项”。** 例子要求关注硬编码凭据、未校验重定向和缺失授权，同时保留相应语言的内置要求。Rust 文件仍有 Rust 清单，Java 文件仍有 Java 清单，再叠加这段安全要求，不需要逐文件或逐语言重复配置。[官方例子](https://github.com/alibaba/open-code-review/blob/main/pages/src/content/docs/en/review-rules.md)
 
 这份配置会沿工作流产生以下影响：
 
@@ -112,13 +114,13 @@ ocr review
 
 去掉 `merge_system_rule` 时，自定义条目默认替换内置要求；多个用户条目取第一个匹配项，不会全部叠加。只想对本次任务使用另一份配置，可以通过 `ocr review --rule ./custom.json` 指定。[配置与使用](https://github.com/alibaba/open-code-review/blob/main/pages/src/content/docs/en/review-rules.md)
 
-几百万行代码不需要先配一套完备规则才能审查。先使用默认能力，再补充已确认的重要项目契约；规则无法代替文件覆盖对账，也无法修复预算不足或调查中断。
+几百万行代码不需要先配一套完备规则才能审查。先使用默认能力，再补充已确认的重要项目契约；规则无法代替文件清单对账，也无法修复预算不足或调查中断。
 
 ### 3 文件分组
 
 对于需要模型分组的改动集，程序把文件序号、路径、变更状态、增删行数填入 `GROUPING_TASK`，让 LLM 返回各组的标签与文件序号。**这次调用没有整批源码或 diff**，模型主要根据元数据判断哪些文件相关。[分组提示词](#ocr-prompt-grouping)
 
-程序检查返回结果，去重、补齐漏分文件，并限制组大小；分组失败就退回单文件任务。小改动集也可能直接由程序合并或逐文件处理，跳过模型分组。输出是一组组待调度的 diff。分组只决定哪些文件共用上下文，尚未开展缺陷调查。[分组实现](https://github.com/alibaba/open-code-review/blob/main/internal/agent/grouping.go)
+程序检查返回结果，去重、补齐漏分文件，并限制组大小；分组失败就退回单文件任务。小改动集也可能直接由程序合并或逐文件处理，跳过模型分组。输出是一组组待调度的 diff。分组只决定哪些文件共用上下文，尚未开始查找 bug。[分组实现](https://github.com/alibaba/open-code-review/blob/main/internal/agent/grouping.go)
 
 ### 4 任务调度
 
@@ -144,7 +146,7 @@ ocr review
 
 程序收集候选评论后，调用 `REVIEW_FILTER_TASK`。模型主要看到本组 diff 和评论，按提示词删除局部可直接推翻的意见，并优先保留并发、内存安全、行为变化等类别。它看不到主审查的完整调查过程，也不会重新执行测试。[过滤提示词](#ocr-prompt-filter)
 
-最后程序再次处理行号，输出评论和运行状态。定位成功不证明缺陷正确，过滤保留也不等于复现通过；最终报告仍需区分代码推断、其他 agent 复核和实际执行的验证。
+最后程序再次处理行号，输出评论和运行状态。定位成功不证明 bug 成立，过滤保留也不等于复现通过；最终报告仍需区分代码推断、其他 agent 复核和实际执行的验证。
 
 ### 与 Codex 的区别
 
@@ -184,7 +186,7 @@ ocr review --format json --output review-result.json
 
 预览只能说明计划选中哪些文件。它无法预知后面的预算消耗、模型调用失败或调查中断。源码中的运行清单记录已选任务及完成、复用、失败等执行状态，但分母是筛选后的任务，不能拿它代替原始变更清单。部分完成也可能仍返回已有评论和成功退出码，不能仅凭命令退出成功认定审查完整。[执行状态](https://github.com/alibaba/open-code-review/blob/main/internal/agent/agent.go)
 
-### 覆盖对账
+### 文件对账
 
 一次大审查至少应该交付三份能互相核对的清单：原始变更、被排除的文件及理由、进入任务后的执行结果。以下数字只是说明口径的例子：
 
@@ -199,11 +201,11 @@ ocr review --format json --output review-result.json
 
 即使所有已选文件对应的任务都完成，也仍可能漏掉 bug。OCR 的主任务提示词要求每个文件单独检查后再调用 `task_done`，但指令和完成标记不能证明模型逐行分析了所有分支。订单查询被看过，模型仍可能没想到跨用户请求；查询和授权分别被看过，模型也可能没把它们联系起来。[逐文件要求](https://github.com/alibaba/open-code-review/blob/main/internal/config/template/prompts/main_task_system.md)
 
-实际使用中，可以按相关模块分批检查，随后另设一次跨模块调查，关注接口、共享状态和失败恢复。第二轮应有明确目标和补充证据，反复发送同一句“再检查一下”无法提供独立覆盖的保证。
+实际使用中，可以按相关模块分批检查，随后另设一次跨模块调查，关注接口、共享状态和失败恢复。第二轮应有明确目标和补充证据，反复发送同一句“再检查一下”不能保证查出此前遗漏的 bug。
 
-## 代码图
+## Code Review Graph
 
-[Code Review Graph](https://github.com/tirth8205/code-review-graph)提供代码关系索引、查询工具和指导宿主使用工具的 skill。它可以接入 Codex、Claude Code 等 agent；最终调查和缺陷判断由宿主完成。不能默认 OCR 已经集成了这个项目。
+[Code Review Graph](https://github.com/tirth8205/code-review-graph)提供代码关系索引、查询工具和指导宿主使用工具的 skill。它可以接入 Codex、Claude Code 等 agent；最终由宿主调查并判断问题是否成立。不能默认 OCR 已经集成了这个项目。
 
 <picture>
   <source media="(max-width: 600px)" srcset="{{ site.baseurl }}/pics/ai-code-review-graph-pipeline-mobile.png">
@@ -274,24 +276,24 @@ WHERE kind = 'CALLS'
 
 这些项目尝试改进的环节不同：提示词影响注意力，任务编排影响工作分配，检索影响可见证据，复核影响误报，预算管理影响成本。改进其中一项，不代表其他几项也提高了。
 
-例如，PR-Agent 提供输入压缩策略；CodeRabbit 的公开架构组合静态分析、agent 探索与验证；Greptile 强调代码关系检索。这些是设计方法，不构成缺陷检出能力排名。[PR-Agent](https://github.com/The-PR-Agent/pr-agent)、[CodeRabbit](https://docs.coderabbit.ai/overview/architecture)、[Greptile](https://www.greptile.com/docs/how-greptile-works/graph-based-codebase-context)
+例如，PR-Agent 提供输入压缩策略；CodeRabbit 的公开架构组合静态分析、agent 探索与验证；Greptile 强调代码关系检索。这些是设计方法，不构成 bug 检出能力排名。[PR-Agent](https://github.com/The-PR-Agent/pr-agent)、[CodeRabbit](https://docs.coderabbit.ai/overview/architecture)、[Greptile](https://www.greptile.com/docs/how-greptile-works/graph-based-codebase-context)
 
-OCR 官方报告在其评测中，相同底层模型下，已报告问题的成立比例更高、耗时与 token 更低，但已知缺陷的检出比例更低。这支持它在这组条件下的取舍，不能推出换成自己的仓库、原生审查入口和预算后仍然更优。尤其对担心漏检的人，召回率下降不能被“评论更准”掩盖。[官方评测](https://github.com/alibaba/open-code-review#benchmark)
+OCR 官方报告在其评测中，相同底层模型下，已报告问题的成立比例更高、耗时与 token 更低，但已知 bug 的检出比例更低。这支持它在这组条件下的取舍，不能推出换成自己的仓库、原生审查入口和预算后仍然更优。尤其对担心漏检的人，召回率下降不能被“评论更准”掩盖。[官方评测](https://github.com/alibaba/open-code-review#benchmark)
 
 <picture>
   <source media="(max-width: 600px)" srcset="{{ site.baseurl }}/pics/ai-code-review-evaluation-mobile.png">
-  <img src="{{ site.baseurl }}/pics/ai-code-review-evaluation.png" alt="审查覆盖的三层：文件是否进入并完成任务，关键路径是否得到调查，真实缺陷是否被发现；每层需要不同证据" width="920" loading="lazy">
+  <img src="{{ site.baseurl }}/pics/ai-code-review-evaluation.png" alt="文件覆盖度、调查覆盖度与 bug 检出率：分别检查文件任务状态、关键路径调查和已知 bug 的发现情况，需要不同证据" width="920" loading="lazy">
 </picture>
 
-评估时要把三层覆盖分开：文件覆盖可以通过清单对账；调查覆盖只能从读取、搜索和验证记录中检查关键路径；缺陷覆盖需要已知问题作为参照，真实系统中通常没有完整答案。
+评估时要区分三件事：文件覆盖度可以通过清单对账；调查覆盖度只能从读取、搜索和验证记录中检查关键路径；bug 检出率需要已知问题作为参照，真实系统中通常没有完整答案。
 
-可以恢复历史缺陷进入时的代码，隐藏后续修复信息，再加入没有缺陷的改动和正确例外。在相同背景、模型与预算下比较原生审查、OCR，或者同一个 agent 有无图检索。记录已知缺陷的漏检、额外发现的有效性、未完成任务及总成本。对已报告问题交叉复核，能增加可信度；它无法证明第一轮没有漏掉其他问题。
+可以取出引入历史 bug 的版本，隐藏后续修复信息，再加入没有 bug 的改动和正确例外。在相同背景、模型与预算下比较原生审查、OCR，或者同一个 agent 有无图检索。记录已知 bug 的漏检、额外发现的有效性、未完成任务及总成本。对已报告问题交叉复核，能增加可信度；它无法证明第一轮没有漏掉其他问题。
 
-本文没有做完整的模型或产品对照实验。现有实验只支持前面列出的结构查询和行为观察，不能据此宣布 OCR 或某个模型找到了越权缺陷。
+本文没有做完整的模型或产品对照实验。现有实验只支持前面列出的结构查询和行为观察，不能据此宣布 OCR 或某个模型找到了越权 bug。
 
 ## 审查边界
 
-有些不确定性不能通过增加文件覆盖解决：
+有些不确定性不能通过扩大文件审查范围解决：
 
 - **契约不明确**：代码能表明如何实现，未必能表明应该如何实现。同步持久化还是允许异步落盘，需要已有协议、设计或明确决策。
 - **运行条件缺失**：真实数据分布、流量、外部服务和部署配置不完整，性能、故障恢复与资源竞争的结论就受限，需要压测、故障注入或运行观测。
@@ -305,7 +307,7 @@ OCR 官方报告在其评测中，相同底层模型下，已报告问题的成�
 
 1. **补齐未完成内容。** 对照原始文件清单，把失败、超预算和必要的排除项重新派发。生成文件可以检查生成源和产物一致性，不能无说明地从风险清单中消失。补审后更新状态，保留仍未检查的内容及原因。
 2. **分开安排复核与查漏。** 对已报告的问题，让另一个 agent 主动寻找反证和正确例外；对尚未发现的问题，另设并发、取消、跨模块契约等调查目标，从入口和失败路径重新检查。把已有评论全部确认一遍，并没有完成查漏。
-3. **验证关键行为。** 先运行编译、lint 和已有测试，再让 AI 为高风险行为补充有区分力的验证。订单例子要覆盖跨用户访问；重试逻辑要覆盖“执行成功但响应丢失”；恢复逻辑需要检查中途失败或重启后的状态。能复现的缺陷，应让验证在错误版本上失败、在修复后通过，而不只是增加通过的测试。
+3. **验证关键行为。** 先运行编译、lint 和已有测试，再让 AI 为高风险行为补充有区分力的验证。订单例子要覆盖跨用户访问；重试逻辑要覆盖“执行成功但响应丢失”；恢复逻辑需要检查中途失败或重启后的状态。能复现的 bug，应让验证在错误版本上失败、在修复后通过，而不只是增加通过的测试。
 4. **按证据决定交付。** 关键路径未审完、重要契约未确认，或相关验证失败时，继续补查和修复。依赖真实负载才能判断的问题，单独安排压测、故障注入和观测；没有执行条件，就明确保留为未验证项。具备交付条件后，再按项目既有的分批发布、监控和回滚流程控制上线风险。
 
 实际发起审查时，可以从下面的任务开始，不必先为仓库写一套完备规则：

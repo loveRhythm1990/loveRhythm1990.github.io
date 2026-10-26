@@ -48,6 +48,7 @@ tags:
 - Keep article titles free of parentheses.
 - For a series, use a shared title prefix and a plain sequence number, such as `AI Code Review 1: ...`.
 - Use concise section headings that name the main topic rather than full sentences.
+- In software posts, prefer `bug` for confirmed problems and “风险点” for concerns that still need verification; avoid “缺陷” in original prose and diagrams.
 - Use tables sparingly, only when readers need to compare the same attributes across items. Prefer prose or short lists for explanations, and PNG diagrams with editable sources for workflows and relationships.
 - Keep diagrams compact in the article. Prefer horizontal layouts for short workflows and call chains, omit repeated headings and decorative padding, and provide a narrow-screen version when horizontal labels would become too small.
 - Focus explanatory articles on ideas and design. Do not show commit hashes or upstream branch details in article prose; keep detailed reproducibility metadata in linked examples.

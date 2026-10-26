@@ -44,5 +44,5 @@
 <path d="M918 266 L982 266" fill="none" stroke="#2563b8" stroke-width="3" marker-end="url(#arrow)"/>
 <path d="M1085 314 V390 H455 V320" fill="none" stroke="#2563b8" stroke-width="3" marker-end="url(#arrow)"/>
 <text x="770" y="381" font-size="20" fill="#2563b8" font-weight="400" text-anchor="middle">证据不足：再次查询 / 补读</text>
-<text x="600" y="436" font-size="19" fill="#52647b" font-weight="400" text-anchor="middle">图关系帮助找代码，向量相似度帮助找入口；缺陷判断仍需源码和行为证据</text>
+<text x="600" y="436" font-size="19" fill="#52647b" font-weight="400" text-anchor="middle">图关系帮助找代码，向量相似度帮助找入口；确认 bug 仍需源码和行为证据</text>
 </g></svg>
