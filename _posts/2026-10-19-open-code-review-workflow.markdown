@@ -59,11 +59,11 @@ AI 找到的缺陷，可以交给另一个 agent 复核，也可以继续生成�
 
 ## OCR 的执行过程
 
-[OpenCodeReview](https://github.com/alibaba/open-code-review)的常规模式自己组织模型调用，可以看作运行审查 agent 的框架。下面沿 `ocr review` 展开；委托模式只由 OCR 提供文件选择和规则解析，实际调查交给宿主 agent，不能套用整条执行流程。
+[OpenCodeReview](https://github.com/alibaba/open-code-review)是专用的代码审查 agent 系统，常规模式由自己的框架组织模型调用和工具反馈。下面沿 `ocr review` 展开；委托模式只由 OCR 提供文件选择和规则解析，实际调查交给宿主 agent，不能套用整条执行流程。
 
 <picture>
   <source media="(max-width: 600px)" srcset="{{ site.baseurl }}/pics/ai-code-review-ocr-pipeline-mobile.png">
-  <img src="{{ site.baseurl }}/pics/ai-code-review-ocr-pipeline.png" alt="OCR 六步执行流程：程序筛选文件、匹配规则；模型参与文件分组；程序调度各组；模型通过工具调查；程序与模型定位和过滤评论" width="920" loading="lazy">
+  <img src="{{ site.baseurl }}/pics/ai-code-review-ocr-pipeline.png" alt="OCR 执行流程：文件选择、规则准备、分组与调度后，各组装入规则并进入模型和工具的反馈循环；候选评论经定位过滤，满足条件时再开展下一轮，最终汇总报告" width="920" loading="lazy">
 </picture>
 
 ### 1 文件选择
@@ -72,15 +72,47 @@ AI 找到的缺陷，可以交给另一个 agent 复核，也可以继续生成�
 
 随后执行路径、类型和大小筛选：二进制、受保护路径、用户排除项、不支持类型、默认排除项，以及过大的 diff 都可能不进入任务。整文件删除保留在变更清单中，但不作为独立任务派发。输出是待审清单和排除理由。**这一步由程序执行，没有筛选文件的 LLM 提示词。**[选择实现](https://github.com/alibaba/open-code-review/blob/main/internal/agent/selection.go)
 
-### 2 规则匹配
+### 2 规则准备与匹配
 
-对选中的路径，程序依次尝试命令行规则、项目规则、用户全局规则，最后使用内置规则。匹配过程不调用 LLM，结果是要装入审查请求的文本。例如 Rust 源码匹配 `rust.md`，关注错误传播、unsafe、锁和异步取消。[匹配实现](https://github.com/alibaba/open-code-review/blob/main/internal/config/rules/system_rules.go)
+程序先加载规则配置；真正逐文件解析并装入提示词，发生在后面每组任务的组装阶段。图中的第二步表示规则准备。
 
-这里要分清程序和提示词的作用：程序决定装入哪份要求，LLM 再结合代码判断是否违反要求。内置 Rust 清单是自然语言提示词，并不会逐项执行检查或证明不存在问题；[附录保留了原文](#ocr-prompt-rust)。
+OCR 的“规则”包含两件事：**文件筛选配置**决定哪些文件进入任务；**审查要求**是按路径选取、装入模型请求的自然语言。程序执行筛选和匹配，LLM 判断代码是否违反要求。内置 Rust 清单也是提示词，不是逐项执行的静态检查器；[附录保留了原文](#ocr-prompt-rust)。
 
-用户不需要先编写规则，也不需要逐文件配置。可选的 `rule.json` 中，`include`、`exclude` 调整文件筛选；`rules` 按仓库或目录批量补充项目约束。自定义条目默认替换内置要求，`merge_system_rule: true` 才保留两者；多个用户条目取第一个匹配项。`include` 是绕过部分默认排除的模式，不是白名单。[配置机制](https://github.com/alibaba/open-code-review/blob/main/pages/src/content/docs/en/review-rules.md)
+用户不需要先编写规则。程序依次尝试命令行规则、项目规则、用户全局规则，最后使用内置规则；不存在自定义文件时直接使用默认配置。[匹配实现](https://github.com/alibaba/open-code-review/blob/main/internal/config/rules/system_rules.go)
 
-只有项目确实承诺“关闭返回后不再建立新连接”，这项要求才值得加入相关模块。几百万行代码不可能由人先写出完整正确性规则再开始审查；可以先用默认能力，后续补充已确认的重要契约。
+官方文档提供了下面这个例子，可以保存为项目根目录的 `.opencodereview/rule.json`：
+
+```json
+{
+  "rules": [
+    {
+      "path": "**/*",
+      "rule": "Security review: flag hardcoded secrets, unvalidated redirects, and missing authz checks.",
+      "merge_system_rule": true
+    }
+  ]
+}
+```
+
+`path` 匹配所有适用文件，`rule` 要求关注硬编码凭据、未校验重定向和缺失授权，`merge_system_rule: true` 保留相应语言的内置要求。Rust 文件仍有 Rust 清单，Java 文件仍有 Java 清单，再叠加这段安全要求，不需要逐文件或逐语言重复配置。[官方例子](https://github.com/alibaba/open-code-review/blob/main/pages/src/content/docs/en/review-rules.md)
+
+这份配置会沿工作流产生以下影响：
+
+1. **选择文件时**，可选的 `include`、`exclude` 改变待审范围。这个例子没有这两个字段，因此不改变默认筛选。`exclude` 排除匹配项；`include` 绕过部分默认排除，不是白名单，也不能绕过所有保护条件。
+2. **组装任务时**，程序逐文件解析适用要求，再按组去重合并；不同要求会标明对应文件，填入 `{% raw %}{{system_rule}}{% endraw %}`，供 `PLAN_TASK` 和 `MAIN_TASK` 使用。分组模型仍主要看文件元数据，这条安全要求不会让它自动重做安全分组。[任务装配](https://github.com/alibaba/open-code-review/blob/main/internal/agent/agent.go)
+3. **模型调查时**，要求可能促使模型追查授权或输入校验，但不会增加工具权限、单独启动一个安全扫描器，也不能证明每项要求都已检查。图中的工具反馈和停止条件照常生效。
+
+可以先预览覆盖范围，再用项目中的实际路径核对最终生效文本：
+
+```bash
+ocr review --preview
+ocr rules check src/storage.rs
+ocr review
+```
+
+去掉 `merge_system_rule` 时，自定义条目默认替换内置要求；多个用户条目取第一个匹配项，不会全部叠加。只想对本次任务使用另一份配置，可以通过 `ocr review --rule ./custom.json` 指定。[配置与使用](https://github.com/alibaba/open-code-review/blob/main/pages/src/content/docs/en/review-rules.md)
+
+几百万行代码不需要先配一套完备规则才能审查。先使用默认能力，再补充已确认的重要项目契约；规则无法代替文件覆盖对账，也无法修复预算不足或调查中断。
 
 ### 3 文件分组
 
@@ -104,7 +136,7 @@ AI 找到的缺陷，可以交给另一个 agent 复核，也可以继续生成�
 
 工具结果会追加到当前会话，模型继续调查，直到显式结束或触发停止条件。上下文变长时，程序可能调用 `MEMORY_COMPRESSION_TASK`，摘要保留已发现问题、工具结论、完成与待办事项，再继续原任务；摘要本身也可能丢掉细节。[压缩提示词](#ocr-prompt-memory)
 
-同一组还可以开展多轮审查，后续轮次带入此前确认的发现，并去掉原计划；无新增发现或达到限制时提前结束。工具调用循环和多轮审查是两个层次，都不能推出每条路径已经检查完。[调查循环](https://github.com/alibaba/open-code-review/blob/main/internal/llmloop/loop.go)
+图中有两层循环：实线表示同一会话内的“模型请求工具 → 程序执行 → 结果返回模型”；虚线表示本轮结束、评论过滤后，再开始一轮审查。后续轮次带入已确认的发现，并去掉原计划；无新增发现、预算不足或达到轮次等限制时，不再继续。工具调用可以重复很多次，但这两层循环都不能证明已穷尽所有路径。[调查循环](https://github.com/alibaba/open-code-review/blob/main/internal/llmloop/loop.go)、[多轮调度](https://github.com/alibaba/open-code-review/blob/main/internal/agent/agent.go)
 
 ### 6 评论处理
 
@@ -114,7 +146,15 @@ AI 找到的缺陷，可以交给另一个 agent 复核，也可以继续生成�
 
 最后程序再次处理行号，输出评论和运行状态。定位成功不证明缺陷正确，过滤保留也不等于复现通过；最终报告仍需区分代码推断、其他 agent 复核和实际执行的验证。
 
-OCR 的改进分布在任务组织、上下文获取和评论处理等环节。原生审查若已满足这些需求，就不必只为规则可配置而换工具；缺少的若是关系检索，则应单独评估代码图。
+### 与 Codex 的区别
+
+**OCR 和 Codex 都使用 agent 循环。** Codex 本身已有会话状态、工具执行、上下文压缩和权限管理；原生 review 也是专用审查入口。OCR 的特点主要在围绕审查组织任务的方式，不能把差异说成“一个只读 diff，另一个会追调用链”。[Codex harness](https://developers.openai.com/blog/codex-as-a-platform)、[原生审查入口](https://learn.chatgpt.com/docs/codex/cli)
+
+- **任务如何组织**：OCR 明确按文件筛选、分组和派发，组内独立调查，组间按需补读。比较原生审查时，要核对具体入口是否已有类似拆分和完成记录，不能预设它一定只有一次模型调用。
+- **调查能做什么**：OCR 的默认主工具集聚焦搜索、读取和评论；本地 Codex 可以在权限允许时使用终端、测试和其他已配置工具。能执行不等于本次 review 实际执行，比较时需要核对工具权限和记录。
+- **结果怎样交付**：OCR 专门处理 diff 行号、候选评论过滤和文件任务状态。原生入口也能报告发现、遵循项目指导；是否还需要 OCR，应看额外流程是否降低遗漏、误报或成本。
+
+更换提示词、工具集和任务组织方式，可能改变同一模型的调查结果；这不等于 OCR 换上了更强的语义理解引擎，也不保证它比原生审查发现更多问题。
 
 ## 千文件改动
 
@@ -161,20 +201,44 @@ ocr review --format json --output review-result.json
 
 实际使用中，可以按相关模块分批检查，随后另设一次跨模块调查，关注接口、共享状态和失败恢复。第二轮应有明确目标和补充证据，反复发送同一句“再检查一下”无法提供独立覆盖的保证。
 
-## 代码图的作用
+## Code Review Graph 的执行过程
 
-[Code Review Graph](https://github.com/tirth8205/code-review-graph)主要改进上下文检索。它用 Tree-sitter 等机制解析代码，以 SQLite 保存函数、文件及调用、导入、引用等关系，再通过工具接口供 agent 查询。图构建时解析了文件，不代表 LLM 已经审查了这些文件。
+[Code Review Graph](https://github.com/tirth8205/code-review-graph)提供代码关系索引、查询工具和指导宿主使用工具的 skill。它可以接入 Codex、Claude Code 等 agent；最终调查和缺陷判断由宿主完成。不能默认 OCR 已经集成了这个项目。
 
-普通 agent 可以搜索 `GetOrder` 再辨认调用方；有图时，可以先查询调用关系，再读取关键源码。图补充的是结构信息，订单归属、错误恢复等行为仍需模型判断。它可以配合原生 agent 使用，不能默认 OCR 已经集成了这个项目。
+<picture>
+  <source media="(max-width: 600px)" srcset="{{ site.baseurl }}/pics/ai-code-review-graph-pipeline-mobile.png">
+  <img src="{{ site.baseurl }}/pics/ai-code-review-graph-pipeline.png" alt="Code Review Graph 分为程序建图和宿主审查：源码解析为 SQLite 关系索引；宿主识别改动、查询关系、补读源码并判断行为，证据不足时继续查询或读取" width="920" loading="lazy">
+</picture>
+
+### 建图与维护
+
+1. **收集源码**：程序根据仓库文件、支持的语言和忽略配置确定解析范围。依赖目录、生成物或不支持的文件可能不在索引内，建图范围也需要核对。
+2. **提取关系**：Tree-sitter 等解析器识别函数、类、导入和调用语法；语言相关的解析逻辑再尝试把名字、别名和跨文件引用关联到具体定义。结果以节点和边保存在 SQLite 中。调用目标无法可靠确定时，不能把一条近似关系当成运行时保证。
+3. **增量维护**：文件变化后，程序依据变更、内容哈希和依赖关系更新索引。解析失败可能留下旧记录，返回 `partial` 等状态时需要处理失败项，不能把索引存在当成已经与当前源码一致。
+
+基础建图和关系查询由程序完成，不需要审查 LLM 逐文件阅读。也因此，“整个仓库已建图”不能写成“整个仓库已 review”。[建图实现](https://github.com/tirth8205/code-review-graph/blob/staging/code_review_graph/incremental.py)、[解析实现](https://github.com/tirth8205/code-review-graph/blob/staging/code_review_graph/parser.py)
+
+### 查询与调查
+
+以项目提供的 `review-delta` skill 为例，宿主先查询最小上下文，索引未就绪时再建图或更新；然后调用 `detect_changes_tool`，把 diff 映射到变更函数、受影响路径和测试线索。需要进一步调查时，再调用 `get_review_context_tool` 或 `query_graph_tool`。[审查 skill](https://github.com/tirth8205/code-review-graph/blob/staging/skills/review-delta/SKILL.md)
+
+图工具回答的是“哪些函数调用它”“哪些文件可能受影响”“有哪些关联测试”，返回关系、文件位置以及预算内的源码片段。风险分数帮助安排阅读顺序，不能当成 bug 已经成立的概率；测试关联也不是实际执行得到的覆盖率。[查询接口](https://github.com/tirth8205/code-review-graph/blob/staging/docs/COMMANDS.md)
+
+宿主拿到结果后，继续打开关键文件，检查调用条件、数据变化和测试断言。若证据仍不足，就再查询、扩大范围或改用普通搜索。查询深度、数量与源码片段都有限制，`truncated`、省略计数或名字歧义需要显式处理。宿主决定何时结束，图工具不会自动把返回的每个文件全部审完。
+
+### 结构与语义
+
+“语义理解”需要分成三个层次看：
+
+- **代码结构及符号关系**：解析导入、别名、继承与调用目标，确实涉及部分静态语义，超出了纯文本匹配。但关系解析并不等同于编译器完整的类型和运行语义分析，动态分发等路径仍可能缺失。
+- **按意思查找代码**：项目可选用 embedding，把节点名称、签名、文档摘要等文本转成向量，再按查询的相似度找节点；没有可用向量时可以退回关键词检索。这是语义检索，帮助找到调查入口，不能证明检索结果的行为正确。[向量检索实现](https://github.com/tirth8205/code-review-graph/blob/staging/code_review_graph/embeddings.py)
+- **判断设计与行为**：是否越权、是否违反持久化约定、取消后会不会留下错误状态，需要结合需求、源码和运行证据继续判断。找到一个“相关函数”，甚至找到所有已知调用方，也没有自动完成这一步。
+
+因此，可以说代码图辅助语义分析，包含部分结构语义和可选的语义检索；不能把它概括成已经理解整个系统业务逻辑的审查模型。
 
 ### 实验观察
 
 配套的 Python/SQLite 小实验重现前面的订单问题，保留查询、handler、测试、动态任务分发和无关健康检查五个源码文件。它实际运行了代码图查询与 SQL 行为验证，没有调用 LLM。脚本和观测结果见[示例目录](https://github.com/loveRhythm1990/loveRhythm1990.github.io/tree/master/code-examples/ai-code-review)。
-
-<picture>
-  <source media="(max-width: 600px)" srcset="{{ site.baseurl }}/pics/ai-code-review-graph-mobile.png">
-  <img src="{{ site.baseurl }}/pics/ai-code-review-graph.png" alt="订单实验：测试通过 handler 调用查询；调用方不变，删除归属过滤却改变了跨用户访问结果" width="920" loading="lazy">
-</picture>
 
 实验查到了 handler，影响范围还包含相关测试和动态任务文件，没有包含无关的健康检查。不过，`get_review_context` 只返回查询文件的源码，agent 仍需继续打开 handler。动态字典分发没有直接调用边，任务文件通过导入和引用关系进入结果，具体调用目标仍需读代码。
 
