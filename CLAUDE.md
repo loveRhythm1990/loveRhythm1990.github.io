@@ -6,6 +6,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a Jekyll-based technical blog hosted on GitHub Pages, primarily covering Kubernetes and Go programming topics. Based on the Hux Blog theme.
 
+## Git Delivery
+
+For this blog repository, the user explicitly authorizes committing and pushing updates directly to `origin/master`, without creating a PR. Verify the actual remote and target branch before pushing. This repository-specific exception does not apply to other projects.
+
 ## Common Commands
 
 ```bash
