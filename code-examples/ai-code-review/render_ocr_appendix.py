@@ -7,7 +7,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE = Path(__file__).resolve().parent / "ocr-prompts"
-POST = ROOT / "_posts/2026-10-19-open-code-review-workflow.markdown"
+POST = ROOT / "_posts/2026-10-24-open-code-review-workflow.markdown"
 BEGIN = "<!-- OCR_PROMPTS_BEGIN -->"
 END = "<!-- OCR_PROMPTS_END -->"
 

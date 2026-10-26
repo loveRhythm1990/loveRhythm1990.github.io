@@ -1,7 +1,8 @@
 ---
 layout: post
 title: "AI Code Review：审查流程、覆盖度与边界"
-date: 2026-10-19 18:00:00 +0800
+date: 2026-10-24 18:00:00 +0800
+permalink: /2026/10/19/open-code-review-workflow/
 author: "weak old dog"
 header-img-credit: false
 tags:
