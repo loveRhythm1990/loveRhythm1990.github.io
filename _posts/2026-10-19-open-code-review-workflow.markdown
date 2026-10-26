@@ -201,7 +201,7 @@ ocr review --format json --output review-result.json
 
 实际使用中，可以按相关模块分批检查，随后另设一次跨模块调查，关注接口、共享状态和失败恢复。第二轮应有明确目标和补充证据，反复发送同一句“再检查一下”无法提供独立覆盖的保证。
 
-## Code Review Graph 的执行过程
+## 代码图
 
 [Code Review Graph](https://github.com/tirth8205/code-review-graph)提供代码关系索引、查询工具和指导宿主使用工具的 skill。它可以接入 Codex、Claude Code 等 agent；最终调查和缺陷判断由宿主完成。不能默认 OCR 已经集成了这个项目。
 
@@ -217,6 +217,26 @@ ocr review --format json --output review-result.json
 3. **增量维护**：文件变化后，程序依据变更、内容哈希和依赖关系更新索引。解析失败可能留下旧记录，返回 `partial` 等状态时需要处理失败项，不能把索引存在当成已经与当前源码一致。
 
 基础建图和关系查询由程序完成，不需要审查 LLM 逐文件阅读。也因此，“整个仓库已建图”不能写成“整个仓库已 review”。[建图实现](https://github.com/tirth8205/code-review-graph/blob/staging/code_review_graph/incremental.py)、[解析实现](https://github.com/tirth8205/code-review-graph/blob/staging/code_review_graph/parser.py)
+
+### 关系表存储
+
+SQLite 用关系表表达这张图，核心是 `nodes` 和 `edges`：
+
+- **节点表 `nodes`**：每行代表文件、函数、类或测试，保存类型、完整符号名、文件位置和行号等信息。
+- **边表 `edges`**：每行代表一条有向关系，以 `source_qualified`、`target_qualified` 保存两端符号名，`kind` 表示调用、导入、继承等关系类型。
+
+例如，handler 调用查询函数，就写入一条从 handler 指向查询函数的 `CALLS` 边。查“谁调用这个函数”，可以用下面的 SQL 示意，参数传入目标函数的完整符号名：
+
+```sql
+SELECT source_qualified
+FROM edges
+WHERE kind = 'CALLS'
+  AND target_qualified = ?;
+```
+
+边的起点、终点及其与关系类型的组合都有数据库索引，支持定向查找。多跳影响范围由程序配合 SQL 遍历计算，源码也保留 NetworkX 遍历方式。因此，“图索引”包含两层：表中的节点关系，以及加速查询的数据库索引。[表结构](https://github.com/tirth8205/code-review-graph/blob/staging/docs/schema.md)、[存储与遍历](https://github.com/tirth8205/code-review-graph/blob/staging/code_review_graph/graph.py)
+
+可选 embedding 另存在 `embeddings` 表，向量以 BLOB 保存，用于相似度检索。向量相近与存在调用关系是两种信息，不能混用。[向量存储](https://github.com/tirth8205/code-review-graph/blob/staging/code_review_graph/embeddings.py)
 
 ### 查询与调查
 
